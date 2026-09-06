@@ -1,14 +1,29 @@
 using System.Linq.Expressions;
 using Klowee.Api.Entities;
 using Klowee.Api.Entities.Common;
+using Klowee.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Klowee.Api.Data;
 
 public class KloweeDbContext : DbContext
 {
-    public KloweeDbContext(DbContextOptions<KloweeDbContext> options) : base(options)
+    private readonly ICurrentUser? _currentUser;
+
+    /// <summary>Used by the design-time factory, where there is no HTTP request.</summary>
+    public KloweeDbContext(DbContextOptions<KloweeDbContext> options)
+        : this(options, currentUser: null)
     {
+    }
+
+    /// <summary>
+    /// Used at runtime: the DI container supplies the request's
+    /// <see cref="ICurrentUser"/> so <c>created_by</c> can be stamped centrally.
+    /// </summary>
+    public KloweeDbContext(DbContextOptions<KloweeDbContext> options, ICurrentUser? currentUser)
+        : base(options)
+    {
+        _currentUser = currentUser;
     }
 
     public DbSet<User> Users => Set<User>();
@@ -30,6 +45,11 @@ public class KloweeDbContext : DbContext
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(KloweeDbContext).Assembly);
 
+        // PostgreSQL generates the key; other providers (the SQLite used by the
+        // test suite) fall back to EF's client-side Guid generator, which the
+        // convention for a Guid key already supplies.
+        var isPostgres = Database.IsNpgsql();
+
         // Conventions shared by every BaseEntity-derived table:
         //   - a database-generated uuid primary key
         //   - a global query filter that hides soft-deleted rows
@@ -40,9 +60,12 @@ public class KloweeDbContext : DbContext
                 continue;
             }
 
-            modelBuilder.Entity(entityType.ClrType)
-                .Property(nameof(BaseEntity.Id))
-                .HasDefaultValueSql("gen_random_uuid()");
+            if (isPostgres)
+            {
+                modelBuilder.Entity(entityType.ClrType)
+                    .Property(nameof(BaseEntity.Id))
+                    .HasDefaultValueSql("gen_random_uuid()");
+            }
 
             // Build: entity => entity.DeletedAt == null
             var parameter = Expression.Parameter(entityType.ClrType, "entity");
@@ -57,7 +80,7 @@ public class KloweeDbContext : DbContext
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
-        ApplyAuditTimestamps();
+        ApplyAuditFields();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
@@ -65,14 +88,20 @@ public class KloweeDbContext : DbContext
         bool acceptAllChangesOnSuccess,
         CancellationToken cancellationToken = default)
     {
-        ApplyAuditTimestamps();
+        ApplyAuditFields();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
-    /// <summary>Maintains created_at / updated_at centrally for every tracked entity.</summary>
-    private void ApplyAuditTimestamps()
+    /// <summary>
+    /// Maintains created_at / updated_at and stamps created_by from the caller's
+    /// JWT "sub" claim, centrally, for every tracked entity. Rows written outside
+    /// a request (the seeder, migrations) leave created_by null.
+    /// </summary>
+    private void ApplyAuditFields()
     {
         var now = DateTimeOffset.UtcNow;
+        var userId = _currentUser?.UserId;
+
         foreach (var entry in ChangeTracker.Entries<BaseEntity>())
         {
             switch (entry.State)
@@ -80,6 +109,7 @@ public class KloweeDbContext : DbContext
                 case EntityState.Added:
                     entry.Entity.CreatedAt = now;
                     entry.Entity.UpdatedAt = now;
+                    entry.Entity.CreatedBy ??= userId;
                     break;
                 case EntityState.Modified:
                     entry.Entity.UpdatedAt = now;

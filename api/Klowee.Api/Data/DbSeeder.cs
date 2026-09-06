@@ -1,4 +1,6 @@
 using Klowee.Api.Entities;
+using Klowee.Api.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Klowee.Api.Data;
@@ -10,12 +12,85 @@ namespace Klowee.Api.Data;
 /// </summary>
 public static class DbSeeder
 {
-    public static async Task SeedAsync(KloweeDbContext db)
+    /// <summary>Categories in display order. Kept in one place so the sort orders stay consistent.</summary>
+    private static readonly (string Name, int SortOrder)[] Categories =
+    [
+        ("Coffee", 1),
+        ("Matcha", 2),
+        ("Milk drinks", 3),
+        ("Fruit soda", 4)
+    ];
+
+    public static async Task SeedAsync(
+        KloweeDbContext db,
+        IConfiguration configuration,
+        IPasswordHasher<User> passwordHasher,
+        ILogger logger)
     {
+        await SeedOwnersAsync(db, configuration, passwordHasher, logger);
         await SeedAddOnsAsync(db);
         await SeedCategoriesAsync(db);
         await SeedSiteSettingsAsync(db);
         await SeedSampleMenuVersionAsync(db);
+        await MoveStrawberryMilkToMilkDrinksAsync(db);
+    }
+
+    /// <summary>
+    /// Creates the two owner accounts from user-secrets. There is deliberately no
+    /// registration endpoint: owners are provisioned out of band, and the plaintext
+    /// password never leaves configuration.
+    /// </summary>
+    private static async Task SeedOwnersAsync(
+        KloweeDbContext db,
+        IConfiguration configuration,
+        IPasswordHasher<User> passwordHasher,
+        ILogger logger)
+    {
+        var seeded = 0;
+
+        for (var index = 0; index < 2; index++)
+        {
+            var section = configuration.GetSection($"Seed:Owners:{index}");
+            var email = section["Email"];
+            var password = section["Password"];
+            var displayName = section["DisplayName"];
+
+            if (string.IsNullOrWhiteSpace(email)
+                || string.IsNullOrWhiteSpace(password)
+                || string.IsNullOrWhiteSpace(displayName))
+            {
+                logger.LogWarning(
+                    "Owner seed skipped: Seed:Owners:{Index} needs Email, Password and DisplayName. " +
+                    "Set them with: dotnet user-secrets set \"Seed:Owners:{Index}:Email\" \"...\"",
+                    index, index);
+                continue;
+            }
+
+            var normalizedEmail = AuthService.NormalizeEmail(email);
+
+            // Idempotency key: the email.
+            if (await db.Users.AnyAsync(u => u.Email == normalizedEmail))
+            {
+                continue;
+            }
+
+            var user = new User
+            {
+                Email = normalizedEmail,
+                DisplayName = displayName.Trim(),
+                Role = UserRole.Owner
+            };
+            user.PasswordHash = passwordHasher.HashPassword(user, password);
+
+            db.Users.Add(user);
+            seeded++;
+            logger.LogInformation("Seeded owner account {Email}.", normalizedEmail);
+        }
+
+        if (seeded > 0)
+        {
+            await db.SaveChangesAsync();
+        }
     }
 
     private static async Task SeedAddOnsAsync(KloweeDbContext db)
@@ -32,19 +107,36 @@ public static class DbSeeder
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Upserts each category by name, so adding one to the list above reaches a
+    /// database that was already seeded by an earlier run.
+    /// </summary>
     private static async Task SeedCategoriesAsync(KloweeDbContext db)
     {
-        if (await db.MenuCategories.AnyAsync())
+        var existing = await db.MenuCategories.ToDictionaryAsync(c => c.Name);
+        var changed = false;
+
+        foreach (var (name, sortOrder) in Categories)
         {
-            return;
+            if (existing.TryGetValue(name, out var category))
+            {
+                if (category.SortOrder != sortOrder)
+                {
+                    category.SortOrder = sortOrder;
+                    changed = true;
+                }
+
+                continue;
+            }
+
+            db.MenuCategories.Add(new MenuCategory { Name = name, SortOrder = sortOrder });
+            changed = true;
         }
 
-        db.MenuCategories.AddRange(
-            new MenuCategory { Name = "Coffee", SortOrder = 1 },
-            new MenuCategory { Name = "Matcha", SortOrder = 2 },
-            new MenuCategory { Name = "Fruit soda", SortOrder = 3 });
-
-        await db.SaveChangesAsync();
+        if (changed)
+        {
+            await db.SaveChangesAsync();
+        }
     }
 
     private static async Task SeedSiteSettingsAsync(KloweeDbContext db)
@@ -89,7 +181,7 @@ public static class DbSeeder
             ("Cinnamon Cloud", "Coffee", 160m),
             ("Ube Latte", "Coffee", 160m),
             ("Oat Biscoff Latte", "Coffee", 140m),
-            ("Strawberry Milk", "Coffee", 120m),
+            ("Strawberry Milk", "Milk drinks", 120m),
             ("Matcha Latte", "Matcha", 150m),
             ("Berry Matcha", "Matcha", 140m),
             ("Dirty Matcha", "Matcha", 140m),
@@ -128,6 +220,31 @@ public static class DbSeeder
         }
 
         db.MenuVersions.Add(version);
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Handover 01 filed Strawberry Milk under Coffee for want of a better fit.
+    /// Now that "Milk drinks" exists, move it — including in databases seeded
+    /// before that category was added.
+    /// </summary>
+    private static async Task MoveStrawberryMilkToMilkDrinksAsync(KloweeDbContext db)
+    {
+        var milkDrinks = await db.MenuCategories.FirstOrDefaultAsync(c => c.Name == "Milk drinks");
+        if (milkDrinks is null)
+        {
+            return;
+        }
+
+        var strawberryMilk = await db.MenuItems
+            .FirstOrDefaultAsync(i => i.Name == "Strawberry Milk" && i.CategoryId != milkDrinks.Id);
+
+        if (strawberryMilk is null)
+        {
+            return;
+        }
+
+        strawberryMilk.CategoryId = milkDrinks.Id;
         await db.SaveChangesAsync();
     }
 }

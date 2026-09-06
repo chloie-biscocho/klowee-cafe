@@ -1,35 +1,22 @@
-using Klowee.Api.Data;
+using Klowee.Api.Contracts.Health;
+using Klowee.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Klowee.Api.Controllers;
 
 [ApiController]
-[Route("api/[health]")]
+[Route("api/health")]
+[AllowAnonymous]
 public class HealthController : ControllerBase
 {
-    private readonly KloweeDbContext _db;
+    private readonly IHealthService _health;
 
-    public HealthController(KloweeDbContext db) => _db = db;
+    public HealthController(IHealthService health) => _health = health;
 
     /// <summary>Liveness + database reachability check.</summary>
     [HttpGet]
-    public async Task<IActionResult> Get(CancellationToken cancellationToken)
-    {
-        bool canConnect;
-        try
-        {
-            canConnect = await _db.Database.CanConnectAsync(cancellationToken);
-        }
-        catch
-        {
-            canConnect = false;
-        }
-
-        return Ok(new
-        {
-            status = "ok",
-            database = canConnect ? "connected" : "unreachable",
-            utc = DateTimeOffset.UtcNow
-        });
-    }
+    [ProducesResponseType<HealthDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<HealthDto>> Get(CancellationToken cancellationToken) =>
+        Ok(await _health.GetHealthAsync(cancellationToken));
 }

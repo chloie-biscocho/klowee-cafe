@@ -10,7 +10,7 @@ public class MenuVersionItemConfiguration : IEntityTypeConfiguration<MenuVersion
     {
         builder.Property(i => i.Price).HasPrecision(10, 2);
 
-        builder.HasIndex(i => new { i.MenuVersionId, i.MenuItemId }).IsUnique();
+        builder.HasIndex(i => new { i.MenuVersionId, i.MenuItemId }).IsUnique().HasFilter(SoftDelete.Filter);
 
         builder.HasOne(i => i.MenuItem)
             .WithMany(m => m.VersionItems)

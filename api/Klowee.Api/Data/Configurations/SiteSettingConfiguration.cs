@@ -9,7 +9,7 @@ public class SiteSettingConfiguration : IEntityTypeConfiguration<SiteSetting>
     public void Configure(EntityTypeBuilder<SiteSetting> builder)
     {
         builder.Property(s => s.Key).IsRequired().HasMaxLength(120);
-        builder.HasIndex(s => s.Key).IsUnique();
+        builder.HasIndex(s => s.Key).IsUnique().HasFilter(SoftDelete.Filter);
 
         builder.Property(s => s.Value).IsRequired().HasColumnType("text");
     }

@@ -9,7 +9,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.Property(u => u.Email).IsRequired().HasMaxLength(256);
-        builder.HasIndex(u => u.Email).IsUnique();
+        builder.HasIndex(u => u.Email).IsUnique().HasFilter(SoftDelete.Filter);
 
         builder.Property(u => u.DisplayName).IsRequired().HasMaxLength(120);
         builder.Property(u => u.PasswordHash).IsRequired();
