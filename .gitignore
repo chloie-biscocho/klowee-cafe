@@ -1,0 +1,26 @@
+# ---- .NET ----
+bin/
+obj/
+*.user
+.vs/
+
+# ---- JetBrains / Rider ----
+.idea/
+
+# ---- Node / frontend ----
+node_modules/
+dist/
+
+# ---- Environment & secrets (never commit) ----
+.env*
+appsettings.Development.json
+
+# ---- Claude Code personal/local settings ----
+.claude/settings.local.json
+
+# ---- Internal handover docs (not part of the public repo) ----
+docs/handovers/
+
+# ---- OS cruft ----
+.DS_Store
+Thumbs.db
