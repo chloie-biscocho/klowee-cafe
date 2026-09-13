@@ -9,8 +9,13 @@ namespace Klowee.Api.Services;
 public class MenuVersionService : IMenuVersionService
 {
     private readonly KloweeDbContext _db;
+    private readonly IClock _clock;
 
-    public MenuVersionService(KloweeDbContext db) => _db = db;
+    public MenuVersionService(KloweeDbContext db, IClock clock)
+    {
+        _db = db;
+        _clock = clock;
+    }
 
     public async Task<IReadOnlyList<MenuVersionSummaryDto>> ListAsync(
         MenuContext? context,
@@ -63,7 +68,10 @@ public class MenuVersionService : IMenuVersionService
         // sharing one effective date in one context is a data-entry mistake.
         // (created_at would read better, but SQLite - the test provider - cannot
         // ORDER BY a timestamptz.)
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        //
+        // "Today" is the date in Cagayan de Oro, not in UTC: a menu effective
+        // today must go live at local midnight, not eight hours later.
+        var today = _clock.Today;
 
         var id = await _db.MenuVersions
             .AsNoTracking()

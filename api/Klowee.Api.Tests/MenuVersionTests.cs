@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using Klowee.Api.Common;
 using Klowee.Api.Contracts.Menu;
 using Klowee.Api.Entities;
+using Klowee.Api.Services;
+using Microsoft.Extensions.Options;
 
 namespace Klowee.Api.Tests;
 
@@ -81,7 +84,10 @@ public class MenuVersionTests : IClassFixture<KloweeApiFactory>
     [Fact]
     public async Task GetCurrent_ReturnsNewestPublished_IgnoringDraftsAndFutureVersions()
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        // A fixed "today" from the fake clock, so this asserts the selection rule
+        // rather than whatever date the test machine happens to be on.
+        var today = new DateOnly(2026, 4, 10);
+        _factory.Clock.Today = today;
 
         await _factory.WithDbAsync(async db =>
         {
@@ -114,6 +120,49 @@ public class MenuVersionTests : IClassFixture<KloweeApiFactory>
         var item = Assert.Single(current.Items);
         Assert.Equal("Office Americano", item.Name);
         Assert.Equal(105m, item.Price);
+    }
+
+    /// <summary>
+    /// Cagayan de Oro is UTC+8, so between local midnight and 08:00 the UTC date
+    /// is still yesterday. A menu effective "today" has to be live for those
+    /// eight hours — that is the whole point of decision 006.
+    /// </summary>
+    [Fact]
+    public async Task GetCurrent_UsesTheBusinessTimeZone_WhenUtcIsStillOnYesterday()
+    {
+        // 2026-04-15 20:00 UTC is already 04:00 on 16 April in Manila.
+        var utcInstant = new DateTimeOffset(2026, 4, 15, 20, 0, 0, TimeSpan.Zero);
+        var clock = new SystemClock(
+            Options.Create(new AppOptions { TimeZone = "Asia/Manila" }),
+            new FixedTimeProvider(utcInstant));
+
+        Assert.Equal(new DateOnly(2026, 4, 15), DateOnly.FromDateTime(utcInstant.UtcDateTime));
+        Assert.Equal(new DateOnly(2026, 4, 16), clock.Today);
+
+        // Hand the app that same business date and ask for the live menu.
+        _factory.Clock.Today = clock.Today;
+
+        await _factory.WithDbAsync(async db =>
+        {
+            var category = new MenuCategory { Name = "Manila office drinks", SortOrder = 1 };
+            var item = new MenuItem { Name = "Manila Americano", Description = string.Empty, Category = category };
+
+            var effectiveToday = NewVersion("Manila office menu", new DateOnly(2026, 4, 16), isPublished: true);
+            effectiveToday.Items.Add(new MenuVersionItem { MenuItem = item, Price = 115m, SortOrder = 0 });
+
+            db.MenuVersions.Add(effectiveToday);
+            await db.SaveChangesAsync();
+            return true;
+        });
+
+        var client = await _factory.CreateAnonymousClientAsync();
+
+        var current = await client.GetFromJsonAsync<MenuVersionDetailDto>(
+            "/api/menu/versions/current?context=Office", KloweeApiFactory.Json);
+
+        Assert.NotNull(current);
+        Assert.Equal("Manila office menu", current!.Name);
+        Assert.Equal(new DateOnly(2026, 4, 16), current.EffectiveFrom);
     }
 
     private static MenuVersion NewVersion(string name, DateOnly effectiveFrom, bool isPublished) => new()

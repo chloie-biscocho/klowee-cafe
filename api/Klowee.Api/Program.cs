@@ -83,6 +83,13 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
+// "Today" is the date in the business's time zone, not UTC
+// (docs/decisions/006-business-timezone.md). Both are singletons: the zone is
+// resolved once, and TimeProvider.System is stateless.
+builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IClock, SystemClock>();
+
 // Standalone hasher from Microsoft.Extensions.Identity.Core: PBKDF2 with a
 // per-password random salt. Not the full ASP.NET Core Identity stack.
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();

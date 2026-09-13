@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Klowee.Api.Contracts.Auth;
 using Klowee.Api.Data;
 using Klowee.Api.Entities;
+using Klowee.Api.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -12,6 +13,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Klowee.Api.Tests;
 
@@ -40,6 +42,9 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
 
     private readonly SqliteConnection _connection;
     private readonly Lazy<Task> _initialized;
+
+    /// <summary>The date the app believes it is. Set it before acting in a test.</summary>
+    public FakeClock Clock { get; } = new();
 
     public KloweeApiFactory()
     {
@@ -71,6 +76,9 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
 
             services.AddDbContext<KloweeDbContext>(options =>
                 options.UseSqlite(_connection).UseSnakeCaseNamingConvention());
+
+            services.RemoveAll<IClock>();
+            services.AddSingleton<IClock>(Clock);
         });
     }
 
