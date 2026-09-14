@@ -13,6 +13,7 @@ dist/
 
 # ---- Environment & secrets (never commit) ----
 .env*
+!.env.example
 appsettings.Development.json
 
 # ---- Claude Code personal/local settings ----

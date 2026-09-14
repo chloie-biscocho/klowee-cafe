@@ -70,6 +70,61 @@ Errors leave in one shape everywhere: `ProblemDetails`. Validation failures are
 bad credentials 401 with a deliberately vague message, and business-rule
 violations 409.
 
+## The admin app
+
+`admin/` is a React 19 + TypeScript SPA built with Vite, routed by React Router
+v7 in library mode (`createBrowserRouter`, no route loaders). Redux Toolkit
+holds the store; RTK Query owns everything that came from the API.
+
+### How a screen gets its data
+
+```
+CategoriesPage                 useListCategoriesQuery()
+  component renders       ──►  generated RTK Query hook
+  { data, isLoading }     ◄──  cache entry, keyed by endpoint + arguments
+                                      │  (miss, or invalidated)
+                                      ▼
+                               baseQuery  ──►  fetch  ──►  GET /api/menu/categories
+                          adds Authorization,             ASP.NET Core
+                          handles 401
+```
+
+- The component never fetches. It calls a hook and renders whatever the hook
+  reports: skeleton rows while `isLoading`, the table once `data` arrives, the
+  API's message on `error`. **There is no `useEffect` for data anywhere in the
+  app.**
+- A cache entry is shared by every component asking for the same endpoint and
+  arguments, so two screens showing categories make one request.
+- Mutations (`useCreateCategoryMutation`, …) declare `invalidatesTags`. RTK
+  Query drops the matching cache entries and refetches the ones still on
+  screen — which is why a list refreshes after a create without a reload.
+- Errors are read out of the API's `ProblemDetails` by `lib/errors.ts` and shown
+  as a toast (`features/toasts/`), so a 409 from the API reads the same on every
+  screen.
+
+Folders: `app/` (store, router, typed hooks), `api/` (the one API slice),
+`features/` (auth, menu, toasts), `components/ui` and `components/layout`,
+`lib/`, `types/api.ts` — which mirrors `api/Klowee.Api/Contracts/` exactly.
+
+### How auth is attached
+
+```
+LoginPage  ──►  POST /api/auth/login  ──►  authSlice { token, user, expiresAt }
+                                                 │            │
+                        listener middleware  ◄───┘            └──►  every request:
+                        localStorage['klowee.admin.auth']            prepareHeaders adds
+                                                                     Authorization: Bearer …
+```
+
+- The token is added by `prepareHeaders` inside the base query, once, for every
+  endpoint. No call site handles a header.
+- Any 401 on a signed-in request clears the slice and raises a "session expired"
+  toast; `RequireAuth` — a layout route in front of everything except `/login` —
+  sees the empty token and redirects, remembering where the owner was heading.
+- The slice is mirrored to `localStorage` so a refresh keeps the session. The
+  XSS trade-off that comes with that is written down in
+  `docs/decisions/007-rtk-query-and-token-storage.md`.
+
 ## Hosting plan
 
 - **Database:** Supabase (managed PostgreSQL). One project per environment; the dev
