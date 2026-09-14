@@ -42,6 +42,10 @@ dotnet user-secrets set "Seed:Owners:0:Password"    "<owner password>"          
 dotnet user-secrets set "Seed:Owners:0:DisplayName" "<owner name>"                 --project Klowee.Api
 # ...repeat with Seed:Owners:1:* for the second co-owner.
 
+# Media uploads go to a public Supabase Storage bucket named "media":
+dotnet user-secrets set "Supabase:Url"            "https://<project-ref>.supabase.co" --project Klowee.Api
+dotnet user-secrets set "Supabase:ServiceRoleKey" "<service role key>"                --project Klowee.Api
+
 dotnet ef database update --project Klowee.Api    # Development also does this on startup
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project Klowee.Api --launch-profile http
 ```
@@ -57,6 +61,11 @@ for the expected shape. Non-secret settings such as `App:TimeZone`
 
 > If the API fails to start with `tenant/user … not found`, the Supabase dev
 > project is paused. Open it in the Supabase dashboard to resume it.
+
+The API refuses to start in Development without the Supabase storage settings.
+`Supabase:Url` is the **project** URL — the dashboard also shows the REST and
+Storage endpoints on the same page, and either of those pasted here is
+normalised back to the project root rather than failing oddly later.
 
 ### 2. Admin — http://localhost:5173
 

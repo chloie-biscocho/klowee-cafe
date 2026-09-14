@@ -46,6 +46,7 @@ public class MenuVersionService : IMenuVersionService
                 vi.Id,
                 vi.MenuItemId,
                 vi.MenuItem!.Name,
+                vi.MenuItem!.CategoryId,
                 vi.MenuItem!.Category!.Name,
                 vi.Price,
                 vi.IsAvailable,
@@ -58,19 +59,24 @@ public class MenuVersionService : IMenuVersionService
             version.IsPublished, version.Notes, items);
     }
 
-    public async Task<MenuVersionDetailDto> GetCurrentAsync(MenuContext context, CancellationToken cancellationToken)
+    /// <summary>
+    /// The "current menu" rule, in one place, so the admin endpoint and the
+    /// public home payload can never disagree about which version is live.
+    ///
+    /// "Current" = the published version for this context whose effective date
+    /// has already arrived, most recent first. Future-dated versions can be
+    /// prepared and published ahead of time without going live early.
+    ///
+    /// Id breaks a tie only so the answer is stable; two published versions
+    /// sharing one effective date in one context is a data-entry mistake.
+    /// (created_at would read better, but SQLite - the test provider - cannot
+    /// ORDER BY a timestamptz.)
+    ///
+    /// "Today" is the date in Cagayan de Oro, not in UTC: a menu effective today
+    /// must go live at local midnight, not eight hours later.
+    /// </summary>
+    public async Task<Guid?> FindCurrentIdAsync(MenuContext context, CancellationToken cancellationToken)
     {
-        // "Current" = the published version for this context whose effective date
-        // has already arrived, most recent first. Future-dated versions can be
-        // prepared and published ahead of time without going live early.
-        //
-        // Id breaks a tie only so the answer is stable; two published versions
-        // sharing one effective date in one context is a data-entry mistake.
-        // (created_at would read better, but SQLite - the test provider - cannot
-        // ORDER BY a timestamptz.)
-        //
-        // "Today" is the date in Cagayan de Oro, not in UTC: a menu effective
-        // today must go live at local midnight, not eight hours later.
         var today = _clock.Today;
 
         var id = await _db.MenuVersions
@@ -81,10 +87,14 @@ public class MenuVersionService : IMenuVersionService
             .Select(v => v.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (id == Guid.Empty)
-        {
-            throw new NotFoundException($"No published {context} menu is effective as of {today:yyyy-MM-dd}.");
-        }
+        return id == Guid.Empty ? null : id;
+    }
+
+    public async Task<MenuVersionDetailDto> GetCurrentAsync(MenuContext context, CancellationToken cancellationToken)
+    {
+        var id = await FindCurrentIdAsync(context, cancellationToken)
+            ?? throw new NotFoundException(
+                $"No published {context} menu is effective as of {_clock.Today:yyyy-MM-dd}.");
 
         return await GetAsync(id, cancellationToken);
     }
@@ -150,6 +160,12 @@ public class MenuVersionService : IMenuVersionService
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <summary>
+    /// Idempotent: publishing an already-published version, or unpublishing a
+    /// draft, is a 200 with the version unchanged. A PATCH that states a desired
+    /// state should not care how many times it is sent — a double-click in the
+    /// admin app is not an error.
+    /// </summary>
     public async Task<MenuVersionDetailDto> SetPublishedAsync(
         Guid id,
         bool isPublished,

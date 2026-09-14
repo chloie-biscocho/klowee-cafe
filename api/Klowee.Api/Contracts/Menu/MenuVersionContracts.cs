@@ -18,6 +18,7 @@ public record MenuVersionItemDto(
     Guid Id,
     Guid MenuItemId,
     string Name,
+    Guid CategoryId,
     string CategoryName,
     decimal Price,
     bool IsAvailable,

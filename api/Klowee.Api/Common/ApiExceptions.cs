@@ -60,3 +60,15 @@ public class ValidationFailedException : ApiException
     {
     }
 }
+
+/// <summary>
+/// 502 — object storage refused or was unreachable. The underlying message is
+/// logged, not returned: it can carry bucket names and keys.
+/// </summary>
+public class StorageException : ApiException
+{
+    public StorageException(string message)
+        : base(StatusCodes.Status502BadGateway, "Storage unavailable", message)
+    {
+    }
+}

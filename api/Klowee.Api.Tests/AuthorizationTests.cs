@@ -13,6 +13,10 @@ public class AuthorizationTests : IClassFixture<KloweeApiFactory>
     [InlineData("/api/menu/items")]
     [InlineData("/api/menu/add-ons")]
     [InlineData("/api/menu/versions")]
+    [InlineData("/api/packages")]
+    [InlineData("/api/events")]
+    [InlineData("/api/announcements")]
+    [InlineData("/api/settings")]
     public async Task MenuEndpoints_WithoutToken_Return401(string path)
     {
         var client = await _factory.CreateAnonymousClientAsync();
@@ -32,10 +36,11 @@ public class AuthorizationTests : IClassFixture<KloweeApiFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    /// <summary>The two endpoints that opt out of the fallback policy.</summary>
+    /// <summary>The endpoints that opt out of the fallback policy.</summary>
     [Theory]
     [InlineData("/api/health")]
     [InlineData("/api/menu/versions/current?context=PopUp")]
+    [InlineData("/api/public/home")]
     public async Task PublicEndpoints_WithoutToken_AreNotRejected(string path)
     {
         var client = await _factory.CreateAnonymousClientAsync();

@@ -16,9 +16,15 @@ var builder = WebApplication.CreateBuilder(args);
 // ---- Services ----
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
+    {
         // Enums travel as strings ("PopUp"), not ordinals, so the contract stays
         // readable and stable if the enum is ever reordered.
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+        // An empty or whitespace-only string on the way in means "not set"
+        // (docs/decisions/008-empty-strings-are-null.md).
+        options.JsonSerializerOptions.Converters.Add(new EmptyStringToNullConverter());
+    });
 
 // EF Core + PostgreSQL (Supabase). The connection string comes from configuration:
 //   * local dev  -> dotnet user-secrets ("ConnectionStrings:Default")
@@ -101,6 +107,43 @@ builder.Services.AddScoped<IMenuCategoryService, MenuCategoryService>();
 builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 builder.Services.AddScoped<IAddOnService, AddOnService>();
 builder.Services.AddScoped<IMenuVersionService, MenuVersionService>();
+builder.Services.AddScoped<IPackageService, PackageService>();
+builder.Services.AddScoped<IEventService, EventService>();
+builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
+builder.Services.AddScoped<ISiteSettingService, SiteSettingService>();
+builder.Services.AddScoped<IPublicHomeService, PublicHomeService>();
+
+// ---- Media storage ----
+// Supabase Storage over its REST API (docs/decisions/009-media-storage.md).
+// The service role key is a secret: it lives in user-secrets locally and an
+// environment variable in production, and never leaves this process.
+builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection(SupabaseOptions.SectionName));
+
+var supabaseOptions = builder.Configuration
+    .GetSection(SupabaseOptions.SectionName).Get<SupabaseOptions>() ?? new SupabaseOptions();
+
+if (builder.Environment.IsDevelopment()
+    && (string.IsNullOrWhiteSpace(supabaseOptions.Url)
+        || string.IsNullOrWhiteSpace(supabaseOptions.ServiceRoleKey)))
+{
+    throw new InvalidOperationException(
+        "Supabase:Url and Supabase:ServiceRoleKey are not configured. Set them with: " +
+        "dotnet user-secrets set \"Supabase:Url\" \"https://<project>.supabase.co\" and " +
+        "dotnet user-secrets set \"Supabase:ServiceRoleKey\" \"<service role key>\".");
+}
+
+builder.Services.AddHttpClient(SupabaseStorageService.HttpClientName, client =>
+{
+    if (!string.IsNullOrWhiteSpace(supabaseOptions.ProjectUrl))
+    {
+        client.BaseAddress = new Uri(supabaseOptions.ProjectUrl + "/");
+    }
+
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+builder.Services.AddScoped<IStorageService, SupabaseStorageService>();
+builder.Services.AddScoped<IUploadService, UploadService>();
 
 // ---- Errors ----
 // Every failure leaves as ProblemDetails: validation 400s from [ApiController],

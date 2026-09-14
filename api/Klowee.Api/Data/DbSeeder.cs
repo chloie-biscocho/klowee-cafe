@@ -33,6 +33,8 @@ public static class DbSeeder
         await SeedSiteSettingsAsync(db);
         await SeedSampleMenuVersionAsync(db);
         await MoveStrawberryMilkToMilkDrinksAsync(db);
+        await SeedPackagesAsync(db);
+        await SeedPastEventsAsync(db);
     }
 
     /// <summary>
@@ -139,26 +141,37 @@ public static class DbSeeder
         }
     }
 
+    /// <summary>
+    /// Inserts any missing setting key, and never overwrites a value the owners
+    /// have edited. Written as an upsert rather than an all-or-nothing insert so
+    /// that a key added later (the two image URLs) reaches a database that was
+    /// already seeded.
+    /// </summary>
     private static async Task SeedSiteSettingsAsync(KloweeDbContext db)
     {
-        if (await db.SiteSettings.AnyAsync())
-        {
-            return;
-        }
-
         var settings = new (string Key, string Value)[]
         {
             ("hero_heading", "smol pop-up cafe, big on matcha."),
             ("hero_body", "Handcrafted coffee, matcha, and fruit sodas — rolling into your events around Cagayan de Oro."),
+            ("hero_image_url", string.Empty),
             ("story_heading", "Our story"),
             ("story_body", "Klowee Cafe started as a two-friend passion project: a little cart, good beans, and a lot of matcha. We pop up at offices and events across Cagayan de Oro."),
+            ("story_image_url", string.Empty),
             ("ticker_fallback", "Now booking pop-ups around Cagayan de Oro — say hi!"),
             ("instagram_url", "https://instagram.com/kloweecafe"),
             ("facebook_url", "https://facebook.com/kloweecafe"),
             ("contact_email", "hello@kloweecafe.com"),
         };
 
-        db.SiteSettings.AddRange(settings.Select(s => new SiteSetting { Key = s.Key, Value = s.Value }));
+        var existing = await db.SiteSettings.Select(s => s.Key).ToListAsync();
+        var missing = settings.Where(s => !existing.Contains(s.Key)).ToList();
+
+        if (missing.Count == 0)
+        {
+            return;
+        }
+
+        db.SiteSettings.AddRange(missing.Select(s => new SiteSetting { Key = s.Key, Value = s.Value }));
         await db.SaveChangesAsync();
     }
 
@@ -245,6 +258,96 @@ public static class DbSeeder
         }
 
         strawberryMilk.CategoryId = milkDrinks.Id;
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// The three booking packages from the owners' Instagram post. Seeded so the
+    /// public site has something real to render; the owners edit the wording and
+    /// the inclusions from the admin app.
+    /// </summary>
+    private static async Task SeedPackagesAsync(KloweeDbContext db)
+    {
+        if (await db.Packages.AnyAsync())
+        {
+            return;
+        }
+
+        var packages = new (string Name, decimal Price, string GuestNote, int SortOrder, string[] Inclusions)[]
+        {
+            ("Starter", 7500m, "good for 50 pax", 1,
+                ["Good for 50 pax", "Choose from 4 drinks", "3 hours of service", "2 baristas"]),
+            ("Regular", 10500m, "good for 75 pax", 2,
+                ["Good for 75 pax", "Choose from 6 drinks", "3 hours of service", "2 baristas"]),
+            ("Premium", 14500m, "good for 100 pax", 3,
+                ["Good for 100 pax", "Choose from the full menu", "4 hours of service", "2 baristas"]),
+        };
+
+        foreach (var (name, price, guestNote, sortOrder, inclusions) in packages)
+        {
+            var package = new Package
+            {
+                Name = name,
+                Price = price,
+                Description = string.Empty,
+                GuestCountNote = guestNote,
+                IsActive = true,
+                SortOrder = sortOrder
+            };
+
+            var inclusionSort = 0;
+            foreach (var text in inclusions)
+            {
+                package.Inclusions.Add(new PackageInclusion { Text = text, SortOrder = inclusionSort++ });
+            }
+
+            db.Packages.Add(package);
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// The pop-ups Klowee has already run, as Done and unpublished: real history
+    /// for the events screen, but nothing reaches the public site until an owner
+    /// reviews each one and publishes it.
+    /// </summary>
+    private static async Task SeedPastEventsAsync(KloweeDbContext db)
+    {
+        if (await db.Events.AnyAsync())
+        {
+            return;
+        }
+
+        var events = new (string Name, string Venue, string? Address, DateOnly StartsOn, DateOnly EndsOn)[]
+        {
+            ("First pop-up", "Quijano Building parking", "Nazareth, Cagayan de Oro",
+                new DateOnly(2025, 9, 20), new DateOnly(2025, 9, 20)),
+            ("Corner Space", "Corner Space", null,
+                new DateOnly(2026, 2, 25), new DateOnly(2026, 2, 26)),
+            ("Sip & Bloom Mother's Day pop-up", "Quijano Building parking", null,
+                new DateOnly(2026, 5, 9), new DateOnly(2026, 5, 9)),
+            ("Scout Market Uptown", "OG Bistro parking lot", "Pueblo Business Park, Cagayan de Oro",
+                new DateOnly(2026, 5, 21), new DateOnly(2026, 5, 24)),
+            ("Scout Market Downtown", "Rosario Arcade", null,
+                new DateOnly(2026, 6, 5), new DateOnly(2026, 6, 7)),
+            ("Pop Up Babe", "Sev's Diner", null,
+                new DateOnly(2026, 6, 12), new DateOnly(2026, 6, 13)),
+            ("Scout Market Ketkai", "Ketkai", null,
+                new DateOnly(2026, 7, 22), new DateOnly(2026, 7, 26)),
+        };
+
+        db.Events.AddRange(events.Select(e => new Event
+        {
+            Name = e.Name,
+            Venue = e.Venue,
+            Address = e.Address,
+            StartsOn = e.StartsOn,
+            EndsOn = e.EndsOn,
+            Status = EventStatus.Done,
+            IsPublished = false
+        }));
+
         await db.SaveChangesAsync();
     }
 }

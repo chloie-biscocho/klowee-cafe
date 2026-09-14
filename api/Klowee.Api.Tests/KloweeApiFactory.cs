@@ -46,6 +46,9 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
     /// <summary>The date the app believes it is. Set it before acting in a test.</summary>
     public FakeClock Clock { get; } = new();
 
+    /// <summary>Object storage, in memory. Inspect it to see what an upload stored.</summary>
+    public FakeStorageService Storage { get; } = new();
+
     public KloweeApiFactory()
     {
         // Program.cs reads configuration eagerly, before WebApplicationFactory can
@@ -55,6 +58,11 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
             "ConnectionStrings__Default",
             "Host=unused;Database=unused;Username=unused;Password=unused");
         Environment.SetEnvironmentVariable("Jwt__Key", TestJwtKey);
+
+        // Storage is faked below, but Program.cs checks these are present before
+        // the test services are swapped in.
+        Environment.SetEnvironmentVariable("Supabase__Url", "https://fake.supabase.test");
+        Environment.SetEnvironmentVariable("Supabase__ServiceRoleKey", "test-service-role-key");
         Environment.SetEnvironmentVariable("Jwt__Issuer", "klowee-cafe");
         Environment.SetEnvironmentVariable("Jwt__Audience", "klowee-cafe");
 
@@ -79,6 +87,9 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IClock>();
             services.AddSingleton<IClock>(Clock);
+
+            services.RemoveAll<IStorageService>();
+            services.AddSingleton<IStorageService>(Storage);
         });
     }
 
