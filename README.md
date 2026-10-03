@@ -90,13 +90,30 @@ allows exactly that origin.
 
 ### 3. Client — http://localhost:5174
 
+The public one-page site. It needs only the API, and only its anonymous
+`GET /api/public/home`; no sign-in, no secrets.
+
 ```bash
 cd client
 npm install
+cp .env.example .env      # VITE_API_URL=http://localhost:5181
 npm run dev
 ```
 
-Still the untouched Vite scaffold.
+The port is pinned to 5174, the client origin in the API's development CORS
+policy. Everything on the page is edited in the admin app; the API sends
+`Cache-Control: max-age=60`, so a change can take up to a minute to show.
+
+| Command | What it does |
+| ------- | ------------ |
+| `npm run dev` | Vite dev server on 5174 |
+| `npm run build` | Type-check then production build into `dist/` |
+| `npm run preview` | Serve `dist/` on 5174, for Lighthouse |
+| `npm test` | Vitest + React Testing Library + MSW, once |
+| `npm run lint` | oxlint |
+
+To use the real logo lettering, drop it in as `client/public/logo.svg`; the
+wordmark switches to it with no code change.
 
 ## Repository conventions
 

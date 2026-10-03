@@ -10,8 +10,8 @@ Klowee Cafe is a monorepo with three deployable apps plus a shared PostgreSQL da
 - **`admin/` — React + Vite + TypeScript + Redux Toolkit.** A private dashboard the
   two co-owners use to manage the menu, packages, events, announcements and site
   settings. Redux Toolkit holds client state and cached server data.
-- **`client/` — React + Vite + TypeScript.** The public marketing site. Read-mostly:
-  shows the current menu, packages, upcoming events and announcements.
+- **`client/` — React + Vite + TypeScript + Tailwind.** The public one-page site.
+  Read-only: one anonymous request to `GET /api/public/home`, no router, no store.
 
 ## How they talk
 
@@ -211,6 +211,36 @@ and expired announcements are all filtered here. `IMenuVersionService
 .FindCurrentIdAsync` and `IClock` are still the single source of "which version
 is live" and "what day is it in Manila", so the public site and the admin app
 cannot disagree.
+
+## The client site
+
+`client/` is the public page: React 19, TypeScript strict, Vite, Tailwind v4,
+nothing else at runtime. The visual spec is `docs/design-brief.md`.
+
+```
+main.tsx ─► App ─► useHomeData()  ──►  fetch GET /api/public/home   (one request, anonymous)
+                     { status: loading | error | ready, data, retry }
+                │
+                ├─ loading ─► LoadingState   (paper hero skeleton, three blocks)
+                ├─ error   ─► ErrorState     (retry → the effect runs again)
+                └─ ready   ─► StickerBar · Nav · Hero · Story · Menu ·
+                              Packages · Popups · Book · Footer
+                              (each a file in src/sections/, each given the payload)
+```
+
+- **No router, no store.** Navigation is `#anchor` links to sections; the payload
+  is fetched once in `App` and passed down as a prop. Decision 011 covers why
+  this differs from the admin app.
+- **Every section renders from missing data.** A null setting, a null menu or an
+  empty list produces a placeholder or an empty state (`Placeholder`,
+  `TentSketch`), never an error; Packages disappears entirely, with its nav link.
+- **Design tokens live in `src/index.css`'s `@theme`**, with Tailwind's default
+  palette switched off, so a class like `bg-red-500` simply does not exist and
+  no hex appears in a component.
+- **The wordmark probes for `public/logo.svg`** once per page load and falls back
+  to the Fuzzy Bubbles lettering, so the real logo is a file drop, not a change.
+- **The browser caches the payload** for up to 60 seconds (the API's
+  `Cache-Control`); there is no client-side cache beyond that.
 
 ## Hosting plan
 
