@@ -1,4 +1,4 @@
-import { baseApi } from './baseApi'
+import { baseApi, TAG_TYPES } from './baseApi'
 import type { LoginRequest, LoginResponse, UserDto } from '../types/api'
 
 export const authApi = baseApi.injectEndpoints({
@@ -7,7 +7,7 @@ export const authApi = baseApi.injectEndpoints({
       query: (credentials) => ({ url: '/auth/login', method: 'POST', body: credentials }),
       // Logging in makes every cached list stale: it was fetched, if at all,
       // as somebody else or as nobody.
-      invalidatesTags: ['Me', 'Category', 'Item', 'AddOn', 'Version', 'VersionDetail'],
+      invalidatesTags: [...TAG_TYPES],
     }),
 
     /**

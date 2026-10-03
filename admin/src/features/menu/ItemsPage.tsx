@@ -25,7 +25,7 @@ function toRequest(values: ItemValues) {
     name: values.name,
     description: values.description === '' ? null : values.description,
     categoryId: values.categoryId,
-    photoUrl: values.photoUrl === '' ? null : values.photoUrl,
+    photoUrl: values.photoUrl,
   }
 }
 

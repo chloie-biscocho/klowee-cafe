@@ -35,6 +35,30 @@ export function formatDate(isoDate: string): string {
   return dateFormat.format(new Date(Date.UTC(year, month - 1, day)))
 }
 
+const monthDay = new Intl.DateTimeFormat('en-PH', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+
+/**
+ * An event's dates the way a poster writes them: "May 21 to 24, 2026", or
+ * "May 30 to Jun 2, 2026" across a month, with the year repeated only when it
+ * changes. A one-day event shows its date once.
+ */
+export function formatDateRange(startsOn: string, endsOn: string): string {
+  if (startsOn === endsOn) return formatDate(startsOn)
+
+  const [startYear, startMonth] = startsOn.split('-')
+  const [endYear, endMonth, endDay] = endsOn.split('-')
+  if (!startYear || !endYear || !endDay) return `${startsOn} to ${endsOn}`
+
+  if (startYear !== endYear) return `${formatDate(startsOn)} to ${formatDate(endsOn)}`
+
+  const start = monthDay.format(new Date(`${startsOn}T00:00:00Z`))
+  const end =
+    startMonth === endMonth
+      ? String(Number(endDay))
+      : monthDay.format(new Date(`${endsOn}T00:00:00Z`))
+  return `${start} to ${end}, ${startYear}`
+}
+
 /** Today as the API writes dates, for form defaults. */
 export function todayIsoDate(): string {
   const now = new Date()

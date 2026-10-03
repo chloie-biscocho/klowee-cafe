@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { Button } from '../../components/ui/Button'
+import { ImageUpload } from '../../components/ui/ImageUpload'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Select } from '../../components/ui/Select'
@@ -24,13 +25,13 @@ export function ItemForm({
   onClose: () => void
   onSubmit: (values: ItemValues) => void
 }) {
-  const { register, handleSubmit, formState } = useForm<ItemValues>({
+  const { register, handleSubmit, control, formState } = useForm<ItemValues>({
     resolver: zodResolver(itemSchema),
     defaultValues: {
       name: item?.name ?? '',
       description: item?.description ?? '',
       categoryId: item?.categoryId ?? (categories[0]?.id ?? ''),
-      photoUrl: item?.photoUrl ?? '',
+      photoUrl: item?.photoUrl ?? null,
     },
   })
 
@@ -69,12 +70,12 @@ export function ItemForm({
             </option>
           ))}
         </Select>
-        <Input
-          label="Photo URL"
-          placeholder="https://…"
-          hint="A link for now. Uploading comes later."
-          error={formState.errors.photoUrl?.message}
-          {...register('photoUrl')}
+        <Controller
+          control={control}
+          name="photoUrl"
+          render={({ field }) => (
+            <ImageUpload label="Photo" folder="menu" value={field.value} onChange={field.onChange} />
+          )}
         />
       </div>
     </Modal>

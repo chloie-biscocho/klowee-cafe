@@ -21,8 +21,8 @@ export const itemSchema = z.object({
   name: requiredText('Name', 120),
   description: z.string().trim().max(1000, 'Description is too long.'),
   categoryId: z.uuid('Pick a category.'),
-  // The API validates this with [Url], so an empty box has to mean "no photo".
-  photoUrl: z.union([z.literal(''), z.url('Enter a full URL, including https://')]),
+  /** Set by `ImageUpload` to the URL the API returned; `null` means no photo. */
+  photoUrl: z.url().nullable(),
 })
 export type ItemValues = z.infer<typeof itemSchema>
 

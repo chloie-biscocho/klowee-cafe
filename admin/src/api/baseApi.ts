@@ -49,17 +49,42 @@ const baseQueryWithAuth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQuery
   return result
 }
 
+/** Every tag any endpoint provides or invalidates. */
+export const TAG_TYPES = [
+  'Me',
+  'Category',
+  'Item',
+  'AddOn',
+  'Version',
+  'VersionDetail',
+  'Package',
+  'Event',
+  'EventDetail',
+  'Announcement',
+  'Setting',
+] as const
+
+type TagType = (typeof TAG_TYPES)[number]
+
 /**
  * The single API slice. Feature endpoints are added with `injectEndpoints` in
- * `authApi.ts` and `menuApi.ts` so the cache, the tags and the base query stay
+ * `authApi.ts`, `menuApi.ts` and one file per site domain, so the cache, the tags and the base query stay
  * shared — one cache for the whole app, not one per feature.
  */
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithAuth,
-  tagTypes: ['Me', 'Category', 'Item', 'AddOn', 'Version', 'VersionDetail'],
+  tagTypes: [...TAG_TYPES],
   endpoints: () => ({}),
 })
 
 /** The id every list query provides, so a create can invalidate "the list". */
 export const LIST_ID = 'LIST' as const
+
+/** `[{ type, id: LIST }, ...one tag per row]` — the standard RTK Query list shape. */
+export function listTags<T extends { id: string }>(type: TagType, rows: T[] | undefined) {
+  return [
+    { type, id: LIST_ID } as const,
+    ...(rows ?? []).map((row) => ({ type, id: row.id }) as const),
+  ]
+}

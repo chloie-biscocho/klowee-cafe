@@ -144,6 +144,162 @@ export interface MenuVersionItemRequest {
   sortOrder: number
 }
 
+// ---- Uploads ----
+
+export type UploadFolder = 'menu' | 'events' | 'site'
+
+export interface UploadResultDto {
+  /** Public URL, safe to store on an entity and render on the site. */
+  url: string
+  path: string
+  contentType: string
+  size: number
+}
+
+// ---- Packages ----
+
+export interface PackageInclusionDto {
+  id: string
+  text: string
+  sortOrder: number
+}
+
+export interface PackageDto {
+  id: string
+  name: string
+  price: number
+  description: string
+  guestCountNote: string
+  isActive: boolean
+  sortOrder: number
+  inclusions: PackageInclusionDto[]
+}
+
+export interface PackageInclusionRequest {
+  text: string
+  sortOrder: number
+}
+
+/** The whole package; a PUT replaces the inclusion list in full. */
+export interface PackageRequest {
+  name: string
+  price: number
+  description: string | null
+  guestCountNote: string | null
+  isActive: boolean
+  sortOrder: number
+  inclusions: PackageInclusionRequest[]
+}
+
+// ---- Events ----
+
+export const EVENT_STATUSES = ['Planned', 'Upcoming', 'Done', 'Cancelled'] as const
+
+export type EventStatus = (typeof EVENT_STATUSES)[number]
+
+export interface EventSummaryDto {
+  id: string
+  name: string
+  venue: string
+  startsOn: string
+  endsOn: string
+  status: EventStatus
+  isPublished: boolean
+  coverPhotoUrl: string | null
+  photoCount: number
+}
+
+export interface EventPhotoDto {
+  id: string
+  url: string
+  caption: string | null
+  sortOrder: number
+}
+
+export interface EventDetailDto {
+  id: string
+  name: string
+  venue: string
+  address: string | null
+  startsOn: string
+  endsOn: string
+  description: string | null
+  coverPhotoUrl: string | null
+  status: EventStatus
+  isPublished: boolean
+  photos: EventPhotoDto[]
+}
+
+export interface EventRequest {
+  name: string
+  venue: string
+  address: string | null
+  startsOn: string
+  endsOn: string
+  description: string | null
+  coverPhotoUrl: string | null
+  status: EventStatus
+}
+
+export interface EventPhotoRequest {
+  url: string
+  caption: string | null
+  sortOrder: number
+}
+
+// ---- Announcements ----
+
+export interface AnnouncementDto {
+  id: string
+  text: string
+  linkUrl: string | null
+  /** ISO instant. The API stores UTC; see `lib/dates.ts` for Manila display. */
+  activeFrom: string
+  /** `null` means open-ended. */
+  activeUntil: string | null
+  isActive: boolean
+}
+
+export interface AnnouncementRequest {
+  text: string
+  linkUrl: string | null
+  /** ISO instant with an offset, e.g. "2026-05-21T20:00:00+08:00". */
+  activeFrom: string
+  activeUntil: string | null
+  isActive: boolean
+}
+
+// ---- Site settings ----
+
+/**
+ * The closed key list from `SiteSettingService.KnownKeys`. The API answers 400
+ * to anything else, so a typo here is a compile error rather than a dead row.
+ */
+export const SETTING_KEYS = [
+  'hero_heading',
+  'hero_body',
+  'hero_image_url',
+  'story_heading',
+  'story_body',
+  'story_image_url',
+  'ticker_fallback',
+  'instagram_url',
+  'facebook_url',
+  'contact_email',
+] as const
+
+export type SettingKey = (typeof SETTING_KEYS)[number]
+
+export interface SiteSettingDto {
+  key: string
+  value: string
+}
+
+export interface SiteSettingRequest {
+  key: SettingKey
+  value: string | null
+}
+
 // ---- Errors ----
 
 /** RFC 7807, the single error shape the API returns (see decision 005). */

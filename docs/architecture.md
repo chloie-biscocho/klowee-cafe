@@ -102,8 +102,9 @@ CategoriesPage                 useListCategoriesQuery()
   as a toast (`features/toasts/`), so a 409 from the API reads the same on every
   screen.
 
-Folders: `app/` (store, router, typed hooks), `api/` (the one API slice),
-`features/` (auth, menu, toasts), `components/ui` and `components/layout`,
+Folders: `app/` (store, router, typed hooks), `api/` (the one API slice plus
+one `injectEndpoints` file per domain), `features/` (auth, menu, packages,
+events, announcements, settings, toasts), `components/ui` and `components/layout`,
 `lib/`, `types/api.ts` — which mirrors `api/Klowee.Api/Contracts/` exactly.
 
 ### How auth is attached
@@ -124,6 +125,36 @@ LoginPage  ──►  POST /api/auth/login  ──►  authSlice { token, user, 
 - The slice is mirrored to `localStorage` so a refresh keeps the session. The
   XSS trade-off that comes with that is written down in
   `docs/decisions/007-rtk-query-and-token-storage.md`.
+
+### Uploading from the admin app
+
+```
+ImageUpload (components/ui)                       uploadsApi.uploadImage
+  click → hidden <input type=file>                  FormData { file }
+  or drop → dataTransfer.files[0]          ──►      POST /api/uploads?folder=…
+        │                                           (browser sets the multipart
+  precheck: JPEG/PNG/WebP, ≤ 5 MB                    boundary header itself)
+  (courtesy only; inline message)                          │
+        │                                                  ▼
+  spinner over the drop zone            ◄──  { url, … }  or ProblemDetails 400
+        │
+  onChange(url) ──► the form field (react-hook-form Controller)
+        │
+  saved with the entity: item photoUrl, event coverPhotoUrl,
+  event photo list, hero/story *_image_url settings
+```
+
+- `ImageUpload` takes `value`, `onChange`, `folder` and `label`, so every image
+  field in the app is the same component. It never touches the entity: the
+  upload only produces a URL, and the form's normal save stores it.
+- A failed upload shows the API's message under the drop zone and leaves the
+  previous value alone. **Remove** only clears the field (`onChange(null)`); the
+  object stays in the bucket — the orphan gap in decision 009.
+- The event detail page's "Add photo" is an `ImageUpload` whose value is always
+  empty: each upload appends to the unsaved photo list, which `Save photos`
+  sends in full to `PUT /api/events/{id}/photos`.
+- Times on the announcements screen cross a time zone on the way in and out;
+  that conversion lives in `lib/dates.ts` (decision 010).
 
 ## Media uploads
 

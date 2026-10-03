@@ -1,6 +1,17 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import { API, draftVersion, draftVersionDetail, menuItems, owner, publishedVersion } from './fixtures'
+import {
+  API,
+  corporatePackage,
+  draftVersion,
+  draftVersionDetail,
+  eventSummary,
+  menuItems,
+  owner,
+  publishedVersion,
+  siteSettings,
+  upcomingEvent,
+} from './fixtures'
 
 /**
  * The happy path for every endpoint a screen touches on load. A test that cares
@@ -13,6 +24,11 @@ export const handlers = [
   http.get(`${API}/menu/items`, () => HttpResponse.json(menuItems)),
   http.get(`${API}/menu/versions`, () => HttpResponse.json([draftVersion, publishedVersion])),
   http.get(`${API}/menu/versions/:id`, () => HttpResponse.json(draftVersionDetail)),
+  http.get(`${API}/packages`, () => HttpResponse.json([corporatePackage])),
+  http.get(`${API}/events`, () => HttpResponse.json([eventSummary(upcomingEvent)])),
+  http.get(`${API}/events/:id`, () => HttpResponse.json(upcomingEvent)),
+  http.get(`${API}/announcements`, () => HttpResponse.json([])),
+  http.get(`${API}/settings`, () => HttpResponse.json(siteSettings)),
 ]
 
 export const server = setupServer(...handlers)

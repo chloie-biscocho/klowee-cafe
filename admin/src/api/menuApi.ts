@@ -1,4 +1,4 @@
-import { baseApi, LIST_ID } from './baseApi'
+import { baseApi, LIST_ID, listTags } from './baseApi'
 import type {
   AddOnDto,
   AddOnRequest,
@@ -13,17 +13,6 @@ import type {
   MenuVersionSummaryDto,
   UpdateMenuVersionRequest,
 } from '../types/api'
-
-/** `[{ type, id: LIST }, ...one tag per row]` — the standard RTK Query list shape. */
-function listTags<T extends { id: string }>(
-  type: 'Category' | 'Item' | 'AddOn' | 'Version',
-  rows: T[] | undefined,
-) {
-  return [
-    { type, id: LIST_ID } as const,
-    ...(rows ?? []).map((row) => ({ type, id: row.id }) as const),
-  ]
-}
 
 export const menuApi = baseApi.injectEndpoints({
   endpoints: (build) => ({

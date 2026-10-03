@@ -1,7 +1,6 @@
 /**
- * A 40px square for the item photo. Uploading is not built yet, so an item
- * usually has no URL; the placeholder keeps the column from collapsing and
- * makes "no photo" obvious at a glance.
+ * A 40px square for the item photo. Many items have none yet; the placeholder
+ * keeps the column from collapsing and makes "no photo" obvious at a glance.
  */
 export function PhotoThumbnail({ url, name }: { url: string | null; name: string }) {
   if (!url) {

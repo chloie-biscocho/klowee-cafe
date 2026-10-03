@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useBlocker, useParams } from 'react-router'
+import { Navigate, useParams } from 'react-router'
 import {
   useGetVersionQuery,
   useListItemsQuery,
@@ -8,9 +8,9 @@ import {
 } from '../../api/menuApi'
 import { Button } from '../../components/ui/Button'
 import { Card, CardHeader } from '../../components/ui/Card'
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Spinner } from '../../components/ui/Spinner'
+import { UnsavedChangesPrompt } from '../../components/ui/UnsavedChangesPrompt'
 import { useToastedAction } from '../../features/toasts/useToastedAction'
 import { AddItemPicker } from './AddItemPicker'
 import { CopyVersionModal } from './CopyVersionModal'
@@ -55,12 +55,6 @@ function VersionEditor({ versionId }: { versionId: string }) {
   const items = draft ?? toEditorItems(version?.items ?? [])
   const isDirty = draft !== null
   const readOnly = version?.isPublished ?? true
-
-  // Stops a half-finished price list from vanishing on a stray click in the nav.
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      isDirty && currentLocation.pathname !== nextLocation.pathname,
-  )
 
   if (isLoading) {
     return <Spinner className="size-6 text-muted" />
@@ -160,13 +154,10 @@ function VersionEditor({ versionId }: { versionId: string }) {
         <CopyVersionModal version={version} onClose={() => setCopyOpen(false)} />
       )}
 
-      <ConfirmDialog
-        open={blocker.state === 'blocked'}
-        title="Leave without saving?"
+      {/* Stops a half-finished price list from vanishing on a stray click in the nav. */}
+      <UnsavedChangesPrompt
+        when={isDirty}
         message="This version has unsaved price or availability changes. They will be lost."
-        confirmLabel="Leave"
-        onCancel={() => blocker.reset?.()}
-        onConfirm={() => blocker.proceed?.()}
       />
     </>
   )
