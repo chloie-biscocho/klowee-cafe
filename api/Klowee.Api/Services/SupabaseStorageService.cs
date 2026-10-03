@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text.Json;
 using Klowee.Api.Common;
 using Microsoft.Extensions.Options;
 
@@ -70,12 +71,54 @@ public class SupabaseStorageService : IStorageService
         using var response = await _http.SendAsync(request, cancellationToken);
 
         // Deleting something that is already gone is a success, not a problem.
-        if (response.StatusCode == HttpStatusCode.NotFound)
+        if (await IsAlreadyGoneAsync(response, cancellationToken))
         {
             return;
         }
 
         await EnsureSucceededAsync(response, "delete", path, cancellationToken);
+    }
+
+    /// <summary>
+    /// Supabase has answered a missing object two ways: a plain HTTP 404, and
+    /// (since late 2026) an HTTP 400 whose body says
+    /// <c>{"statusCode":"404","code":"NoSuchKey"}</c>. Both mean the same thing.
+    /// Any other 400 is a real failure and must still surface.
+    /// </summary>
+    private static async Task<bool> IsAlreadyGoneAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return true;
+        }
+
+        if (response.StatusCode != HttpStatusCode.BadRequest)
+        {
+            return false;
+        }
+
+        // Buffered, so EnsureSucceededAsync can still read the body for the log.
+        await response.Content.LoadIntoBufferAsync(cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            var root = document.RootElement;
+            return root.ValueKind == JsonValueKind.Object
+                && ((root.TryGetProperty("code", out var code)
+                        && code.ValueKind == JsonValueKind.String
+                        && code.GetString() == "NoSuchKey")
+                    || (root.TryGetProperty("statusCode", out var status)
+                        && status.ValueKind == JsonValueKind.String
+                        && status.GetString() == "404"));
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private string PublicUrl(string path) =>

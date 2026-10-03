@@ -73,3 +73,10 @@ where they are.
   `event_photos.url` are strings, not foreign keys, so orphaned objects
   accumulate. Acceptable while media is small; a sweep that lists the bucket and
   compares against referenced URLs is the eventual answer.
+- Deleting an object that is already gone is a success, not an error. Supabase
+  has said "missing" two ways: an HTTP 404, and — since handover 05's live
+  smoke — an HTTP 400 with body `{"statusCode":"404","code":"NoSuchKey"}`.
+  `SupabaseStorageService.IsAlreadyGoneAsync` accepts both; any other 400 still
+  fails as a 502. `SupabaseStorageServiceTests` pins all three answers against a
+  stubbed handler, since the upload tests use the fake and never reach this
+  class.
