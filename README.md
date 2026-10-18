@@ -46,10 +46,6 @@ dotnet user-secrets set "Seed:Owners:0:DisplayName" "<owner name>"              
 dotnet user-secrets set "Supabase:Url"            "https://<project-ref>.supabase.co" --project Klowee.Api
 dotnet user-secrets set "Supabase:ServiceRoleKey" "<service role key>"                --project Klowee.Api
 
-# ImageSharp (decision 012) needs a Six Labors license key for Release builds.
-# Debug builds only warn. MSBuild reads it from the environment:
-export SixLaborsLicenseKey="<key from sixlabors.com>"
-
 dotnet ef database update --project Klowee.Api    # Development also does this on startup
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project Klowee.Api --launch-profile http
 ```

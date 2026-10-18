@@ -3,10 +3,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Klowee.Api.Contracts.Media;
 using Klowee.Api.Services;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.Metadata.Profiles.Exif;
-using SixLabors.ImageSharp.PixelFormats;
+using ImageMagick;
+using ImageMagick.Drawing;
 
 namespace Klowee.Api.Tests;
 
@@ -100,28 +98,28 @@ public class UploadTests : IClassFixture<KloweeApiFactory>
     public async Task Upload_ALargePng_IsResizedToTheLongEdgeLimitAndStoredAsWebp()
     {
         var client = await _factory.CreateOwnerClientAsync();
-        var png = Encode(new Image<Rgb24>(3000, 2000, new Rgb24(36, 70, 199)), new SixLabors.ImageSharp.Formats.Png.PngEncoder());
+        var png = Encode(new MagickImage(new MagickColor("#2446C7"), 3000, 2000), MagickFormat.Png);
 
         var result = await UploadAsync(client, "big.png", "image/png", png);
 
-        using var stored = Image.Load(_factory.Storage.Contents[result.Path]);
-        Assert.IsType<WebpFormat>(stored.Metadata.DecodedImageFormat);
-        Assert.Equal(1600, stored.Width);
-        Assert.Equal(1067, stored.Height);
+        using var stored = new MagickImage(_factory.Storage.Contents[result.Path]);
+        Assert.Equal(MagickFormat.WebP, stored.Format);
+        Assert.Equal(1600u, stored.Width);
+        Assert.Equal(1067u, stored.Height);
     }
 
     [Fact]
     public async Task Upload_ASmallJpeg_IsNotUpscaled()
     {
         var client = await _factory.CreateOwnerClientAsync();
-        var jpeg = Encode(new Image<Rgb24>(800, 600, new Rgb24(247, 243, 232)), new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder());
+        var jpeg = Encode(new MagickImage(new MagickColor("#F7F3E8"), 800, 600), MagickFormat.Jpeg);
 
         var result = await UploadAsync(client, "small.jpg", "image/jpeg", jpeg);
 
-        using var stored = Image.Load(_factory.Storage.Contents[result.Path]);
-        Assert.IsType<WebpFormat>(stored.Metadata.DecodedImageFormat);
-        Assert.Equal(800, stored.Width);
-        Assert.Equal(600, stored.Height);
+        using var stored = new MagickImage(_factory.Storage.Contents[result.Path]);
+        Assert.Equal(MagickFormat.WebP, stored.Format);
+        Assert.Equal(800u, stored.Width);
+        Assert.Equal(600u, stored.Height);
     }
 
     [Fact]
@@ -132,31 +130,31 @@ public class UploadTests : IClassFixture<KloweeApiFactory>
         // A phone held upright: the sensor writes a landscape 400×200 frame and
         // records "rotate 90° clockwise to view" in EXIF. Red marks the sensor's
         // left edge, which is the top of the photo as the person saw it.
-        using var sensor = new Image<Rgb24>(400, 200, new Rgb24(255, 255, 255));
-        for (var y = 0; y < 200; y++)
-        {
-            for (var x = 0; x < 40; x++)
-            {
-                sensor[x, y] = new Rgb24(255, 0, 0);
-            }
-        }
+        var sensor = new MagickImage(MagickColors.White, 400, 200);
+        new Drawables().FillColor(MagickColors.Red).Rectangle(0, 0, 39, 199).Draw(sensor);
 
-        sensor.Metadata.ExifProfile = new ExifProfile();
-        sensor.Metadata.ExifProfile.SetValue(ExifTag.Orientation, (ushort)ExifOrientationMode.RightTop);
-        var jpeg = Encode(sensor, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder { Quality = 95 });
+        // ImageMagick only writes an EXIF profile that has a value in it, and on
+        // write it syncs the tag from the image's Orientation, so set both.
+        var exif = new ExifProfile();
+        exif.SetValue(ExifTag.Orientation, (ushort)6); // 6 = RightTop: rotate 90° clockwise
+        sensor.SetProfile(exif);
+        sensor.Orientation = OrientationType.RightTop;
+        sensor.Quality = 95;
+        var jpeg = Encode(sensor, MagickFormat.Jpeg);
 
         var result = await UploadAsync(client, "portrait.jpg", "image/jpeg", jpeg);
 
-        using var stored = Image.Load<Rgb24>(_factory.Storage.Contents[result.Path]);
-        Assert.Equal(200, stored.Width);
-        Assert.Equal(400, stored.Height);
+        using var stored = new MagickImage(_factory.Storage.Contents[result.Path]);
+        Assert.Equal(200u, stored.Width);
+        Assert.Equal(400u, stored.Height);
 
         // Red is now along the top, and nothing tells a browser to rotate it again.
-        var top = stored[100, 5];
-        var bottom = stored[100, 395];
+        using var pixels = stored.GetPixels();
+        var top = pixels.GetPixel(100, 5).ToColor()!;
+        var bottom = pixels.GetPixel(100, 395).ToColor()!;
         Assert.True(top.R > 200 && top.G < 80, $"top pixel was {top}");
         Assert.True(bottom.G > 200, $"bottom pixel was {bottom}");
-        Assert.Null(stored.Metadata.ExifProfile);
+        Assert.Null(stored.GetExifProfile());
     }
 
     [Fact]
@@ -166,7 +164,7 @@ public class UploadTests : IClassFixture<KloweeApiFactory>
 
         // One colour, so 9000×10 compresses to a few hundred bytes: the size
         // rule can't catch it, only the dimension rule can.
-        var png = Encode(new Image<Rgb24>(9000, 10, new Rgb24(255, 216, 77)), new SixLabors.ImageSharp.Formats.Png.PngEncoder());
+        var png = Encode(new MagickImage(new MagickColor("#FFD84D"), 9000, 10), MagickFormat.Png);
         var before = _factory.Storage.Uploaded.Count;
 
         var response = await client.PostAsync(
@@ -252,13 +250,11 @@ public class UploadTests : IClassFixture<KloweeApiFactory>
         return result;
     }
 
-    private static byte[] Encode(Image image, SixLabors.ImageSharp.Formats.IImageEncoder encoder)
+    private static byte[] Encode(MagickImage image, MagickFormat format)
     {
         using (image)
         {
-            using var stream = new MemoryStream();
-            image.Save(stream, encoder);
-            return stream.ToArray();
+            return image.ToByteArray(format);
         }
     }
 

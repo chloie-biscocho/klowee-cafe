@@ -169,8 +169,8 @@ admin (browser)                 api                                Supabase Stor
                                 UploadService
                                   validate: folder, content type,
                                     size ≤ 5 MB, magic bytes
-                                  process (ImageSharp):
-                                    Identify: either side > 8000px → 400
+                                  process (Magick.NET):
+                                    MagickImageInfo: side > 8000px → 400
                                     decode (JPEG/PNG/WebP only), ICC → sRGB
                                     AutoOrient (EXIF rotation into pixels)
                                     fit within 1600×1600, never enlarge
@@ -195,8 +195,7 @@ admin (browser)                 api                                Supabase Stor
 - **Every stored image is a processed WebP** whatever was uploaded, at most
   1600px on its longest side and free of metadata (location included). `size`
   in the response is the stored size. Objects uploaded before handover 07 are
-  the originals; re-uploading replaces them. Decision 012 covers why, and the
-  Six Labors licence key that Release builds need.
+  the originals; re-uploading replaces them. Decision 012 covers why.
 - `IStorageService` is the seam: the rules live in `UploadService`, the transport
   in `SupabaseStorageService`, and tests substitute a fake for the latter.
 - The returned `url` is what gets stored on an entity (`events.cover_photo_url`,

@@ -1,11 +1,6 @@
 using Klowee.Api.Common;
 using Klowee.Api.Contracts.Media;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.Processing;
+using ImageMagick;
 
 namespace Klowee.Api.Services;
 
@@ -29,41 +24,38 @@ public class UploadService : IUploadService
     private const string StoredContentType = "image/webp";
 
     /// <summary>
-    /// Only the three formats the signature check admits. ImageSharp's default
-    /// configuration also knows TIFF, BMP, GIF and more; none of that code
-    /// should be reachable from an upload.
+    /// The decoder for each accepted content type. Naming the format on every
+    /// read stops ImageMagick sniffing the bytes and reaching for one of its
+    /// other coders (TIFF, SVG, PDF and dozens more); none of that code should
+    /// be reachable from an upload.
     /// </summary>
-    private static readonly DecoderOptions Decoding = new()
+    private static readonly Dictionary<string, MagickFormat> Decoders = new(StringComparer.OrdinalIgnoreCase)
     {
-        Configuration = new Configuration(
-            new JpegConfigurationModule(),
-            new PngConfigurationModule(),
-            new WebpConfigurationModule()),
-        // A phone photo in Display P3 would look washed out if its profile
-        // were simply dropped; convert the pixels to sRGB, then the profile goes.
-        ColorProfileHandling = ColorProfileHandling.Convert,
-        MaxFrames = 1
+        ["image/jpeg"] = MagickFormat.Jpeg,
+        ["image/png"] = MagickFormat.Png,
+        ["image/webp"] = MagickFormat.WebP
     };
 
-    private static readonly WebpEncoder Encoder = new()
+    /// <summary>
+    /// Process-wide ceilings, so a hostile file that slips past the dimension
+    /// check still cannot take the container's memory. Width and height sit
+    /// above <see cref="MaxInputDimension"/>: that check gives the readable 400,
+    /// these are the backstop. Memory over the limit spills to a disk cache,
+    /// which is capped too.
+    /// </summary>
+    static UploadService()
     {
-        FileFormat = WebpFileFormatType.Lossy,
-        Quality = WebpQuality,
-        SkipMetadata = true
-    };
+        ResourceLimits.Width = 16_384;
+        ResourceLimits.Height = 16_384;
+        ResourceLimits.Area = (ulong)MaxInputDimension * MaxInputDimension;
+        ResourceLimits.Memory = 256UL * 1024 * 1024;
+        ResourceLimits.Disk = 512UL * 1024 * 1024;
+    }
 
     /// <summary>The only places media may be written, and the only prefixes a delete accepts.</summary>
     private static readonly string[] Folders = ["menu", "events", "site"];
 
-    /// <summary>Allowed content types and the extension each one is stored with.</summary>
-    private static readonly Dictionary<string, string> Extensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["image/jpeg"] = "jpg",
-        ["image/png"] = "png",
-        ["image/webp"] = "webp"
-    };
-
-    private readonly IStorageService _storage;
+        private readonly IStorageService _storage;
     private readonly IClock _clock;
 
     public UploadService(IStorageService storage, IClock clock)
@@ -87,10 +79,10 @@ public class UploadService : IUploadService
         }
 
         var contentType = declaredContentType?.Split(';')[0].Trim() ?? string.Empty;
-        if (!Extensions.ContainsKey(contentType))
+        if (!Decoders.ContainsKey(contentType))
         {
             throw new ValidationFailedException(
-                $"Only {string.Join(", ", Extensions.Keys)} files can be uploaded.");
+                $"Only {string.Join(", ", Decoders.Keys)} files can be uploaded.");
         }
 
         if (length <= 0)
@@ -114,7 +106,7 @@ public class UploadService : IUploadService
                 $"The file's contents are not a valid {contentType} image.");
         }
 
-        using var processed = await ProcessAsync(content, signature.AsSpan(0, read).ToArray(), cancellationToken);
+        using var processed = await ProcessAsync(content, contentType, signature.AsSpan(0, read).ToArray(), cancellationToken);
 
         var today = _clock.Today;
         var path = $"{folder.ToLowerInvariant()}/{today:yyyy}/{today:MM}/{Guid.NewGuid():N}.webp";
@@ -132,16 +124,24 @@ public class UploadService : IUploadService
     /// </summary>
     private static async Task<MemoryStream> ProcessAsync(
         Stream content,
+        string contentType,
         byte[] alreadyRead,
         CancellationToken cancellationToken)
     {
-        var original = await BufferAsync(content, alreadyRead, cancellationToken);
+        using var original = await BufferAsync(content, alreadyRead, cancellationToken);
+        var settings = new MagickReadSettings
+        {
+            Format = Decoders[contentType],
+            // An animated WebP becomes its first frame.
+            FrameIndex = 0,
+            FrameCount = 1
+        };
 
         try
         {
-            // Identify reads the header only. A small file can still declare
-            // 30000×30000 pixels, which would be gigabytes once decoded.
-            var info = await Image.IdentifyAsync(Decoding, original, cancellationToken);
+            // MagickImageInfo reads the header only. A small file can still
+            // declare 30000×30000 pixels, which would be gigabytes once decoded.
+            var info = new MagickImageInfo(original, settings);
             if (info.Width > MaxInputDimension || info.Height > MaxInputDimension)
             {
                 throw new ValidationFailedException(
@@ -149,39 +149,35 @@ public class UploadService : IUploadService
             }
 
             original.Position = 0;
-            using var image = await Image.LoadAsync(Decoding, original, cancellationToken);
+            using var image = new MagickImage();
+            await image.ReadAsync(original, settings, cancellationToken);
 
-            image.Mutate(x =>
-            {
-                // Phones store pixels as the sensor saw them and record the
-                // rotation in EXIF. Apply it now, because the EXIF is about to go.
-                x.AutoOrient();
+            // A phone photo in Display P3 would look washed out if its profile
+            // were simply dropped; convert the pixels to sRGB first. Returns
+            // false, and does nothing, when there is no embedded profile.
+            image.TransformColorSpace(ColorProfiles.SRGB);
 
-                if (Math.Max(x.GetCurrentSize().Width, x.GetCurrentSize().Height) > MaxStoredEdge)
-                {
-                    x.Resize(new ResizeOptions
-                    {
-                        Mode = ResizeMode.Max,
-                        Size = new Size(MaxStoredEdge, MaxStoredEdge)
-                    });
-                }
-            });
+            // Phones store pixels as the sensor saw them and record the
+            // rotation in EXIF. Apply it now, because the EXIF is about to go.
+            image.AutoOrient();
+
+            // ">" in ImageMagick's geometry: only ever shrink, keeping the ratio.
+            image.Resize(new MagickGeometry(MaxStoredEdge, MaxStoredEdge) { Greater = true });
 
             // Camera model, timestamps and, from phones, GPS coordinates. None
             // of it belongs on a public URL.
-            image.Metadata.ExifProfile = null;
-            image.Metadata.XmpProfile = null;
-            image.Metadata.IptcProfile = null;
-            image.Metadata.IccProfile = null;
+            image.Strip();
 
+            image.Quality = WebpQuality;
             var output = new MemoryStream();
-            await image.SaveAsync(output, Encoder, cancellationToken);
+            await image.WriteAsync(output, MagickFormat.WebP, cancellationToken);
             output.Position = 0;
             return output;
         }
-        catch (Exception ex) when (ex is ImageFormatException or UnknownImageFormatException)
+        catch (MagickException)
         {
-            // The signature matched but the rest of the file did not hold up.
+            // The signature matched but the rest of the file did not hold up,
+            // or it needed more than the resource limits allow.
             throw new ValidationFailedException("The image could not be read. It may be damaged.");
         }
     }
