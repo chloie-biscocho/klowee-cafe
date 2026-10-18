@@ -1,0 +1,71 @@
+# Ships the API: migrate the production database, then tell Render to build
+# and deploy the same commit. Runs after CI passes on a push to main, or by
+# hand. Vercel deploys the two front ends itself; Render's auto-deploy is off,
+# so this workflow is the only thing that deploys the API.
+# See docs/decisions/013-hosting-and-config.md.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and never cancel one half-way through a migration.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  # The commit CI tested (workflow_run), or the branch tip for a manual run.
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+jobs:
+  migrate:
+    # A push to main whose CI passed, or a manual run. Not pull requests.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.400'
+      - name: Install dotnet-ef (matches the EF Core version in Klowee.Api)
+        run: dotnet tool install --global dotnet-ef --version 10.0.11
+      - name: Build the migrations bundle
+        run: dotnet ef migrations bundle --project api/Klowee.Api --self-contained --runtime linux-x64 --output efbundle
+      - name: Apply migrations to production
+        env:
+          PROD_DB_CONNECTION: ${{ secrets.PROD_DB_CONNECTION }}
+        run: |
+          if [ -z "$PROD_DB_CONNECTION" ]; then
+            echo "::error::The PROD_DB_CONNECTION repository secret is not set."
+            exit 1
+          fi
+          ./efbundle --connection "$PROD_DB_CONNECTION"
+
+  deploy-api:
+    needs: migrate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the Render deploy hook for this commit
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::error::The RENDER_DEPLOY_HOOK_URL repository secret is not set."
+            exit 1
+          fi
+          # ref= pins the deploy to the commit just migrated, not whatever is
+          # newest on main by the time Render starts building.
+          curl --fail --silent --show-error --request POST \
+            "${RENDER_DEPLOY_HOOK_URL}&ref=${DEPLOY_SHA}" > /dev/null
+          echo "Render deploy triggered for ${DEPLOY_SHA}."

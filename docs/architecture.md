@@ -258,15 +258,40 @@ main.tsx ─► App ─► useHomeData()  ──►  fetch GET /api/public/home 
 - **The browser caches the payload** for up to 60 seconds (the API's
   `Cache-Control`); there is no client-side cache beyond that.
 
-## Hosting plan
+## Hosting and delivery
 
-- **Database:** Supabase (managed PostgreSQL). One project per environment; the dev
-  project is `klowee-cafe-dev`.
-- **API:** a container-friendly host (e.g. Fly.io, Render, or Railway). The Supabase
-  connection string is supplied via an environment variable, not committed.
-- **admin/ and client/:** static builds (`npm run build` → `dist/`) served from a
-  static/CDN host (e.g. Vercel, Netlify, or Cloudflare Pages), each pointed at the
-  API's public URL.
+| Piece | Host | Built from |
+|---|---|---|
+| API | Render web service (Docker, free) | `api/Dockerfile` |
+| admin, client | Vercel, one project each (Hobby) | `admin/`, `client/` |
+| Database, media bucket | Supabase `klowee-cafe-prod` (free) | migrations bundle in CI |
 
-Migrations are applied as a deploy step (`dotnet ef database update`), keeping the
-database schema in lockstep with the API code.
+Configuration is environment variables on each host, `Section__Key` for the API
+(decision 013). The dev project `klowee-cafe-dev` stays the local database.
+
+### From a push to a running API
+
+```
+git push ──► CI (ci.yml)            api: build + test   admin / client: lint + test + build
+                 │  all green, branch main, event push
+                 ▼
+             Deploy (deploy.yml)    one at a time (concurrency group)
+               migrate              dotnet-ef 10.0.11 → migrations bundle (linux-x64)
+                 │                  ./efbundle --connection $PROD_DB_CONNECTION
+                 ▼                  (fails here → nothing is deployed)
+               deploy-api           POST $RENDER_DEPLOY_HOOK_URL&ref=<that commit>
+                 │
+                 ▼
+             Render                 docker build api/ → start container
+                                    → health check GET /api/health → swap traffic
+
+Vercel, in parallel: every push builds admin/ and client/ (previews for branches,
+production for main), with VITE_API_URL baked in at build time.
+```
+
+- **Migrations never run on API startup in Production** (`Common/StartupPlan.cs`);
+  the bundle is the only thing that changes the production schema, and it runs
+  before the new image exists.
+- **Render's auto-deploy is off**, so the deploy hook is the only trigger, and
+  `ref=` makes Render build exactly the commit that was migrated.
+- Production startup only ensures the two owner accounts exist.
