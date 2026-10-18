@@ -20,15 +20,12 @@ export function splitLastWords(text: string, count: number): [string, string] {
   return [words.slice(0, split).join(' '), words.slice(split).join(' ')]
 }
 
-/** Still to come, by the API's own rule: Upcoming and not yet over in Manila. */
-export function isUpcoming(event: PublicEvent, today: string): boolean {
-  return event.status === 'Upcoming' && event.endsOn >= today
-}
-
-/** Upcoming events first, soonest first; past ones keep the API's order. */
-export function orderEvents(events: PublicEvent[], today: string): PublicEvent[] {
-  const upcoming = events
-    .filter((event) => isUpcoming(event, today))
-    .sort((a, b) => a.startsOn.localeCompare(b.startsOn))
-  return [...upcoming, ...events.filter((event) => !isUpcoming(event, today))]
+/**
+ * The API's next event leads; everything else keeps the API's order. Which
+ * event is next, and whether it is still upcoming, is the API's call
+ * (`nextEvent.status`), not a date comparison here.
+ */
+export function nextFirst(events: PublicEvent[], nextId: string | null): PublicEvent[] {
+  const next = events.filter((event) => event.id === nextId)
+  return [...next, ...events.filter((event) => event.id !== nextId)]
 }

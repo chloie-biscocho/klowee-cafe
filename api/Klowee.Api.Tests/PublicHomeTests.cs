@@ -67,6 +67,7 @@ public class PublicHomeTests : IClassFixture<KloweeApiFactory>
         // Next event: published, Upcoming, not yet over.
         Assert.NotNull(home.NextEvent);
         Assert.Equal("Published market", home.NextEvent!.Name);
+        Assert.Equal(EventStatus.Upcoming, home.NextEvent.Status);
 
         // Settings arrive as a key/value map of the known keys.
         Assert.Equal("smol pop-up cafe", home.Settings["hero_heading"]);

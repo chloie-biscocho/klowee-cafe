@@ -72,7 +72,7 @@ public class PublicHomeService : IPublicHomeService
                 ? null
                 : new PublicEventSummaryDto(
                     nextEvent.Id, nextEvent.Name, nextEvent.Venue,
-                    nextEvent.StartsOn, nextEvent.EndsOn, nextEvent.CoverPhotoUrl),
+                    nextEvent.StartsOn, nextEvent.EndsOn, nextEvent.Status, nextEvent.CoverPhotoUrl),
 
             Menu: await GetMenuAsync(cancellationToken),
 

@@ -13,7 +13,9 @@
 | `paper` | `#F7F3E8` | Cards, hero panel, menu surfaces |
 | `pink` | `#F4B8C8` | Secondary button, tape, one sticker per section max |
 | `yellow` | `#FFD84D` | Sticker badges (next pop-up, new, best seller) |
-| `ink-muted` | `#6B75A3` | Descriptions, captions |
+| `ink-muted` | `#6B75A3` | Caveat captions 24px and up only; body-size secondary text is navy at 80% opacity |
+| `divider` | `#C9D2F1` | Dashed dividers between menu rows |
+| `white` | `#FFFFFF` | Polaroid frames, clouds |
 
 Rule: navy, cobalt, paper, and sky carry 90% of every screen. Pink and yellow are accents, never large surfaces. Matcha green and ube purple come only from photos and the drinks themselves.
 
@@ -33,7 +35,7 @@ No all-caps labels. No eyebrow labels above headings. Prices in Manrope 700 coba
 - Stickers: yellow pill, 2px navy border, rotated 5 to 8 degrees, Caveat text
 - Clouds: white rounded shapes at low opacity on sky sections, static, three per section max
 - Polaroids: white frame, photo area, Caveat caption, alternating minus 2 and plus 2 degree rotation
-- Dashed dividers (`sky-light` or `#C9D2F1`) between menu rows instead of solid lines
+- Dashed dividers (`sky-light` or `divider`) between menu rows instead of solid lines
 - Doodles: the Klowe and Kee illustration in the Story section, the tent sketch as an empty-state illustration
 
 ## Page structure

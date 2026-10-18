@@ -41,8 +41,3 @@ export function formatDateRange(startsOn: string, endsOn: string): string {
       : monthDay.format(asUtc(endsOn))
   return `${monthDay.format(asUtc(startsOn))} to ${end}, ${startsOn.slice(0, 4)}`
 }
-
-/** Today's date in Manila ("2026-05-21"), the business date the API uses. Fixed +08:00, no DST. */
-export function todayInManila(now: Date = new Date()): string {
-  return new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)
-}

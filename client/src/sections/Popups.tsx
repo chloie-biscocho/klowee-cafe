@@ -6,13 +6,12 @@ import { Pill } from '../components/Pill'
 import { Polaroid } from '../components/Polaroid'
 import { Section } from '../components/Section'
 import { TentSketch } from '../components/TentSketch'
-import { isUpcoming, orderEvents } from '../lib/content'
-import { todayInManila } from '../lib/format'
+import { nextFirst } from '../lib/content'
 
 export function Popups({ home }: { home: PublicHome }) {
-  const today = todayInManila()
-  const events = orderEvents(home.events, today)
-  const hasUpcoming = events.some((event) => isUpcoming(event, today))
+  const nextId = home.nextEvent?.status === 'Upcoming' ? home.nextEvent.id : null
+  const events = nextFirst(home.events, nextId)
+  const hasUpcoming = events.some((event) => event.id === nextId)
 
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const buttons = useRef(new Map<string, HTMLButtonElement>())
@@ -62,7 +61,7 @@ export function Popups({ home }: { home: PublicHome }) {
                   <Polaroid
                     event={event}
                     index={index}
-                    isNext={hasUpcoming && index === 0}
+                    isNext={event.id === nextId}
                     expanded={expanded}
                     panelId={panelId}
                     onToggle={() => setExpandedId(expanded ? null : event.id)}

@@ -32,6 +32,7 @@ export const fullHome: PublicHome = {
     story_heading: 'Our story',
     story_body: 'First paragraph.\n\nSecond paragraph.',
     ticker_fallback: 'Now booking pop-ups around Cagayan de Oro',
+    book_body: 'Tell us the date and headcount.',
     contact_email: 'hello@kloweecafe.com',
     instagram_url: 'https://instagram.com/kloweecafe',
     facebook_url: '',
@@ -43,6 +44,7 @@ export const fullHome: PublicHome = {
     venue: 'Uptown Mall',
     startsOn: '2099-05-21',
     endsOn: '2099-05-24',
+    status: 'Upcoming',
     coverPhotoUrl: null,
   },
   menu: {

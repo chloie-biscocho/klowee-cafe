@@ -17,6 +17,7 @@ export interface PublicEventSummary {
   venue: string
   startsOn: string
   endsOn: string
+  status: EventStatus
   coverPhotoUrl: string | null
 }
 

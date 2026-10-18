@@ -83,6 +83,25 @@ public class SiteSettingTests : IClassFixture<KloweeApiFactory>
     }
 
     [Fact]
+    public async Task BookBody_IsAKnownKeyAndReachesThePublicPage()
+    {
+        var client = await _factory.CreateOwnerClientAsync();
+
+        var response = await client.PutAsJsonAsync("/api/settings", new[]
+        {
+            new { key = "book_body", value = "Tell us the date and headcount." }
+        });
+        response.EnsureSuccessStatusCode();
+
+        Assert.Equal("Tell us the date and headcount.", Value(await ListAsync(client), "book_body"));
+
+        // The client site reads settings from the public payload, not /api/settings.
+        var home = await (await _factory.CreateAnonymousClientAsync())
+            .GetFromJsonAsync<Klowee.Api.Contracts.Public.PublicHomeDto>("/api/public/home", KloweeApiFactory.Json);
+        Assert.Equal("Tell us the date and headcount.", home!.Settings["book_body"]);
+    }
+
+    [Fact]
     public async Task Upsert_WithTheSameKeyTwice_Returns400()
     {
         var client = await _factory.CreateOwnerClientAsync();

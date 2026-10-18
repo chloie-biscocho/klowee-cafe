@@ -89,6 +89,16 @@ export function SettingsForm({ initial }: { initial: SettingsValues }) {
         <SiteImage control={control} name="story_image_url" label="Story image" />
       </Group>
 
+      <Group title="Book the cart">
+        <Textarea
+          label="Body"
+          rows={3}
+          hint="The line under the heading of the site's booking section."
+          error={errors.book_body?.message}
+          {...register('book_body')}
+        />
+      </Group>
+
       <Group title="Ticker fallback">
         <Input
           label="Text"

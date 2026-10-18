@@ -283,6 +283,7 @@ export const SETTING_KEYS = [
   'story_body',
   'story_image_url',
   'ticker_fallback',
+  'book_body',
   'instagram_url',
   'facebook_url',
   'contact_email',

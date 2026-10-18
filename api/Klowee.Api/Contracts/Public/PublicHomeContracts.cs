@@ -23,6 +23,7 @@ public record PublicEventSummaryDto(
     string Venue,
     DateOnly StartsOn,
     DateOnly EndsOn,
+    EventStatus Status,
     string? CoverPhotoUrl);
 
 public record PublicMenuItemDto(

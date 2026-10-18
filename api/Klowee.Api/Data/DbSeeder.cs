@@ -144,7 +144,7 @@ public static class DbSeeder
     /// <summary>
     /// Inserts any missing setting key, and never overwrites a value the owners
     /// have edited. Written as an upsert rather than an all-or-nothing insert so
-    /// that a key added later (the two image URLs) reaches a database that was
+    /// that a key added later (the two image URLs, book_body) reaches a database that was
     /// already seeded.
     /// </summary>
     private static async Task SeedSiteSettingsAsync(KloweeDbContext db)
@@ -158,6 +158,7 @@ public static class DbSeeder
             ("story_body", "Klowee Cafe started as a two-friend passion project: a little cart, good beans, and a lot of matcha. We pop up at offices and events across Cagayan de Oro."),
             ("story_image_url", string.Empty),
             ("ticker_fallback", "Now booking pop-ups around Cagayan de Oro — say hi!"),
+            ("book_body", "Coffee and matcha, served from our cart at your office, party, or market. Tell us the date and headcount and we'll put a package together."),
             ("instagram_url", "https://instagram.com/kloweecafe"),
             ("facebook_url", "https://facebook.com/kloweecafe"),
             ("contact_email", "hello@kloweecafe.com"),
@@ -264,7 +265,8 @@ public static class DbSeeder
     /// <summary>
     /// The three booking packages from the owners' Instagram post. Seeded so the
     /// public site has something real to render; the owners edit the wording and
-    /// the inclusions from the admin app.
+    /// the inclusions from the admin app. The guest count lives in GuestCountNote
+    /// only; repeating it as an inclusion printed it twice on every card.
     /// </summary>
     private static async Task SeedPackagesAsync(KloweeDbContext db)
     {
@@ -276,11 +278,11 @@ public static class DbSeeder
         var packages = new (string Name, decimal Price, string GuestNote, int SortOrder, string[] Inclusions)[]
         {
             ("Starter", 7500m, "good for 50 pax", 1,
-                ["Good for 50 pax", "Choose from 4 drinks", "3 hours of service", "2 baristas"]),
+                ["Choose from 4 drinks", "3 hours of service", "2 baristas"]),
             ("Regular", 10500m, "good for 75 pax", 2,
-                ["Good for 75 pax", "Choose from 6 drinks", "3 hours of service", "2 baristas"]),
+                ["Choose from 6 drinks", "3 hours of service", "2 baristas"]),
             ("Premium", 14500m, "good for 100 pax", 3,
-                ["Good for 100 pax", "Choose from the full menu", "4 hours of service", "2 baristas"]),
+                ["Choose from the full menu", "4 hours of service", "2 baristas"]),
         };
 
         foreach (var (name, price, guestNote, sortOrder, inclusions) in packages)

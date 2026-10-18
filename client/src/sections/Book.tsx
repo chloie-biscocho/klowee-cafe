@@ -6,6 +6,7 @@ import { setting } from '../lib/content'
 
 /** Ways to reach the owners. The real booking form is phase 2. */
 export function Book({ home }: { home: PublicHome }) {
+  const body = setting(home, 'book_body')
   const email = setting(home, 'contact_email')
   const instagram = setting(home, 'instagram_url')
   const facebook = setting(home, 'facebook_url')
@@ -19,6 +20,7 @@ export function Book({ home }: { home: PublicHome }) {
           <h2 id="book-heading" className="font-heading text-4xl leading-[1.05] text-navy md:text-5xl">
             bring the cart to your event
           </h2>
+          {body && <p className="mx-auto mt-5 max-w-prose text-lg text-navy">{body}</p>}
           {(email || instagram || facebook) && (
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               {email && <Pill href={`mailto:${email}`}>Email us</Pill>}

@@ -15,6 +15,14 @@ describe('Popups', () => {
     expect(within(polaroids[1]!).queryByText('next')).not.toBeInTheDocument()
   })
 
+  it('takes "next" from the API, not from the dates', () => {
+    // An event marked Upcoming in the list, but the API names no next event.
+    render(<Popups home={{ ...fullHome, nextEvent: null }} />)
+
+    expect(screen.getByRole('heading', { name: "where we've been" })).toBeInTheDocument()
+    expect(screen.queryByText('next')).not.toBeInTheDocument()
+  })
+
   it('expands a polaroid on click, keeps one open at a time, and closes on Escape', async () => {
     const user = userEvent.setup()
     render(<Popups home={fullHome} />)

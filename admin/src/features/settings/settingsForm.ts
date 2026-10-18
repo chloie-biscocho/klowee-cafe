@@ -19,6 +19,7 @@ export const settingsSchema = z.object({
   story_body: text,
   story_image_url: optionalUrl,
   ticker_fallback: text,
+  book_body: text,
   instagram_url: optionalUrl,
   facebook_url: optionalUrl,
   contact_email: z.union([z.literal(''), z.email('Enter an email address.')]),

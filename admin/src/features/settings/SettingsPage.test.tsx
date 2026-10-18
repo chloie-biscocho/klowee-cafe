@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import type { SiteSettingRequest } from '../../types/api'
@@ -35,5 +35,25 @@ describe('SettingsPage', () => {
     await waitFor(() => expect(sent).not.toBeNull())
     expect(sent).toEqual([{ key: 'ticker_fallback', value: 'Now booking December' }])
     expect(await screen.findByText('Settings saved.')).toBeInTheDocument()
+  })
+
+  it('edits the Book line under its own group', async () => {
+    let sent: SiteSettingRequest[] | null = null
+    server.use(
+      http.put(`${API}/settings`, async ({ request }) => {
+        sent = (await request.json()) as SiteSettingRequest[]
+        return HttpResponse.json(siteSettings)
+      }),
+    )
+
+    const { user } = renderApp('/site/settings', signedIn)
+
+    const group = (await screen.findByRole('heading', { name: 'Book the cart' })).parentElement!.parentElement!
+    const body = within(group).getByLabelText('Body')
+    await user.type(body, 'Tell us the date.')
+    await user.click(screen.getByRole('button', { name: 'Save settings' }))
+
+    await waitFor(() => expect(sent).not.toBeNull())
+    expect(sent).toEqual([{ key: 'book_body', value: 'Tell us the date.' }])
   })
 })
