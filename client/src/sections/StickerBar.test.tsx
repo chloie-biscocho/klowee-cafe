@@ -48,4 +48,13 @@ describe('StickerBar', () => {
     expect(screen.getByText('Closed Monday')).toBeInTheDocument()
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
+
+  it('holds its place, empty and hidden from screen readers, while the page loads', () => {
+    const { container } = render(<StickerBar home={null} />)
+
+    const strip = container.firstElementChild!
+    expect(strip).toHaveAttribute('aria-hidden', 'true')
+    expect(strip).toHaveTextContent('')
+    expect(strip.firstElementChild!.className).toContain('min-h-')
+  })
 })

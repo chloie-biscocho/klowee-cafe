@@ -29,7 +29,7 @@ export function App() {
         Skip to content
       </a>
 
-      {data && <StickerBar home={data} />}
+      {home.status !== 'error' && <StickerBar home={data} />}
       <Nav hasPackages={data ? data.packages.length > 0 : true} />
 
       <main id="main" tabIndex={-1} className="focus:outline-none">
