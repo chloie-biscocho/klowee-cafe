@@ -56,6 +56,35 @@ public class HostingTests : IClassFixture<KloweeApiFactory>
     }
 
     [Fact]
+    public async Task Login_ACallerCannotDodgeTheLimitByForgingXForwardedFor()
+    {
+        await _factory.EnsureInitializedAsync();
+        using var limited = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+                services.Configure<LoginRateLimitOptions>(options => options.PermitLimit = 5)));
+        var client = limited.CreateClient();
+
+        // The caller forges a new address each time; Render's proxy appends the
+        // real one. Only the rightmost entry counts.
+        HttpStatusCode last = default;
+        for (var attempt = 1; attempt <= 6; attempt++)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
+            {
+                Content = JsonContent.Create(new LoginRequest
+                {
+                    Email = KloweeApiFactory.OwnerEmail,
+                    Password = KloweeApiFactory.WrongPassword
+                })
+            };
+            request.Headers.Add("X-Forwarded-For", $"10.0.0.{attempt}, 198.51.100.9");
+            last = (await client.SendAsync(request)).StatusCode;
+        }
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, last);
+    }
+
+    [Fact]
     public async Task Health_IsAnonymous()
     {
         var client = await _factory.CreateAnonymousClientAsync();

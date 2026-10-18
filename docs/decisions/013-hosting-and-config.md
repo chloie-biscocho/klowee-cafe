@@ -60,6 +60,15 @@ as the API starts, and `HostingTests` holds it:
   and trusts any forwarder, because Render doesn't publish its proxy
   addresses. The request scheme then reads `https`, and the rate limiter sees
   the visitor's IP rather than the proxy's.
+- **Spoofed `X-Forwarded-For`.** Trusting every forwarder is only safe because
+  `ForwardLimit = 1` reads just the rightmost entry, which is the one Render's
+  proxy appends. A client that sends `X-Forwarded-For: 1.2.3.4` arrives as
+  `1.2.3.4, <real ip>`, and the limiter keys on `<real ip>`. If Render ever
+  passed a client's header through unchanged, the login limit could be dodged
+  by rotating fake IPs. Production smoke step 2 checks this: six logins with a
+  different fake header each must still end in a 429. If that check fails, the
+  fix is a Render-specific client-IP header, or a limit keyed on the email as
+  well.
 - **No HTTPS redirection in the container.** Render's edge already redirects
   HTTP to HTTPS, and inside the container everything is HTTP, so the middleware
   could only misfire (on the health check, for instance). It stays on in

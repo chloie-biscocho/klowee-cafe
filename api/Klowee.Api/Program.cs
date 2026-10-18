@@ -220,10 +220,14 @@ builder.Services.AddCors(options =>
 // ---- Behind Render's proxy ----
 // Render terminates TLS and forwards plain HTTP with X-Forwarded-For/-Proto.
 // Its proxy addresses are not published, so every forwarder is trusted; the
-// container only accepts traffic from Render's network anyway.
+// container is reachable only through Render's proxy. ForwardLimit = 1 reads
+// only the rightmost X-Forwarded-For entry, the one Render's proxy appended,
+// so a client that sends its own header cannot choose the IP the login rate
+// limiter sees. Handover 08's production smoke checks exactly that.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
