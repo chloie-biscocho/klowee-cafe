@@ -15,6 +15,7 @@ dist/
 .env*
 !.env.example
 appsettings.Development.json
+sixlabors.lic
 
 # ---- Claude Code personal/local settings ----
 .claude/settings.local.json

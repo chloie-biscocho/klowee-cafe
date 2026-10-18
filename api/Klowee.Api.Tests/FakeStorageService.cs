@@ -15,6 +15,9 @@ public class FakeStorageService : IStorageService
     public ConcurrentBag<StoredObject> Uploaded { get; } = [];
     public ConcurrentBag<string> Deleted { get; } = [];
 
+    /// <summary>The bytes each upload stored, by path, so a test can decode what was kept.</summary>
+    public ConcurrentDictionary<string, byte[]> Contents { get; } = new();
+
     public async Task<StoredObject> UploadAsync(
         string path,
         string contentType,
@@ -29,6 +32,7 @@ public class FakeStorageService : IStorageService
 
         var stored = new StoredObject($"{BaseUrl}/{path}", path, contentType, buffer.Length);
         Uploaded.Add(stored);
+        Contents[path] = buffer.ToArray();
         return stored;
     }
 

@@ -3,6 +3,10 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Klowee.Api.Contracts.Media;
 using Klowee.Api.Services;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Klowee.Api.Tests;
 
@@ -65,7 +69,7 @@ public class UploadTests : IClassFixture<KloweeApiFactory>
     }
 
     [Fact]
-    public async Task Upload_WithAValidPng_StoresItAndReturnsThePublicUrl()
+    public async Task Upload_WithAValidPng_StoresItAsWebpAndReturnsThePublicUrl()
     {
         _factory.Clock.Today = new DateOnly(2026, 9, 14);
         var client = await _factory.CreateOwnerClientAsync();
@@ -78,18 +82,115 @@ public class UploadTests : IClassFixture<KloweeApiFactory>
 
         var result = await response.Content.ReadFromJsonAsync<UploadResultDto>(KloweeApiFactory.Json);
         Assert.NotNull(result);
-        Assert.Equal("image/png", result!.ContentType);
-        Assert.Equal(ValidPng.Length, result.Size);
+        Assert.Equal("image/webp", result!.ContentType);
 
-        // The path is generated, never the caller's file name.
+        // The path is generated, never the caller's file name, and always .webp.
         Assert.StartsWith("menu/2026/09/", result.Path);
-        Assert.EndsWith(".png", result.Path);
+        Assert.EndsWith(".webp", result.Path);
         Assert.DoesNotContain("latte", result.Path);
         Assert.Equal($"{FakeStorageService.BaseUrl}/{result.Path}", result.Url);
 
-        // The whole file reached storage, not just the bytes the signature check read.
+        // The size reported is the size stored, not the size sent.
         var stored = Assert.Single(_factory.Storage.Uploaded, u => u.Path == result.Path);
-        Assert.Equal(ValidPng.Length, stored.Size);
+        Assert.Equal(_factory.Storage.Contents[result.Path].Length, stored.Size);
+        Assert.Equal(stored.Size, result.Size);
+    }
+
+    [Fact]
+    public async Task Upload_ALargePng_IsResizedToTheLongEdgeLimitAndStoredAsWebp()
+    {
+        var client = await _factory.CreateOwnerClientAsync();
+        var png = Encode(new Image<Rgb24>(3000, 2000, new Rgb24(36, 70, 199)), new SixLabors.ImageSharp.Formats.Png.PngEncoder());
+
+        var result = await UploadAsync(client, "big.png", "image/png", png);
+
+        using var stored = Image.Load(_factory.Storage.Contents[result.Path]);
+        Assert.IsType<WebpFormat>(stored.Metadata.DecodedImageFormat);
+        Assert.Equal(1600, stored.Width);
+        Assert.Equal(1067, stored.Height);
+    }
+
+    [Fact]
+    public async Task Upload_ASmallJpeg_IsNotUpscaled()
+    {
+        var client = await _factory.CreateOwnerClientAsync();
+        var jpeg = Encode(new Image<Rgb24>(800, 600, new Rgb24(247, 243, 232)), new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder());
+
+        var result = await UploadAsync(client, "small.jpg", "image/jpeg", jpeg);
+
+        using var stored = Image.Load(_factory.Storage.Contents[result.Path]);
+        Assert.IsType<WebpFormat>(stored.Metadata.DecodedImageFormat);
+        Assert.Equal(800, stored.Width);
+        Assert.Equal(600, stored.Height);
+    }
+
+    [Fact]
+    public async Task Upload_AnExifRotatedJpeg_IsStoredUprightWithoutMetadata()
+    {
+        var client = await _factory.CreateOwnerClientAsync();
+
+        // A phone held upright: the sensor writes a landscape 400×200 frame and
+        // records "rotate 90° clockwise to view" in EXIF. Red marks the sensor's
+        // left edge, which is the top of the photo as the person saw it.
+        using var sensor = new Image<Rgb24>(400, 200, new Rgb24(255, 255, 255));
+        for (var y = 0; y < 200; y++)
+        {
+            for (var x = 0; x < 40; x++)
+            {
+                sensor[x, y] = new Rgb24(255, 0, 0);
+            }
+        }
+
+        sensor.Metadata.ExifProfile = new ExifProfile();
+        sensor.Metadata.ExifProfile.SetValue(ExifTag.Orientation, (ushort)ExifOrientationMode.RightTop);
+        var jpeg = Encode(sensor, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder { Quality = 95 });
+
+        var result = await UploadAsync(client, "portrait.jpg", "image/jpeg", jpeg);
+
+        using var stored = Image.Load<Rgb24>(_factory.Storage.Contents[result.Path]);
+        Assert.Equal(200, stored.Width);
+        Assert.Equal(400, stored.Height);
+
+        // Red is now along the top, and nothing tells a browser to rotate it again.
+        var top = stored[100, 5];
+        var bottom = stored[100, 395];
+        Assert.True(top.R > 200 && top.G < 80, $"top pixel was {top}");
+        Assert.True(bottom.G > 200, $"bottom pixel was {bottom}");
+        Assert.Null(stored.Metadata.ExifProfile);
+    }
+
+    [Fact]
+    public async Task Upload_AnImageOverTheDimensionLimit_Returns400WithoutStoringIt()
+    {
+        var client = await _factory.CreateOwnerClientAsync();
+
+        // One colour, so 9000×10 compresses to a few hundred bytes: the size
+        // rule can't catch it, only the dimension rule can.
+        var png = Encode(new Image<Rgb24>(9000, 10, new Rgb24(255, 216, 77)), new SixLabors.ImageSharp.Formats.Png.PngEncoder());
+        var before = _factory.Storage.Uploaded.Count;
+
+        var response = await client.PostAsync(
+            "/api/uploads?folder=events",
+            Multipart("panorama.png", "image/png", png));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("9000×10", await response.Content.ReadAsStringAsync());
+        Assert.Equal(before, _factory.Storage.Uploaded.Count);
+    }
+
+    [Fact]
+    public async Task Upload_WithAValidSignatureButDamagedBody_Returns400()
+    {
+        var client = await _factory.CreateOwnerClientAsync();
+
+        // The PNG signature, then nothing a decoder can use.
+        var damaged = ValidPng[..8].Concat(new byte[64]).ToArray();
+
+        var response = await client.PostAsync(
+            "/api/uploads?folder=menu",
+            Multipart("damaged.png", "image/png", damaged));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -136,6 +237,29 @@ public class UploadTests : IClassFixture<KloweeApiFactory>
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Contains("events/2026/09/abc.png", _factory.Storage.Deleted);
+    }
+
+    private async Task<UploadResultDto> UploadAsync(
+        HttpClient client, string fileName, string contentType, byte[] bytes)
+    {
+        var response = await client.PostAsync("/api/uploads?folder=events", Multipart(fileName, contentType, bytes));
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<UploadResultDto>(KloweeApiFactory.Json);
+        Assert.NotNull(result);
+        Assert.Equal("image/webp", result!.ContentType);
+        Assert.EndsWith(".webp", result.Path);
+        return result;
+    }
+
+    private static byte[] Encode(Image image, SixLabors.ImageSharp.Formats.IImageEncoder encoder)
+    {
+        using (image)
+        {
+            using var stream = new MemoryStream();
+            image.Save(stream, encoder);
+            return stream.ToArray();
+        }
     }
 
     private static MultipartFormDataContent Multipart(string fileName, string contentType, byte[] bytes)

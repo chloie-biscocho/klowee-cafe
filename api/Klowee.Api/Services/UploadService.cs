@@ -1,16 +1,56 @@
 using Klowee.Api.Common;
 using Klowee.Api.Contracts.Media;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Processing;
 
 namespace Klowee.Api.Services;
 
 /// <summary>
 /// Every rule about what may be uploaded lives here, so the controller stays a
 /// controller and the storage class stays a transport. See
-/// docs/decisions/009-media-storage.md.
+/// docs/decisions/009-media-storage.md and 012-image-processing.md.
 /// </summary>
 public class UploadService : IUploadService
 {
     public const long MaxBytes = 5 * 1024 * 1024;
+
+    /// <summary>Either side above this is refused before the pixels are decoded.</summary>
+    public const int MaxInputDimension = 8000;
+
+    /// <summary>The longest edge of what gets stored. Smaller images are never enlarged.</summary>
+    public const int MaxStoredEdge = 1600;
+
+    public const int WebpQuality = 82;
+
+    private const string StoredContentType = "image/webp";
+
+    /// <summary>
+    /// Only the three formats the signature check admits. ImageSharp's default
+    /// configuration also knows TIFF, BMP, GIF and more; none of that code
+    /// should be reachable from an upload.
+    /// </summary>
+    private static readonly DecoderOptions Decoding = new()
+    {
+        Configuration = new Configuration(
+            new JpegConfigurationModule(),
+            new PngConfigurationModule(),
+            new WebpConfigurationModule()),
+        // A phone photo in Display P3 would look washed out if its profile
+        // were simply dropped; convert the pixels to sRGB, then the profile goes.
+        ColorProfileHandling = ColorProfileHandling.Convert,
+        MaxFrames = 1
+    };
+
+    private static readonly WebpEncoder Encoder = new()
+    {
+        FileFormat = WebpFileFormatType.Lossy,
+        Quality = WebpQuality,
+        SkipMetadata = true
+    };
 
     /// <summary>The only places media may be written, and the only prefixes a delete accepts.</summary>
     private static readonly string[] Folders = ["menu", "events", "site"];
@@ -47,7 +87,7 @@ public class UploadService : IUploadService
         }
 
         var contentType = declaredContentType?.Split(';')[0].Trim() ?? string.Empty;
-        if (!Extensions.TryGetValue(contentType, out var extension))
+        if (!Extensions.ContainsKey(contentType))
         {
             throw new ValidationFailedException(
                 $"Only {string.Join(", ", Extensions.Keys)} files can be uploaded.");
@@ -74,17 +114,100 @@ public class UploadService : IUploadService
                 $"The file's contents are not a valid {contentType} image.");
         }
 
+        using var processed = await ProcessAsync(content, signature.AsSpan(0, read).ToArray(), cancellationToken);
+
+        var today = _clock.Today;
+        var path = $"{folder.ToLowerInvariant()}/{today:yyyy}/{today:MM}/{Guid.NewGuid():N}.webp";
+
+        var stored = await _storage.UploadAsync(
+            path, StoredContentType, processed, processed.Length, cancellationToken);
+
+        return new UploadResultDto(stored.Url, stored.Path, stored.ContentType, stored.Size);
+    }
+
+    /// <summary>
+    /// Whatever arrived (JPEG, PNG or WebP, any size up to the limits) leaves
+    /// as an upright, metadata-free WebP no longer than <see cref="MaxStoredEdge"/>
+    /// on its longest side.
+    /// </summary>
+    private static async Task<MemoryStream> ProcessAsync(
+        Stream content,
+        byte[] alreadyRead,
+        CancellationToken cancellationToken)
+    {
+        var original = await BufferAsync(content, alreadyRead, cancellationToken);
+
+        try
+        {
+            // Identify reads the header only. A small file can still declare
+            // 30000×30000 pixels, which would be gigabytes once decoded.
+            var info = await Image.IdentifyAsync(Decoding, original, cancellationToken);
+            if (info.Width > MaxInputDimension || info.Height > MaxInputDimension)
+            {
+                throw new ValidationFailedException(
+                    $"The image is {info.Width}×{info.Height} pixels. Neither side may be above {MaxInputDimension}.");
+            }
+
+            original.Position = 0;
+            using var image = await Image.LoadAsync(Decoding, original, cancellationToken);
+
+            image.Mutate(x =>
+            {
+                // Phones store pixels as the sensor saw them and record the
+                // rotation in EXIF. Apply it now, because the EXIF is about to go.
+                x.AutoOrient();
+
+                if (Math.Max(x.GetCurrentSize().Width, x.GetCurrentSize().Height) > MaxStoredEdge)
+                {
+                    x.Resize(new ResizeOptions
+                    {
+                        Mode = ResizeMode.Max,
+                        Size = new Size(MaxStoredEdge, MaxStoredEdge)
+                    });
+                }
+            });
+
+            // Camera model, timestamps and, from phones, GPS coordinates. None
+            // of it belongs on a public URL.
+            image.Metadata.ExifProfile = null;
+            image.Metadata.XmpProfile = null;
+            image.Metadata.IptcProfile = null;
+            image.Metadata.IccProfile = null;
+
+            var output = new MemoryStream();
+            await image.SaveAsync(output, Encoder, cancellationToken);
+            output.Position = 0;
+            return output;
+        }
+        catch (Exception ex) when (ex is ImageFormatException or UnknownImageFormatException)
+        {
+            // The signature matched but the rest of the file did not hold up.
+            throw new ValidationFailedException("The image could not be read. It may be damaged.");
+        }
+    }
+
+    /// <summary>
+    /// The signature check has already consumed the first bytes. Rewind when the
+    /// stream allows it; otherwise stitch those bytes back onto the rest.
+    /// </summary>
+    private static async Task<MemoryStream> BufferAsync(
+        Stream content,
+        byte[] alreadyRead,
+        CancellationToken cancellationToken)
+    {
+        var buffer = new MemoryStream();
         if (content.CanSeek)
         {
             content.Position = 0;
         }
+        else
+        {
+            buffer.Write(alreadyRead);
+        }
 
-        var today = _clock.Today;
-        var path = $"{folder.ToLowerInvariant()}/{today:yyyy}/{today:MM}/{Guid.NewGuid():N}.{extension}";
-
-        var stored = await _storage.UploadAsync(path, contentType, content, length, cancellationToken);
-
-        return new UploadResultDto(stored.Url, stored.Path, stored.ContentType, stored.Size);
+        await content.CopyToAsync(buffer, cancellationToken);
+        buffer.Position = 0;
+        return buffer;
     }
 
     public Task DeleteAsync(string path, CancellationToken cancellationToken)
