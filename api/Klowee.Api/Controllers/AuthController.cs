@@ -1,7 +1,9 @@
+using Klowee.Api.Common;
 using Klowee.Api.Contracts.Auth;
 using Klowee.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Klowee.Api.Controllers;
 
@@ -15,6 +17,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Exchanges owner credentials for an access token.</summary>
     [HttpPost("login")]
+    [EnableRateLimiting(LoginRateLimitOptions.PolicyName)]
     [AllowAnonymous]
     [ProducesResponseType<LoginResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]

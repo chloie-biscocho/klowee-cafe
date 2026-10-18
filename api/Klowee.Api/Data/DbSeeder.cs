@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Klowee.Api.Data;
 
 /// <summary>
-/// Inserts baseline development data. Idempotent: each block checks for existing
-/// rows before inserting, so running it repeatedly (on every startup) is a no-op.
-/// Runs in the Development environment only (see Program.cs).
+/// Inserts baseline data. Idempotent: each block checks for existing rows before
+/// inserting, so running it repeatedly (on every startup) is a no-op. Which
+/// parts run in which environment is decided by Common/StartupPlan.cs.
 /// </summary>
 public static class DbSeeder
 {
@@ -21,13 +21,9 @@ public static class DbSeeder
         ("Fruit soda", 4)
     ];
 
-    public static async Task SeedAsync(
-        KloweeDbContext db,
-        IConfiguration configuration,
-        IPasswordHasher<User> passwordHasher,
-        ILogger logger)
+    /// <summary>Everything except the owners. Development only.</summary>
+    public static async Task SeedSampleDataAsync(KloweeDbContext db)
     {
-        await SeedOwnersAsync(db, configuration, passwordHasher, logger);
         await SeedAddOnsAsync(db);
         await SeedCategoriesAsync(db);
         await SeedSiteSettingsAsync(db);
@@ -38,11 +34,14 @@ public static class DbSeeder
     }
 
     /// <summary>
-    /// Creates the two owner accounts from user-secrets. There is deliberately no
-    /// registration endpoint: owners are provisioned out of band, and the plaintext
-    /// password never leaves configuration.
+    /// Creates the two owner accounts from configuration: user-secrets locally,
+    /// Seed__Owners__{0,1}__{Email,Password,DisplayName} environment variables on
+    /// the host. The only seeding Production does. There is deliberately no
+    /// registration endpoint: owners are provisioned out of band, and the
+    /// plaintext password never leaves configuration. Idempotent by email, and
+    /// an existing owner is never changed.
     /// </summary>
-    private static async Task SeedOwnersAsync(
+    public static async Task SeedOwnersAsync(
         KloweeDbContext db,
         IConfiguration configuration,
         IPasswordHasher<User> passwordHasher,
@@ -62,8 +61,8 @@ public static class DbSeeder
                 || string.IsNullOrWhiteSpace(displayName))
             {
                 logger.LogWarning(
-                    "Owner seed skipped: Seed:Owners:{Index} needs Email, Password and DisplayName. " +
-                    "Set them with: dotnet user-secrets set \"Seed:Owners:{Index}:Email\" \"...\"",
+                    "Owner seed skipped: Seed:Owners:{Index} needs Email, Password and DisplayName " +
+                    "(environment variables Seed__Owners__{Index}__Email etc., or user-secrets locally).",
                     index, index);
                 continue;
             }

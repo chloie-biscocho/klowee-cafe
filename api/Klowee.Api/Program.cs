@@ -1,17 +1,61 @@
+using System.Net;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Klowee.Api.Common;
 using Klowee.Api.Data;
 using Klowee.Api.Entities;
 using Klowee.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ---- Configuration ----
+// Locally, secrets come from user-secrets; on the host, from environment
+// variables named Section__Key (ConnectionStrings__Default, Jwt__Key, ...).
+// Everything required is checked here, together, so a misconfigured deploy
+// fails once with the full list (docs/decisions/013-hosting-and-config.md).
+var missing = RequiredConfiguration.Missing(builder.Configuration, builder.Environment);
+if (missing.Count > 0)
+{
+    throw new InvalidOperationException(
+        $"Missing configuration for the {builder.Environment.EnvironmentName} environment: " +
+        $"{string.Join(", ", missing)}. Set them as environment variables on the host, " +
+        "or with dotnet user-secrets locally (use ':' instead of '__', e.g. \"Jwt:Key\").");
+}
+
+// ---- Logging ----
+// On the host, one JSON object per line: Render's log viewer keeps each entry
+// whole and its fields searchable. Locally, the readable default.
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Logging.ClearProviders();
+    builder.Logging.AddJsonConsole(options =>
+    {
+        options.UseUtcTimestamp = true;
+        options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
+    });
+}
+
+// One line per request: method, path, status and duration. No headers, so an
+// Authorization token can never reach the logs. /api/health is skipped below.
+builder.Services.AddHttpLogging(options =>
+{
+    options.LoggingFields = HttpLoggingFields.RequestMethod
+                            | HttpLoggingFields.RequestPath
+                            | HttpLoggingFields.ResponseStatusCode
+                            | HttpLoggingFields.Duration;
+    options.CombineLogs = true;
+});
 
 // ---- Services ----
 builder.Services.AddControllers()
@@ -29,14 +73,7 @@ builder.Services.AddControllers()
 // EF Core + PostgreSQL (Supabase). The connection string comes from configuration:
 //   * local dev  -> dotnet user-secrets ("ConnectionStrings:Default")
 //   * production -> host environment variable (ConnectionStrings__Default)
-var connectionString = builder.Configuration.GetConnectionString("Default");
-if (string.IsNullOrWhiteSpace(connectionString))
-{
-    throw new InvalidOperationException(
-        "ConnectionStrings:Default is not configured. Set it via user-secrets in " +
-        "development (dotnet user-secrets set \"ConnectionStrings:Default\" \"...\") " +
-        "or an environment variable in production.");
-}
+var connectionString = builder.Configuration.GetConnectionString("Default")!;
 
 builder.Services.AddDbContext<KloweeDbContext>(options =>
     options.UseNpgsql(connectionString)
@@ -122,16 +159,6 @@ builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection(Sup
 var supabaseOptions = builder.Configuration
     .GetSection(SupabaseOptions.SectionName).Get<SupabaseOptions>() ?? new SupabaseOptions();
 
-if (builder.Environment.IsDevelopment()
-    && (string.IsNullOrWhiteSpace(supabaseOptions.Url)
-        || string.IsNullOrWhiteSpace(supabaseOptions.ServiceRoleKey)))
-{
-    throw new InvalidOperationException(
-        "Supabase:Url and Supabase:ServiceRoleKey are not configured. Set them with: " +
-        "dotnet user-secrets set \"Supabase:Url\" \"https://<project>.supabase.co\" and " +
-        "dotnet user-secrets set \"Supabase:ServiceRoleKey\" \"<service role key>\".");
-}
-
 builder.Services.AddHttpClient(SupabaseStorageService.HttpClientName, client =>
 {
     if (!string.IsNullOrWhiteSpace(supabaseOptions.ProjectUrl))
@@ -175,17 +202,101 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// The two Vite dev servers (admin, client). Development only.
-const string devCorsPolicy = "DevCors";
+// ---- CORS ----
+// The browsers that may call the API: the two Vite dev servers locally, and
+// App:AllowedOrigins (the Vercel URLs) on the host, where it is required.
+var allowedOrigins = builder.Environment.IsDevelopment()
+    ? ["http://localhost:5173", "http://localhost:5174"]
+    : (builder.Configuration.GetSection(AppOptions.SectionName).Get<AppOptions>() ?? new AppOptions())
+        .ParseAllowedOrigins();
+
+const string frontendsCorsPolicy = "Frontends";
 builder.Services.AddCors(options =>
-    options.AddPolicy(devCorsPolicy, policy =>
-        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
+    options.AddPolicy(frontendsCorsPolicy, policy =>
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
+// ---- Behind Render's proxy ----
+// Render terminates TLS and forwards plain HTTP with X-Forwarded-For/-Proto.
+// Its proxy addresses are not published, so every forwarder is trusted; the
+// container only accepts traffic from Render's network anyway.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// ---- Rate limiting ----
+// POST /api/auth/login only: 5 attempts per minute per client IP, then 429.
+// The IP is the real one because UseForwardedHeaders runs first.
+builder.Services.AddOptions<LoginRateLimitOptions>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(LoginRateLimitOptions.PolicyName, httpContext =>
+    {
+        var limits = httpContext.RequestServices.GetRequiredService<IOptions<LoginRateLimitOptions>>().Value;
+        var ip = httpContext.Connection.RemoteIpAddress ?? IPAddress.None;
+
+        return RateLimitPartition.GetFixedWindowLimiter(ip.ToString(), _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = limits.PermitLimit,
+            Window = limits.Window,
+            QueueLimit = 0
+        });
+    });
+});
+
 var app = builder.Build();
 
+// ---- Startup database work ----
+// Development migrates and seeds everything; Production only makes sure the
+// two owners exist. Production schema changes are the deploy workflow's job.
+var plan = StartupPlan.For(app.Environment);
+if (plan.Migrate || plan.SeedOwners || plan.SeedSampleData)
+{
+    using var scope = app.Services.CreateScope();
+    var services = scope.ServiceProvider;
+    var db = services.GetRequiredService<KloweeDbContext>();
+    var configuration = services.GetRequiredService<IConfiguration>();
+    var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(DbSeeder));
+
+    if (plan.Migrate)
+    {
+        await db.Database.MigrateAsync();
+    }
+
+    try
+    {
+        if (plan.SeedOwners)
+        {
+            await DbSeeder.SeedOwnersAsync(db, configuration, services.GetRequiredService<IPasswordHasher<User>>(), logger);
+        }
+
+        if (plan.SeedSampleData)
+        {
+            await DbSeeder.SeedSampleDataAsync(db);
+        }
+    }
+    catch (Exception ex) when (!app.Environment.IsDevelopment())
+    {
+        // A paused or unreachable database must not stop the API from starting;
+        // /api/health reports it, and the next start seeds.
+        logger.LogError(ex, "Owner seeding failed at startup.");
+    }
+}
+
 // ---- HTTP pipeline ----
+app.UseForwardedHeaders();
+
+// Outermost after the proxy headers, so the logged status is the one the
+// client got: a domain error becomes its 4xx in the handler below, inside this.
+app.UseWhen(
+    context => !context.Request.Path.StartsWithSegments("/api/health"),
+    branch => branch.UseHttpLogging());
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -193,21 +304,14 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseCors(devCorsPolicy);
 
-    // Apply migrations and seed baseline data (idempotent) for local development.
-    using var scope = app.Services.CreateScope();
-    var services = scope.ServiceProvider;
-    var db = services.GetRequiredService<KloweeDbContext>();
-    await db.Database.MigrateAsync();
-    await DbSeeder.SeedAsync(
-        db,
-        services.GetRequiredService<IConfiguration>(),
-        services.GetRequiredService<IPasswordHasher<User>>(),
-        services.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(DbSeeder)));
+    // Locally only: on Render, TLS ends at its edge, which already redirects
+    // HTTP to HTTPS, and the container itself serves plain HTTP.
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
+app.UseCors(frontendsCorsPolicy);
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

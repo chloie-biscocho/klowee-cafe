@@ -1,0 +1,9 @@
+# Only Klowee.Api is copied into the build; keep everything else out of the
+# context Render uploads to the Docker daemon.
+**/bin/
+**/obj/
+Klowee.Api.Tests/
+**/*.user
+**/appsettings.Development.json
+Dockerfile
+.dockerignore

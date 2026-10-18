@@ -14,4 +14,17 @@ public class AppOptions
     /// is resolved in this zone, not in UTC.
     /// </summary>
     public string TimeZone { get; set; } = "Asia/Manila";
+
+    /// <summary>
+    /// The front ends allowed to call the API from a browser, comma-separated
+    /// (<c>App__AllowedOrigins=https://a.vercel.app,https://b.vercel.app</c>).
+    /// Required in Production; Development allows the two Vite dev servers.
+    /// </summary>
+    public string AllowedOrigins { get; set; } = string.Empty;
+
+    public string[] ParseAllowedOrigins() =>
+        AllowedOrigins
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(origin => origin.TrimEnd('/'))
+            .ToArray();
 }

@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Klowee.Api.Common;
 using Klowee.Api.Contracts.Auth;
 using Klowee.Api.Data;
 using Klowee.Api.Entities;
@@ -90,6 +91,10 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IStorageService>();
             services.AddSingleton<IStorageService>(Storage);
+
+            // Every test signs in from the same (absent) address; the real limit
+            // would trip within one test class. HostingTests puts it back.
+            services.Configure<LoginRateLimitOptions>(options => options.PermitLimit = 10_000);
         });
     }
 
