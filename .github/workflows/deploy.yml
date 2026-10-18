@@ -26,10 +26,18 @@ env:
 
 jobs:
   migrate:
-    # A push to main whose CI passed, or a manual run. Not pull requests.
+    # Only main of this repository reaches production:
+    #  - a manual run must be started from main (not a feature branch, whose
+    #    unmerged migrations would otherwise be applied);
+    #  - an automatic run needs a successful CI run for a push (never a pull
+    #    request, never a fork) to main.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
