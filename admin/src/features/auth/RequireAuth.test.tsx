@@ -10,7 +10,7 @@ describe('RequireAuth', () => {
       expect(router.state.location.pathname).toBe('/login')
     })
 
-    expect(screen.getByText('Sign in to manage the menu.')).toBeInTheDocument()
+    expect(await screen.findByText('Sign in to manage the menu.')).toBeInTheDocument()
   })
 
   it('remembers where they were heading', async () => {

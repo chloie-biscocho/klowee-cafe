@@ -23,7 +23,7 @@
   /* The brief's alternative dashed-divider tint. */
   --color-divider: #c9d2f1;
 
-  --font-heading: 'Fuzzy Bubbles', 'Comic Sans MS', 'Chalkboard SE', cursive;
+  --font-heading: 'Fuzzy Bubbles', 'Fuzzy Bubbles Fallback', 'Comic Sans MS', 'Chalkboard SE', cursive;
   --font-hand: 'Caveat', 'Segoe Print', 'Bradley Hand', cursive;
   --font-body: 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
@@ -46,6 +46,23 @@
       transform: translateY(0);
     }
   }
+}
+
+/*
+ * What the headings show while Fuzzy Bubbles is still downloading. Arial (or
+ * its metric twins), stretched to Fuzzy Bubbles 700's average glyph width and
+ * vertical metrics, so a heading wraps onto the same number of lines before
+ * and after the swap and nothing below it moves. Numbers measured from the
+ * font files: average advance 0.527em vs Arial's 0.447em; ascent 0.90,
+ * descent 0.35, no line gap.
+ */
+@font-face {
+  font-family: 'Fuzzy Bubbles Fallback';
+  src: local('Arial'), local('ArialMT'), local('Helvetica'), local('Liberation Sans'), local('Roboto');
+  size-adjust: 117.79%;
+  ascent-override: 76.41%;
+  descent-override: 29.71%;
+  line-gap-override: 0%;
 }
 
 html {

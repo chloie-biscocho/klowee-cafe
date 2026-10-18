@@ -47,6 +47,7 @@ export function Hero({ home }: { home: PublicHome }) {
           alt={heading || 'Klowee Cafe'}
           placeholder="photo of the cart"
           aspect="hero"
+          priority
           className="mt-10 md:mt-14"
         />
       </div>

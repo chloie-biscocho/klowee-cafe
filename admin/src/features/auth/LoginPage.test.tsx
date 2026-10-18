@@ -15,7 +15,7 @@ describe('LoginPage', () => {
 
     const { user, store } = renderApp('/login')
 
-    await user.type(screen.getByLabelText('Email'), 'owner@klowee.test')
+    await user.type(await screen.findByLabelText('Email'), 'owner@klowee.test')
     await user.type(screen.getByLabelText('Password'), 'wrong-password')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
@@ -28,7 +28,7 @@ describe('LoginPage', () => {
 
     const { user, store, router } = renderApp('/login')
 
-    await user.type(screen.getByLabelText('Email'), 'klowe.cafe@gmail.com')
+    await user.type(await screen.findByLabelText('Email'), 'klowe.cafe@gmail.com')
     await user.type(screen.getByLabelText('Password'), 'correct-horse')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
