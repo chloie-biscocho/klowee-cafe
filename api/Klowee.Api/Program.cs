@@ -293,6 +293,34 @@ if (plan.Migrate || plan.SeedOwners || plan.SeedSampleData)
 }
 
 // ---- HTTP pipeline ----
+
+// TEMPORARY (handover 08 smoke): in production the login limiter keys on a
+// proxy hop rather than the visitor. Log the forwarding headers exactly as
+// Render delivers them, before UseForwardedHeaders rewrites them, for login
+// requests only, so the right client-IP source can be chosen. Remove with
+// the fix.
+app.Use(async (context, next) =>
+{
+    if (HttpMethods.IsPost(context.Request.Method)
+        && context.Request.Path.Equals("/api/auth/login", StringComparison.OrdinalIgnoreCase))
+    {
+        var headers = context.Request.Headers;
+        app.Logger.LogWarning(
+            "Forwarding diagnostic: X-Forwarded-For={XForwardedFor} X-Forwarded-Proto={XForwardedProto} " +
+            "CF-Connecting-IP={CfConnectingIp} True-Client-IP={TrueClientIp} X-Real-IP={XRealIp} " +
+            "Forwarded={Forwarded} RemoteIpAddress={RemoteIpAddress}",
+            headers["X-Forwarded-For"].ToString(),
+            headers["X-Forwarded-Proto"].ToString(),
+            headers["CF-Connecting-IP"].ToString(),
+            headers["True-Client-IP"].ToString(),
+            headers["X-Real-IP"].ToString(),
+            headers["Forwarded"].ToString(),
+            context.Connection.RemoteIpAddress?.ToString());
+    }
+
+    await next();
+});
+
 app.UseForwardedHeaders();
 
 // Outermost after the proxy headers, so the logged status is the one the
