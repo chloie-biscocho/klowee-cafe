@@ -48,6 +48,10 @@ jobs:
           dotnet-version: '10.0.400'
       - name: Install dotnet-ef (matches the EF Core version in Klowee.Api)
         run: dotnet tool install --global dotnet-ef --version 10.0.11
+      - name: Restore packages
+        # The bundle builds Klowee.Api for linux-x64 and does not restore on
+        # its own, so the assets file must already have that runtime's target.
+        run: dotnet restore api/Klowee.sln --runtime linux-x64
       - name: Build the migrations bundle
         run: dotnet ef migrations bundle --project api/Klowee.Api --self-contained --runtime linux-x64 --output efbundle
       - name: Apply migrations to production
