@@ -218,15 +218,19 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()));
 
 // ---- Behind Render's proxy ----
-// Render terminates TLS and forwards plain HTTP with X-Forwarded-For/-Proto.
-// Its proxy addresses are not published, so every forwarder is trusted; the
-// container is reachable only through Render's proxy. ForwardLimit = 1 reads
-// only the rightmost X-Forwarded-For entry, the one Render's proxy appended,
-// so a client that sends its own header cannot choose the IP the login rate
-// limiter sees. Handover 08's production smoke checks exactly that.
+// Requests reach the container through Cloudflare and then Render's proxy.
+// The X-Forwarded-For chain that arrives (seen in production, handover 08) is
+//   <anything the client sent>, <client>, <Cloudflare edge>, <Render proxy>
+// so its rightmost entry is a Render pod, shared by every visitor. Cloudflare
+// also sets CF-Connecting-IP to the client's address and overwrites any value
+// a client sends, so that header is the client IP: RemoteIpAddress (and the
+// login rate limiter) use it. The scheme still comes from X-Forwarded-Proto.
+// Every forwarder is trusted because the container is only reachable through
+// Render. Decision 013.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardedForHeaderName = "CF-Connecting-IP";
     options.ForwardLimit = 1;
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
@@ -293,34 +297,6 @@ if (plan.Migrate || plan.SeedOwners || plan.SeedSampleData)
 }
 
 // ---- HTTP pipeline ----
-
-// TEMPORARY (handover 08 smoke): in production the login limiter keys on a
-// proxy hop rather than the visitor. Log the forwarding headers exactly as
-// Render delivers them, before UseForwardedHeaders rewrites them, for login
-// requests only, so the right client-IP source can be chosen. Remove with
-// the fix.
-app.Use(async (context, next) =>
-{
-    if (HttpMethods.IsPost(context.Request.Method)
-        && context.Request.Path.Equals("/api/auth/login", StringComparison.OrdinalIgnoreCase))
-    {
-        var headers = context.Request.Headers;
-        app.Logger.LogWarning(
-            "Forwarding diagnostic: X-Forwarded-For={XForwardedFor} X-Forwarded-Proto={XForwardedProto} " +
-            "CF-Connecting-IP={CfConnectingIp} True-Client-IP={TrueClientIp} X-Real-IP={XRealIp} " +
-            "Forwarded={Forwarded} RemoteIpAddress={RemoteIpAddress}",
-            headers["X-Forwarded-For"].ToString(),
-            headers["X-Forwarded-Proto"].ToString(),
-            headers["CF-Connecting-IP"].ToString(),
-            headers["True-Client-IP"].ToString(),
-            headers["X-Real-IP"].ToString(),
-            headers["Forwarded"].ToString(),
-            context.Connection.RemoteIpAddress?.ToString());
-    }
-
-    await next();
-});
-
 app.UseForwardedHeaders();
 
 // Outermost after the proxy headers, so the logged status is the one the

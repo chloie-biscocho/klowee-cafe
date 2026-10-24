@@ -55,20 +55,26 @@ as the API starts, and `HostingTests` holds it:
 
 - **Port.** Render sets `PORT`. The container's command expands it at start:
   `ASPNETCORE_URLS=http://+:${PORT}`. The default is 8080.
-- **Proxy headers.** Render terminates TLS and forwards plain HTTP with
-  `X-Forwarded-For` and `X-Forwarded-Proto`. `UseForwardedHeaders` runs first
-  and trusts any forwarder, because Render doesn't publish its proxy
-  addresses. The request scheme then reads `https`, and the rate limiter sees
-  the visitor's IP rather than the proxy's.
-- **Spoofed `X-Forwarded-For`.** Trusting every forwarder is only safe because
-  `ForwardLimit = 1` reads just the rightmost entry, which is the one Render's
-  proxy appends. A client that sends `X-Forwarded-For: 1.2.3.4` arrives as
-  `1.2.3.4, <real ip>`, and the limiter keys on `<real ip>`. If Render ever
-  passed a client's header through unchanged, the login limit could be dodged
-  by rotating fake IPs. Production smoke step 2 checks this: six logins with a
-  different fake header each must still end in a 429. If that check fails, the
-  fix is a Render-specific client-IP header, or a limit keyed on the email as
-  well.
+- **Proxy headers: the client IP comes from `CF-Connecting-IP`.** Requests
+  pass through Cloudflare and then Render's proxy, which terminates TLS and
+  forwards plain HTTP. Production showed the `X-Forwarded-For` chain the
+  container receives:
+
+  ```
+  <anything the client sent>, <client>, <Cloudflare edge>, <Render proxy pod>
+  ```
+
+  The first build read the rightmost entry (`ForwardLimit = 1`). That turned
+  out to be a Render pod from a small pool, so every visitor shared a few
+  login buckets. Seven quick wrong logins from one machine never got a 429.
+  Cloudflare also sends `CF-Connecting-IP`: the client's address, which
+  Cloudflare sets itself and overwrites if a client sends one. So
+  `UseForwardedHeaders` now reads the client from that header
+  (`ForwardedForHeaderName`), and the scheme from `X-Forwarded-Proto`.
+  `RemoteIpAddress`, and with it the login limiter, is the real visitor.
+  Counting hops from the right ("third entry") would work today but breaks
+  the moment Render adds or removes a proxy layer. Every forwarder is trusted,
+  because the container is only reachable through Render.
 - **No HTTPS redirection in the container.** Render's edge already redirects
   HTTP to HTTPS, and inside the container everything is HTTP, so the middleware
   could only misfire (on the health check, for instance). It stays on in

@@ -39,7 +39,7 @@ public class HostingTests : IClassFixture<KloweeApiFactory>
             new LoginRequest { Email = KloweeApiFactory.OwnerEmail, Password = KloweeApiFactory.OwnerPassword });
         Assert.Equal(HttpStatusCode.TooManyRequests, sixth.StatusCode);
 
-        // Another visitor, as Render's proxy reports it, has their own allowance.
+        // Another visitor, as Cloudflare reports it, has their own allowance.
         var elsewhere = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
         {
             Content = JsonContent.Create(new LoginRequest
@@ -48,7 +48,7 @@ public class HostingTests : IClassFixture<KloweeApiFactory>
                 Password = KloweeApiFactory.OwnerPassword
             })
         };
-        elsewhere.Headers.Add("X-Forwarded-For", "203.0.113.7");
+        elsewhere.Headers.Add("CF-Connecting-IP", "203.0.113.7");
         Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(elsewhere)).StatusCode);
 
         // Only login is limited.
@@ -64,8 +64,9 @@ public class HostingTests : IClassFixture<KloweeApiFactory>
                 services.Configure<LoginRateLimitOptions>(options => options.PermitLimit = 5)));
         var client = limited.CreateClient();
 
-        // The caller forges a new address each time; Render's proxy appends the
-        // real one. Only the rightmost entry counts.
+        // The chain production delivers: whatever the caller forged, the
+        // caller, a Cloudflare edge, a Render proxy pod. Only CF-Connecting-IP,
+        // which Cloudflare sets and overwrites, names the visitor.
         HttpStatusCode last = default;
         for (var attempt = 1; attempt <= 6; attempt++)
         {
@@ -77,7 +78,8 @@ public class HostingTests : IClassFixture<KloweeApiFactory>
                     Password = KloweeApiFactory.WrongPassword
                 })
             };
-            request.Headers.Add("X-Forwarded-For", $"10.0.0.{attempt}, 198.51.100.9");
+            request.Headers.Add("X-Forwarded-For", $"10.0.0.{attempt}, 198.51.100.9, 172.71.124.6, 10.27.188.{attempt}");
+            request.Headers.Add("CF-Connecting-IP", "198.51.100.9");
             last = (await client.SendAsync(request)).StatusCode;
         }
 
