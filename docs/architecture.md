@@ -269,6 +269,24 @@ main.tsx ─► App ─► useHomeData()  ──►  fetch GET /api/public/home 
 Configuration is environment variables on each host, `Section__Key` for the API
 (decision 013). The dev project `klowee-cafe-dev` stays the local database.
 
+### Production
+
+| App | URL |
+|---|---|
+| Client | https://klowee-cafe.vercel.app |
+| Admin | https://klowee-cafe-admin.vercel.app |
+| API | https://klowee-cafe.onrender.com |
+
+```
+browser ──► Vercel CDN (client, admin: static files, vercel.json headers)
+   │
+   └─ fetch ──► Cloudflare ──► Render proxy ──► container :$PORT (Kestrel, Production)
+                                                   │ ConnectionStrings__Default
+                                                   ▼
+                                     Supabase session pooler ──► Postgres
+                                     Supabase Storage (bucket "media", public reads)
+```
+
 ### From a push to a running API
 
 ```

@@ -115,6 +115,47 @@ policy. Everything on the page is edited in the admin app; the API sends
 To use the real logo lettering, drop it in as `client/public/logo.svg`; the
 wordmark switches to it with no code change.
 
+## Deploying
+
+Production runs on free tiers (decision 013):
+
+| App | URL | Host |
+| --- | --- | ---- |
+| Client | https://klowee-cafe.vercel.app | Vercel |
+| Admin | https://klowee-cafe-admin.vercel.app | Vercel |
+| API | https://klowee-cafe.onrender.com | Render (Docker) |
+| Database, media | Supabase `klowee-cafe-prod` | Supabase |
+
+**Shipping a change is a push to `main`.**
+
+1. **CI** (`.github/workflows/ci.yml`) builds and tests the API and lints, tests
+   and builds both front ends.
+2. If CI is green, **Deploy** (`.github/workflows/deploy.yml`) builds an EF Core
+   migrations bundle, applies it to the production database, then calls
+   Render's deploy hook for that commit. Render builds `api/Dockerfile` and
+   switches traffic once `/api/health` answers.
+3. **Vercel** builds `client/` and `admin/` on every push by itself (previews for
+   branches, production for `main`).
+
+To redeploy the API without a code change, use **Actions → Deploy → Run
+workflow** on `main`. Render's own auto-deploy is off on purpose, so a new image
+never goes live before its migration.
+
+**Where configuration lives** (names only; values are never committed):
+
+| Where | Names |
+| ----- | ----- |
+| GitHub → Settings → Secrets → Actions | `PROD_DB_CONNECTION`, `RENDER_DEPLOY_HOOK_URL` (used by Deploy) |
+| Render → service → Environment | `ConnectionStrings__Default`, `Jwt__Key`, `Supabase__Url`, `Supabase__ServiceRoleKey`, `App__AllowedOrigins`, `Seed__Owners__{0,1}__{Email,Password,DisplayName}` |
+| Vercel → each project → Environment Variables | `VITE_API_URL` (baked in at build time: redeploy after changing it) |
+
+- The database connection string is Supabase's **.NET** format on the **Session
+  pooler** (`Host=…pooler.supabase.com;Port=5432;…`), not the `postgresql://` URI.
+- A front end on a new URL must be added to `App__AllowedOrigins` (comma-separated)
+  or the browser's CORS check will refuse it. Vercel preview URLs are not in it.
+- The free API sleeps after about 15 minutes idle; the first request after that
+  takes 30–60 seconds.
+
 ## Repository conventions
 
 - Tables and columns use `snake_case` (via `EFCore.NamingConventions`).
