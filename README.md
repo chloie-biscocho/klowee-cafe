@@ -156,6 +156,43 @@ never goes live before its migration.
 - The free API sleeps after about 15 minutes idle; the first request after that
   takes 30–60 seconds.
 
+## Copying content between environments
+
+`tools/ContentSync` copies the menu, packages, events, announcements, site
+settings and their photos from one Supabase project to another (decision 014).
+It never touches `users`. It replaces the destination's content; it does not
+merge.
+
+Set six variables. Values never go in the repo; a `chmod 600` file outside it
+works well. Database strings are Supabase's **.NET** format on the **Session
+pooler**, on one line.
+
+```bash
+export SYNC_SOURCE_DB='User Id=postgres.<source-ref>;Password=…;Server=…;Port=5432;Database=postgres'
+export SYNC_SOURCE_SUPABASE_URL='https://<source-ref>.supabase.co'
+export SYNC_SOURCE_SERVICE_KEY='<source service role key>'
+export SYNC_DEST_DB='User Id=postgres.<dest-ref>;Password=…;Server=…;Port=5432;Database=postgres'
+export SYNC_DEST_SUPABASE_URL='https://<dest-ref>.supabase.co'
+export SYNC_DEST_SERVICE_KEY='<dest service role key>'
+```
+
+```bash
+# 1. Dry run: counts per table and photos to copy; writes nothing
+dotnet run --project tools/ContentSync
+
+# 2. Apply: asks you to type the destination project ref, then copies
+dotnet run --project tools/ContentSync -- --apply
+
+# Optional: only some tables (their dependent tables come along)
+dotnet run --project tools/ContentSync -- --tables packages,site_settings
+```
+
+- **Dev → prod** (done in handover 09): source = `klowee-cafe-dev`, destination =
+  `klowee-cafe-prod`.
+- **Refresh dev from prod**: the same commands with the sides swapped. Put the
+  prod values in `SYNC_SOURCE_*` and the dev values in `SYNC_DEST_*`. The tool
+  refuses to run if both sides are the same project.
+
 ## Repository conventions
 
 - Tables and columns use `snake_case` (via `EFCore.NamingConventions`).
