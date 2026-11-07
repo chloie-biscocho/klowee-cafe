@@ -43,4 +43,16 @@ public class StorageUrlsTests
     [InlineData("https://devref.supabase.co")]
     public void ProjectUrl_ToleratesTheOtherDashboardUrls(string configured) =>
         Assert.Equal("https://devref.supabase.co", new StorageUrls(configured).ProjectUrl);
+
+    [Theory]
+    [InlineData("../other-bucket/secret.png")]
+    [InlineData("events/../../other-bucket/x.webp")]
+    [InlineData("events/./x.webp")]
+    [InlineData("events/%2e%2e/x.webp")]
+    [InlineData("events\\..\\x.webp")]
+    [InlineData("/events/x.webp")]
+    [InlineData(".hidden/x.webp")]
+    public void APathThatCouldLeaveTheBucket_StopsTheRun(string path) =>
+        Assert.Throws<StorageCopyException>(() =>
+            StorageUrls.Rewrite("https://devref.supabase.co/storage/v1/object/public/media/" + path, Dev, Prod));
 }

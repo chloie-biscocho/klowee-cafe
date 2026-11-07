@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Klowee.ContentSync;
 
 /// <summary>
@@ -19,7 +21,21 @@ public sealed class StorageUrls
     /// <summary>The project root, e.g. https://abcd.supabase.co, with no trailing slash.</summary>
     public string ProjectUrl { get; }
 
-    /// <summary>The object path when <paramref name="url"/> is in this bucket; otherwise null.</summary>
+    /// <summary>
+    /// The shape of every path the API generates ({folder}/{yyyy}/{MM}/{guid}.{ext}),
+    /// loosely: letters, digits, '_' and '-', '.' only after a segment's first
+    /// character. No "." or ".." segment, no backslash, no percent-escape, no
+    /// leading slash can match, so a path can never climb out of the bucket.
+    /// </summary>
+    private static readonly Regex SafePath = new(
+        "^[A-Za-z0-9_-]+(/[A-Za-z0-9_-][A-Za-z0-9_.-]*)*$", RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// The object path when <paramref name="url"/> is in this bucket; otherwise null.
+    /// A URL that is in this bucket but whose path is not a plain object path
+    /// (traversal, escapes) stops the run rather than being skipped: it would
+    /// otherwise reach outside the bucket with the service key.
+    /// </summary>
     public string? ObjectPath(string? url)
     {
         if (string.IsNullOrWhiteSpace(url)
@@ -36,8 +52,22 @@ public sealed class StorageUrls
             path = path[..cut];
         }
 
-        return path.Length == 0 ? null : path;
+        if (path.Length == 0)
+        {
+            return null;
+        }
+
+        if (!SafePath.IsMatch(path))
+        {
+            throw new StorageCopyException($"A row refers to an unsafe object path in the {Bucket} bucket: {path}");
+        }
+
+        return path;
     }
+
+    /// <summary>The path with each segment escaped, for building a request URI.</summary>
+    public static string Escape(string path) =>
+        string.Join('/', path.Split('/').Select(Uri.EscapeDataString));
 
     public string PublicUrl(string path) => _publicPrefix + path;
 
