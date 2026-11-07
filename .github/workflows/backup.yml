@@ -1,0 +1,105 @@
+# Daily encrypted backup of the production database (decision 015).
+# pg_dump (custom format) -> age-encrypted with the public key -> kept as a
+# workflow artifact for 30 days and in the private Supabase bucket "backups"
+# for 90. The private key never exists here; restoring is
+# docs/runbooks/restore-database.md.
+name: Backup
+
+on:
+  schedule:
+    - cron: '0 18 * * *'   # 18:00 UTC = 02:00 in Manila
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-production
+  cancel-in-progress: false
+
+env:
+  # Supabase's server major. The job checks the server against this before
+  # dumping; bump both together when Supabase upgrades the project.
+  PG_MAJOR: '17'
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the PostgreSQL ${{ env.PG_MAJOR }} client and age
+        run: |
+          # The runner's own PostgreSQL is 16; a pg_dump older than the server refuses to run.
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq "postgresql-client-${PG_MAJOR}" age
+          echo "/usr/lib/postgresql/${PG_MAJOR}/bin" >> "$GITHUB_PATH"
+
+      - name: Connect (password goes to ~/.pgpass, never the command line)
+        env:
+          PROD_DB_CONNECTION: ${{ secrets.PROD_DB_CONNECTION }}
+        run: python3 .github/scripts/backup.py pgenv
+
+      - name: Check the server's major version matches the client
+        run: |
+          server=$(psql -tAc "SHOW server_version_num")
+          echo "Server: $(psql -tAc 'SELECT version()')"
+          echo "Client: $(pg_dump --version)"
+          if [ "$((server / 10000))" != "$PG_MAJOR" ]; then
+            echo "::error::Supabase runs PostgreSQL $((server / 10000)) but the workflow pins $PG_MAJOR. Update PG_MAJOR in backup.yml."
+            exit 1
+          fi
+
+      - name: Dump the public schema (every app table, users included)
+        run: |
+          echo "STAMP=$(date -u +%Y-%m-%d)" >> "$GITHUB_ENV"
+          # Supabase's own schemas (auth, storage, ...) belong to the platform and
+          # are recreated with any new project; the app's data is all in public.
+          pg_dump --format=custom --no-owner --no-privileges --schema=public --file=klowee.dump
+          size=$(stat -c %s klowee.dump)
+          echo "Dump: $size bytes"
+          if [ "$size" -lt 10240 ]; then
+            echo "::error::The dump is only $size bytes; something is wrong. Refusing to keep it as a backup."
+            exit 1
+          fi
+          # The archive must be readable and hold the tables a restore needs.
+          pg_restore --list klowee.dump > toc.txt
+          for table in users __EFMigrationsHistory menu_items events site_settings; do
+            grep -q "TABLE DATA public ${table} " toc.txt || { echo "::error::No data for ${table} in the dump."; exit 1; }
+          done
+          echo "Tables with data: $(grep -c 'TABLE DATA' toc.txt)"
+
+      - name: Encrypt with the public key, then delete the plain dump
+        env:
+          BACKUP_AGE_PUBLIC_KEY: ${{ secrets.BACKUP_AGE_PUBLIC_KEY }}
+        run: |
+          case "$BACKUP_AGE_PUBLIC_KEY" in
+            age1*) ;;
+            *) echo "::error::BACKUP_AGE_PUBLIC_KEY is not an age public key (age1...)."; exit 1 ;;
+          esac
+          name="klowee-prod-${STAMP}.dump.age"
+          age --encrypt --recipient "$BACKUP_AGE_PUBLIC_KEY" --output "$name" klowee.dump
+          shred -u klowee.dump toc.txt
+          echo "NAME=$name" >> "$GITHUB_ENV"
+          echo "Encrypted: $(stat -c %s "$name") bytes"
+
+      - name: Keep as a workflow artifact (30 days)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.NAME }}
+          path: ${{ env.NAME }}
+          retention-days: 30
+          if-no-files-found: error
+          compression-level: 0   # already encrypted, nothing to gain
+
+      - name: Upload to the private Supabase bucket (90 days)
+        env:
+          PROD_SUPABASE_URL: ${{ secrets.PROD_SUPABASE_URL }}
+          PROD_SUPABASE_SERVICE_KEY: ${{ secrets.PROD_SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 .github/scripts/backup.py upload "$NAME" "db/${STAMP:0:4}/${STAMP:5:2}/$NAME"
+          python3 .github/scripts/backup.py prune 90
