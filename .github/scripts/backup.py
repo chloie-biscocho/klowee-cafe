@@ -76,11 +76,13 @@ def pgenv() -> None:
 
 
 def request(method: str, path: str, body=None, data: bytes | None = None, content_type="application/json"):
-    base = os.environ["PROD_SUPABASE_URL"].rstrip("/")
+    # Secrets pasted into GitHub often carry a trailing newline; a header
+    # value cannot contain one, and a key or URL never contains whitespace.
+    base = os.environ["PROD_SUPABASE_URL"].strip().rstrip("/")
     for suffix in ("/rest/v1", "/storage/v1", "/auth/v1"):
         if base.endswith(suffix):
             base = base[: -len(suffix)]
-    key = os.environ["PROD_SUPABASE_SERVICE_KEY"]
+    key = os.environ["PROD_SUPABASE_SERVICE_KEY"].strip()
     payload = data if data is not None else (json.dumps(body).encode() if body is not None else None)
     req = urllib.request.Request(f"{base}/storage/v1/{path}", data=payload, method=method, headers={
         "Authorization": f"Bearer {key}", "apikey": key, "Content-Type": content_type, "x-upsert": "true"})
