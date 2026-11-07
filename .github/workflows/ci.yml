@@ -10,6 +10,8 @@ permissions:
   contents: read
 
 jobs:
+  # Klowee.sln also holds tools/ContentSync and its unit tests, so this job
+  # builds and tests them alongside the API.
   api:
     runs-on: ubuntu-latest
     defaults:
