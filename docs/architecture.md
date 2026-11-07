@@ -275,7 +275,7 @@ Configuration is environment variables on each host, `Section__Key` for the API
 |---|---|
 | Client | https://klowee-cafe.vercel.app |
 | Admin | https://klowee-cafe-admin.vercel.app |
-| API | https://klowee-cafe.onrender.com |
+| API | https://klowee-cafe-api.onrender.com |
 
 ```
 browser ──► Vercel CDN (client, admin: static files, vercel.json headers)

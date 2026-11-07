@@ -110,6 +110,24 @@ GitHub Actions use the **pooler** connection string. The session pooler (port
 also works with this API's EF Core usage, but migrations are safer on the
 session pooler.
 
+### Region: the API sits next to the database
+
+**The API and the database must be in the same region.**
+
+| | Region |
+|---|---|
+| Database: Supabase `klowee-cafe-prod` | `eu-west-1` (Ireland) |
+| API: Render `klowee-cafe-api` | Frankfurt (EU Central) |
+
+The first service ran in another region. Every database query then crossed
+continents (about 180 ms per round trip), and the home payload makes about
+8–9 of them one after another: a 1,641 ms median. Moved next to the database
+in handover 10, the same request takes 463 ms. The visitor's browser is one
+round trip from the API whatever the region, but the API's round trips to the
+database multiply. Render can't move a service between regions, so a move
+means a new service, a new deploy hook and a new `VITE_API_URL`. If the
+database ever moves, the API moves with it.
+
 ## Why these hosts
 
 - **Render** runs a Dockerfile as-is on the free tier, so the API ships with

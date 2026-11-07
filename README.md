@@ -123,7 +123,7 @@ Production runs on free tiers (decision 013):
 | --- | --- | ---- |
 | Client | https://klowee-cafe.vercel.app | Vercel |
 | Admin | https://klowee-cafe-admin.vercel.app | Vercel |
-| API | https://klowee-cafe.onrender.com | Render (Docker) |
+| API | https://klowee-cafe-api.onrender.com | Render (Docker) |
 | Database, media | Supabase `klowee-cafe-prod` | Supabase |
 
 **Shipping a change is a push to `main`.**
