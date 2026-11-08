@@ -27,6 +27,23 @@ public class AuthController : ControllerBase
         CancellationToken cancellationToken) =>
         Ok(await _auth.LoginAsync(request, cancellationToken));
 
+    /// <summary>
+    /// Changes the signed-in owner's password. 401 if the current password is
+    /// wrong; rate limited like login, since it is also a password check.
+    /// Tokens already issued stay valid until they expire.
+    /// </summary>
+    [HttpPut("password")]
+    [EnableRateLimiting(LoginRateLimitOptions.PolicyName)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        await _auth.ChangePasswordAsync(request, cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>Returns the owner behind the presented token.</summary>
     [HttpGet("me")]
     [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]

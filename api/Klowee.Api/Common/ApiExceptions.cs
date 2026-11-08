@@ -47,7 +47,12 @@ public class ConflictException : ApiException
 public class InvalidCredentialsException : ApiException
 {
     public InvalidCredentialsException()
-        : base(StatusCodes.Status401Unauthorized, "Unauthorized", "Invalid email or password.")
+        : this("Invalid email or password.")
+    {
+    }
+
+    public InvalidCredentialsException(string message)
+        : base(StatusCodes.Status401Unauthorized, "Unauthorized", message)
     {
     }
 }

@@ -25,3 +25,8 @@ docs/handovers/
 # ---- OS cruft ----
 .DS_Store
 Thumbs.db
+
+# ---- Spreadsheet import (handover 13): the workbook and its parsed rows hold real data ----
+docs/import/*.xlsx
+docs/import/parsed.csv
+docs/import/summary.txt

@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router'
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
+import { ChangePasswordModal } from '../../features/auth/ChangePasswordModal'
 import { loggedOut, selectUser } from '../../features/auth/authSlice'
 import { showToast } from '../../features/toasts/toastSlice'
 
@@ -40,6 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
 export function Sidebar() {
   const user = useAppSelector(selectUser)
   const dispatch = useAppDispatch()
+  const [changingPassword, setChangingPassword] = useState(false)
 
   return (
     <aside className="flex w-[220px] shrink-0 flex-col border-r border-line bg-surface">
@@ -84,17 +87,27 @@ export function Sidebar() {
 
       <div className="border-t border-line px-5 py-4">
         <p className="truncate text-sm font-medium">{user?.displayName ?? 'Signed in'}</p>
-        <button
-          type="button"
-          className="mt-1 text-xs text-muted underline-offset-2 hover:text-ink hover:underline"
-          onClick={() => {
-            dispatch(loggedOut())
-            dispatch(showToast('success', 'Signed out.'))
-          }}
-        >
-          Log out
-        </button>
+        <div className="mt-1 flex gap-3">
+          <button
+            type="button"
+            className="text-xs text-muted underline-offset-2 hover:text-ink hover:underline"
+            onClick={() => setChangingPassword(true)}
+          >
+            Change password
+          </button>
+          <button
+            type="button"
+            className="text-xs text-muted underline-offset-2 hover:text-ink hover:underline"
+            onClick={() => {
+              dispatch(loggedOut())
+              dispatch(showToast('success', 'Signed out.'))
+            }}
+          >
+            Log out
+          </button>
+        </div>
       </div>
+      {changingPassword && <ChangePasswordModal onClose={() => setChangingPassword(false)} />}
     </aside>
   )
 }

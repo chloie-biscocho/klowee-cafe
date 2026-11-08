@@ -61,6 +61,32 @@ public class AuthService : IAuthService
         return user is null ? throw new InvalidCredentialsException() : ToDto(user);
     }
 
+    public async Task ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        var userId = _currentUser.UserId ?? throw new InvalidCredentialsException();
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            ?? throw new InvalidCredentialsException();
+
+        if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.CurrentPassword)
+            == PasswordVerificationResult.Failed)
+        {
+            throw new InvalidCredentialsException("The current password is incorrect.");
+        }
+
+        if (request.NewPassword.Length < 12)
+        {
+            throw new ValidationFailedException("The new password must be at least 12 characters.");
+        }
+
+        if (request.NewPassword == request.CurrentPassword)
+        {
+            throw new ValidationFailedException("The new password must be different from the current one.");
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
     /// <summary>Emails are stored and compared lower-cased so login is case-insensitive.</summary>
     public static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 

@@ -18,3 +18,15 @@ public record LoginRequest
 public record UserDto(Guid Id, string Email, string DisplayName);
 
 public record LoginResponse(string AccessToken, DateTimeOffset ExpiresAt, UserDto User);
+
+/// <summary>Body of <c>PUT /api/auth/password</c>.</summary>
+public record ChangePasswordRequest
+{
+    [Required]
+    public string CurrentPassword { get; init; } = string.Empty;
+
+    [Required]
+    [MinLength(12, ErrorMessage = "The new password must be at least 12 characters.")]
+    [MaxLength(200)]
+    public string NewPassword { get; init; } = string.Empty;
+}

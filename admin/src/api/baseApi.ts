@@ -31,7 +31,9 @@ const rawBaseQuery = fetchBaseQuery({
  * user to /login.
  *
  * A 401 while signed *out* is a wrong password, not an expired session — that
- * one belongs to the login form, so it is passed through untouched.
+ * one belongs to the login form, so it is passed through untouched. So is the
+ * 401 from changing the password: it means "the current password you typed is
+ * wrong", and the change-password form shows it.
  */
 const baseQueryWithAuth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
   args,
@@ -41,7 +43,10 @@ const baseQueryWithAuth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQuery
   const wasSignedIn = (api.getState() as RootState).auth.token !== null
   const result = await rawBaseQuery(args, api, extraOptions)
 
-  if (result.error?.status === 401 && wasSignedIn) {
+  const url = typeof args === 'string' ? args : args.url
+  const isPasswordCheck = url.replace(/^\//, '') === 'auth/password'
+
+  if (result.error?.status === 401 && wasSignedIn && !isPasswordCheck) {
     api.dispatch(loggedOut())
     api.dispatch(showToast('error', 'Your session expired. Please sign in again.'))
   }

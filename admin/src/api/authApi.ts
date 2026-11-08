@@ -15,6 +15,10 @@ export const authApi = baseApi.injectEndpoints({
      * a token that expired while the tab was closed fails here, which trips the
      * 401 handler in `baseApi` and signs the user out.
      */
+    /** 204 on success. A wrong current password is a 401 that does not sign the owner out (see baseApi). */
+    changePassword: build.mutation<void, { currentPassword: string; newPassword: string }>({
+      query: (body) => ({ url: '/auth/password', method: 'PUT', body }),
+    }),
     getMe: build.query<UserDto, void>({
       query: () => '/auth/me',
       providesTags: ['Me'],
@@ -22,4 +26,4 @@ export const authApi = baseApi.injectEndpoints({
   }),
 })
 
-export const { useLoginMutation, useGetMeQuery } = authApi
+export const { useLoginMutation, useGetMeQuery, useChangePasswordMutation } = authApi
