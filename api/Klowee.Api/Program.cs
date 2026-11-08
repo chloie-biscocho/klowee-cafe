@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
@@ -111,6 +112,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.FromMinutes(1),
             NameClaimType = "sub",
             RoleClaimType = "role"
+        };
+
+        // Revocation by issue time: a token issued before its user's last
+        // password change is refused. One primary-key read per request.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                if (context.SecurityToken is not JsonWebToken token
+                    || !Guid.TryParse(token.Subject, out var userId))
+                {
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices.GetRequiredService<KloweeDbContext>();
+                var changedAt = await db.Users.AsNoTracking()
+                    .Where(u => u.Id == userId)
+                    .Select(u => u.PasswordChangedAt)
+                    .FirstOrDefaultAsync(context.HttpContext.RequestAborted);
+                if (changedAt is not null && new DateTimeOffset(token.IssuedAt, TimeSpan.Zero) < changedAt)
+                {
+                    context.Fail("The token was issued before the password changed.");
+                }
+            }
         };
     });
 

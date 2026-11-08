@@ -47,8 +47,10 @@ browser  ─►  [ CORS ]  ─►  [ Authentication ]  ─►  [ Authorization ]
 ```
 
 - **Authentication** happens before anything application-specific. The JWT is
-  verified against the signing key the API itself used to issue it, so no
-  database lookup is needed to know who is calling. See
+  verified against the signing key the API itself used to issue it. One
+  primary-key read then compares the token's `iat` with the user's
+  `password_changed_at`: a token issued before the last password change is
+  refused, so changing a password signs that user out everywhere. See
   `docs/decisions/004-jwt-auth.md`.
 - **Authorization** uses a *fallback policy*: any endpoint that does not state
   its own requirements needs an authenticated user. Public endpoints
@@ -153,7 +155,8 @@ LoginPage  ──►  POST /api/auth/login  ──►  authSlice { token, user, 
 - The token is added by `prepareHeaders` inside the base query, once, for every
   endpoint. No call site handles a header.
 - Any 401 on a signed-in request clears the slice and raises a "session expired"
-  toast; `RequireAuth` — a layout route in front of everything except `/login` —
+  toast (except `auth/password`, where 401 means a wrong current password; a
+  successful change signs out at once with its own toast); `RequireAuth` — a layout route in front of everything except `/login` —
   sees the empty token and redirects, remembering where the owner was heading.
 - The slice is mirrored to `localStorage` so a refresh keeps the session. The
   XSS trade-off that comes with that is written down in

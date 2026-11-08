@@ -5,7 +5,9 @@ import { useChangePasswordMutation } from '../../api/authApi'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
+import { useAppDispatch } from '../../app/hooks'
 import { useToastedAction } from '../toasts/useToastedAction'
+import { loggedOut } from './authSlice'
 
 const schema = z
   .object({
@@ -17,10 +19,15 @@ const schema = z
   .refine((v) => v.newPassword !== v.currentPassword, { path: ['newPassword'], message: 'Choose a different password.' })
 type Values = z.infer<typeof schema>
 
-/** Current, new, confirm. The API checks the current one; a wrong one is a toast, not a sign-out. */
+/**
+ * Current, new, confirm. The API checks the current one; a wrong one is a toast,
+ * not a sign-out. A change revokes every token issued before it, this one
+ * included, so success signs out here at once instead of waiting for a 401.
+ */
 export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   const [changePassword, { isLoading }] = useChangePasswordMutation()
   const run = useToastedAction()
+  const dispatch = useAppDispatch()
   const { register, handleSubmit, formState } = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: { currentPassword: '', newPassword: '', confirm: '' },
@@ -28,8 +35,13 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   const { errors } = formState
 
   const submit = handleSubmit(async ({ currentPassword, newPassword }) => {
-    const outcome = await run(changePassword({ currentPassword, newPassword }), 'Password changed.')
-    if (outcome.ok) onClose()
+    const outcome = await run(
+      changePassword({ currentPassword, newPassword }),
+      'Password changed. Signed out everywhere, please sign in again.',
+    )
+    if (!outcome.ok) return
+    onClose()
+    dispatch(loggedOut())
   })
 
   return (

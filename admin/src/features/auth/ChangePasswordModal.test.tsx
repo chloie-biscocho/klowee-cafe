@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { API, signedIn } from '../../test/fixtures'
@@ -19,7 +19,7 @@ async function openModal() {
 }
 
 describe('Change password', () => {
-  it('sends the current and new password, and closes on success', async () => {
+  it('sends the current and new password, then signs out everywhere with a toast', async () => {
     let sent: unknown = null
     server.use(
       http.put(`${API}/auth/password`, async ({ request }) => {
@@ -27,13 +27,15 @@ describe('Change password', () => {
         return new HttpResponse(null, { status: 204 })
       }),
     )
-    const { fill } = await openModal()
+    const { fill, store, router } = await openModal()
 
     await fill('old-password-1', 'a-new-long-password')
 
-    expect(await screen.findByText('Password changed.')).toBeInTheDocument()
+    expect(await screen.findByText('Password changed. Signed out everywhere, please sign in again.')).toBeInTheDocument()
     expect(sent).toEqual({ currentPassword: 'old-password-1', newPassword: 'a-new-long-password' })
-    expect(screen.queryByRole('dialog', { name: 'Change password' })).not.toBeInTheDocument()
+    expect(store.getState().auth.token).toBeNull()
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+    expect(screen.queryByText('Your session expired. Please sign in again.')).not.toBeInTheDocument()
   })
 
   it("shows the API's 401 message and keeps the owner signed in", async () => {

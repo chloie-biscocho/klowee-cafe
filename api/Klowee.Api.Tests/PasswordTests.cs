@@ -65,7 +65,7 @@ public class PasswordTests : IClassFixture<KloweeApiFactory>
     }
 
     [Fact]
-    public async Task Success_Is204_TheNewPasswordLogsIn_TheOldDoesNot_AndTheOldTokenStillWorks()
+    public async Task Success_Is204_TheNewPasswordLogsIn_TheOldDoesNot()
     {
         var (client, email) = await OwnerAsync("changes");
 
@@ -74,11 +74,31 @@ public class PasswordTests : IClassFixture<KloweeApiFactory>
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal(HttpStatusCode.OK, await LoginAsync(email, "a-brand-new-password"));
         Assert.Equal(HttpStatusCode.Unauthorized, await LoginAsync(email, Original));
-
-        // No token revocation in this phase: a token issued before the change
-        // keeps working until it expires (decision 004's lifetime).
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/auth/me")).StatusCode);
     }
+
+    [Fact]
+    public async Task AfterAChange_TokensIssuedBefore_AreRejected_NewOnesWork_OtherUsersUnaffected()
+    {
+        var (client, email) = await OwnerAsync("revokes");
+        var (bystander, _) = await OwnerAsync("bystander");
+
+        // The old token was issued in this same second: still refused.
+        Assert.Equal(HttpStatusCode.NoContent, (await ChangeAsync(client, Original, "a-brand-new-password")).StatusCode);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/auth/me")).StatusCode);
+
+        // "iat" has one-second resolution; a token from the next second on is accepted.
+        await NextSecondAsync();
+        var fresh = await _factory.CreateAnonymousClientAsync();
+        var login = await (await fresh.PostAsJsonAsync("/api/auth/login", new { email, password = "a-brand-new-password" }))
+            .Content.ReadFromJsonAsync<LoginResponse>(KloweeApiFactory.Json);
+        fresh.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login!.AccessToken);
+        Assert.Equal(HttpStatusCode.OK, (await fresh.GetAsync("/api/auth/me")).StatusCode);
+
+        Assert.Equal(HttpStatusCode.OK, (await bystander.GetAsync("/api/auth/me")).StatusCode);
+    }
+
+    private static Task NextSecondAsync() => Task.Delay(1050 - DateTime.UtcNow.Millisecond);
 
     [Fact]
     public async Task WithoutAToken_Is401()

@@ -84,6 +84,13 @@ public class AuthService : IAuthService
         }
 
         user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
+
+        // A token's "iat" has one-second resolution, so the change is stamped as
+        // the start of the next second: every token from this second or earlier
+        // is refused, including one issued a moment before the change. A sign-in
+        // within the same second is refused too; the next second works.
+        var now = DateTimeOffset.UtcNow;
+        user.PasswordChangedAt = now.AddTicks(TimeSpan.TicksPerSecond - now.UtcTicks % TimeSpan.TicksPerSecond);
         await _db.SaveChangesAsync(cancellationToken);
     }
 
