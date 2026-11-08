@@ -258,6 +258,40 @@ main.tsx ─► App ─► useHomeData()  ──►  fetch GET /api/public/home 
 - **The browser caches the payload** for up to 60 seconds (the API's
   `Cache-Control`); there is no client-side cache beyond that.
 
+## Phase 2: office sales
+
+API only so far (admin screens follow). Decision 016 has the reasoning.
+
+```
+Customers ─┬─ drinks ─> Order ─< OrderItem ─< OrderItemAddOn
+           └─ pays ───> Order       │ unit_price: snapshot of the MenuVersionItem price
+                         │          └─> MenuVersionItem (exact priced row, decision 002)
+                         ├─< Payment (one order each; settle splits a transfer)
+                         └─< LoyaltyEntry (Earned / Redeemed / Adjustment) >─ Customer
+```
+
+| Endpoint group | What it does |
+|---|---|
+| `/api/customers` | list with tab balance, stamps, rewards, last order; CRUD; activate/deactivate; delete refused while orders exist; `merge-into/{targetId}`; `loyalty` ledger and `loyalty/adjust`; `settle` |
+| `/api/orders` | paged list (dates, customer, derived status); detail with items, add-ons, payments, warnings; create, replace (409 once paid against), delete |
+| `/api/orders/{id}/payments` | add (409 on overpayment), delete |
+| `/api/reports` | `summary` (revenue by order date, collected by payment date, outstanding, channels, top items, new customers), `outstanding`, `monthly` |
+
+- **Services:**
+  - `PricingService`: arithmetic only, no database.
+  - `OrderService`: snapshots, validation, totals.
+  - `PaymentService`: add, delete, settle.
+  - `LoyaltyService`: ledger, plus `ReconcileAsync` after every change.
+  - `CustomerService`, `ReportService`.
+- **Status is derived** (`Unpaid` / `Partial` / `Paid` from payments). Totals
+  are stored and recomputed on every edit, and `unit_price` is never recomputed.
+- **The tab** is the orders a customer pays for (`payer_id ?? customer_id`).
+  Stamps go to the drinker.
+- `loyalty_stamps_per_reward` is a site setting (default 10) that the public
+  endpoint leaves out.
+- **Development seed:** three sample customers and six orders in mixed states,
+  only into a database with no customers yet.
+
 ## Hosting and delivery
 
 | Piece | Host | Built from |

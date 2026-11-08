@@ -31,6 +31,7 @@ public static class DbSeeder
         await MoveStrawberryMilkToMilkDrinksAsync(db);
         await SeedPackagesAsync(db);
         await SeedPastEventsAsync(db);
+        await SeedSampleSalesAsync(db);
     }
 
     /// <summary>
@@ -161,6 +162,7 @@ public static class DbSeeder
             ("instagram_url", "https://instagram.com/kloweecafe"),
             ("facebook_url", "https://facebook.com/kloweecafe"),
             ("contact_email", "hello@kloweecafe.com"),
+            (SiteSettingService.LoyaltyStampsPerRewardKey, "10"),
         };
 
         var existing = await db.SiteSettings.Select(s => s.Key).ToListAsync();
@@ -348,6 +350,122 @@ public static class DbSeeder
             Status = EventStatus.Done,
             IsPublished = false
         }));
+
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Phase 2 sample data for the admin screens: three customers and six
+    /// office orders in mixed states (paid, partial, unpaid, one covered by
+    /// someone else, one using a free-drink reward). Development only, and only
+    /// into a database with no customers yet. Totals come from the real
+    /// <see cref="PricingService"/>; the stamp ledger is written the way the
+    /// services would write it (decision 016).
+    /// </summary>
+    private static async Task SeedSampleSalesAsync(KloweeDbContext db)
+    {
+        if (await db.Customers.IgnoreQueryFilters().AnyAsync())
+        {
+            return;
+        }
+
+        // Whatever menu exists: the office one if there is one, else any
+        // published version. Orders may reference any version (with a warning).
+        var rows = await db.MenuVersionItems
+            .Where(vi => vi.MenuVersion!.IsPublished)
+            .OrderBy(vi => vi.MenuVersion!.Context == MenuContext.Office ? 0 : 1)
+            .ThenBy(vi => vi.SortOrder)
+            .Take(3)
+            .ToListAsync();
+        var addOn = await db.AddOns.Where(a => a.IsActive).OrderBy(a => a.Name).FirstOrDefaultAsync();
+        if (rows.Count < 3 || addOn is null)
+        {
+            return;
+        }
+
+        var kee = new Customer { Name = "Kee (sample)", Nickname = "Kee" };
+        var klowe = new Customer { Name = "Klowe (sample)", Nickname = "Klowe" };
+        var prince = new Customer { Name = "Prince (sample)", Notes = "Kee covers him sometimes." };
+        db.Customers.AddRange(kee, klowe, prince);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(8)); // Manila, fixed +08:00
+        var pricing = new PricingService();
+
+        Order NewOrder(Customer customer, Customer? payer, int daysAgo, DiscountType discount, decimal value,
+            params (MenuVersionItem Row, int Quantity, bool WithAddOn)[] lines)
+        {
+            var order = new Order
+            {
+                Customer = customer,
+                Payer = payer,
+                OrderedOn = today.AddDays(-daysAgo),
+                DiscountType = discount,
+                DiscountValue = discount is DiscountType.Percent or DiscountType.Fixed ? value : 0m
+            };
+
+            foreach (var (row, quantity, withAddOn) in lines)
+            {
+                var item = new OrderItem
+                {
+                    MenuVersionItemId = row.Id,
+                    Quantity = quantity,
+                    SortOrder = order.Items.Count,
+                    UnitPrice = row.Price
+                };
+                if (withAddOn)
+                {
+                    item.AddOns.Add(new OrderItemAddOn { AddOnId = addOn.Id, UnitPrice = addOn.Price });
+                }
+
+                order.Items.Add(item);
+            }
+
+            var priced = pricing.Price(
+                order.Items.Select(i => new PricingLine(i.UnitPrice, i.Quantity, i.AddOns.Select(a => a.UnitPrice).ToList())).ToList(),
+                discount, order.DiscountValue);
+            var index = 0;
+            foreach (var item in order.Items)
+            {
+                item.LineTotal = priced.LineTotals[index++];
+            }
+
+            order.Subtotal = priced.Subtotal;
+            order.DiscountAmount = priced.DiscountAmount;
+            order.Total = priced.Total;
+            db.Orders.Add(order);
+            return order;
+        }
+
+        void Pay(Order order, decimal amount, PaymentChannel channel, int daysAgo) =>
+            db.Payments.Add(new Payment { Order = order, Amount = amount, Channel = channel, PaidOn = today.AddDays(-daysAgo) });
+
+        void Earn(Order order, int stamps) =>
+            db.LoyaltyEntries.Add(new LoyaltyEntry { Customer = order.Customer!, Order = order, Delta = stamps, Reason = LoyaltyReason.Earned });
+
+        // 1. Paid in full.
+        var paid = NewOrder(kee, null, 20, DiscountType.None, 0m, (rows[0], 1, false));
+        Pay(paid, paid.Total, PaymentChannel.GCash, 19);
+        Earn(paid, 1);
+
+        // 2. Partly paid.
+        var partial = NewOrder(kee, null, 12, DiscountType.None, 0m, (rows[1], 2, true));
+        Pay(partial, Math.Min(100m, partial.Total - 1m), PaymentChannel.Cash, 12);
+
+        // 3. Unpaid.
+        NewOrder(klowe, null, 9, DiscountType.None, 0m, (rows[0], 1, false), (rows[2], 1, false));
+
+        // 4. "Prince c/o Kee": on Kee's tab, unpaid.
+        NewOrder(prince, kee, 6, DiscountType.None, 0m, (rows[1], 1, false));
+
+        // 5. Ten percent off, paid by transfer.
+        var percent = NewOrder(klowe, null, 3, DiscountType.Percent, 10m, (rows[2], 3, false));
+        Pay(percent, percent.Total, PaymentChannel.BPI, 2);
+        Earn(percent, 3);
+
+        // 6. A free drink: Prince was given ten stamps, and redeems them.
+        var free = NewOrder(prince, null, 1, DiscountType.LoyaltyFree, 0m, (rows[0], 1, false), (rows[1], 1, true));
+        db.LoyaltyEntries.Add(new LoyaltyEntry { Customer = prince, Delta = 10, Reason = LoyaltyReason.Adjustment, Notes = "Sample stamps" });
+        db.LoyaltyEntries.Add(new LoyaltyEntry { Customer = prince, Order = free, Delta = -10, Reason = LoyaltyReason.Redeemed });
 
         await db.SaveChangesAsync();
     }
