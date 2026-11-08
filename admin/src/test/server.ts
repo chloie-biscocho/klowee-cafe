@@ -12,6 +12,7 @@ import {
   siteSettings,
   upcomingEvent,
 } from './fixtures'
+import { keeDetail, kee, monthly, oatMilk, officeMenu, outstanding, prince, summary, unpaidOrder } from './salesFixtures'
 
 /**
  * The happy path for every endpoint a screen touches on load. A test that cares
@@ -20,15 +21,25 @@ import {
 export const handlers = [
   http.get(`${API}/auth/me`, () => HttpResponse.json(owner)),
   http.get(`${API}/menu/categories`, () => HttpResponse.json([])),
-  http.get(`${API}/menu/add-ons`, () => HttpResponse.json([])),
+  http.get(`${API}/menu/add-ons`, () => HttpResponse.json([oatMilk])),
   http.get(`${API}/menu/items`, () => HttpResponse.json(menuItems)),
   http.get(`${API}/menu/versions`, () => HttpResponse.json([draftVersion, publishedVersion])),
+  http.get(`${API}/menu/versions/current`, () => HttpResponse.json(officeMenu)),
   http.get(`${API}/menu/versions/:id`, () => HttpResponse.json(draftVersionDetail)),
   http.get(`${API}/packages`, () => HttpResponse.json([corporatePackage])),
   http.get(`${API}/events`, () => HttpResponse.json([eventSummary(upcomingEvent)])),
   http.get(`${API}/events/:id`, () => HttpResponse.json(upcomingEvent)),
   http.get(`${API}/announcements`, () => HttpResponse.json([])),
   http.get(`${API}/settings`, () => HttpResponse.json(siteSettings)),
+  http.get(`${API}/customers`, () => HttpResponse.json([kee, prince])),
+  http.get(`${API}/customers/:id`, () => HttpResponse.json(keeDetail)),
+  http.get(`${API}/customers/:id/loyalty`, () => HttpResponse.json([])),
+  http.get(`${API}/orders`, () => HttpResponse.json({ items: [], page: 1, pageSize: 25, totalCount: 0 })),
+  http.get(`${API}/orders/:id`, () => HttpResponse.json(unpaidOrder)),
+  http.get(`${API}/reports/summary`, () => HttpResponse.json(summary)),
+  http.get(`${API}/reports/outstanding`, () => HttpResponse.json(outstanding)),
+  http.get(`${API}/reports/monthly`, ({ request }) =>
+    HttpResponse.json(monthly(Number(new URL(request.url).searchParams.get('year'))))),
 ]
 
 export const server = setupServer(...handlers)

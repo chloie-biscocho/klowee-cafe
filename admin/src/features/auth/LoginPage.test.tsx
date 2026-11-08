@@ -37,7 +37,7 @@ describe('LoginPage', () => {
     })
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/menu/versions')
+      expect(router.state.location.pathname).toBe('/')
     })
 
     // ...and the session survives a reload.

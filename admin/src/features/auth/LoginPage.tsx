@@ -16,7 +16,7 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>
 
-const DEFAULT_DESTINATION = '/menu/versions'
+const DEFAULT_DESTINATION = '/'
 
 export function LoginPage() {
   const isSignedIn = useAppSelector(selectIsSignedIn)

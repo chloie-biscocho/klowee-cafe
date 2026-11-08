@@ -10,6 +10,14 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
   {
+    heading: 'Sales',
+    links: [
+      { to: '/', label: 'Dashboard' },
+      { to: '/sales/orders', label: 'Orders' },
+      { to: '/sales/customers', label: 'Customers' },
+    ],
+  },
+  {
     heading: 'Menu',
     links: [
       { to: '/menu/versions', label: 'Versions' },
@@ -55,6 +63,8 @@ export function Sidebar() {
                 <li key={link.to}>
                   <NavLink
                     to={link.to}
+                    // "/" would otherwise match, and highlight, every page.
+                    end={link.to === '/'}
                     className={({ isActive }) =>
                       `block rounded-md px-2 py-1.5 text-sm ${
                         isActive

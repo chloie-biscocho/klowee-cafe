@@ -43,3 +43,21 @@ export const AnnouncementsPage = lazy(() =>
 export const SettingsPage = lazy(() =>
   import('../features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
+export const DashboardPage = lazy(() =>
+  import('../features/sales/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+)
+export const OrdersPage = lazy(() =>
+  import('../features/sales/orders/OrdersPage').then((m) => ({ default: m.OrdersPage })),
+)
+export const OrderFormPage = lazy(() =>
+  import('../features/sales/orders/OrderFormPage').then((m) => ({ default: m.OrderFormPage })),
+)
+export const OrderDetailPage = lazy(() =>
+  import('../features/sales/orders/OrderDetailPage').then((m) => ({ default: m.OrderDetailPage })),
+)
+export const CustomersPage = lazy(() =>
+  import('../features/sales/customers/CustomersPage').then((m) => ({ default: m.CustomersPage })),
+)
+export const CustomerDetailPage = lazy(() =>
+  import('../features/sales/customers/CustomerDetailPage').then((m) => ({ default: m.CustomerDetailPage })),
+)

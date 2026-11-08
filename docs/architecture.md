@@ -104,8 +104,36 @@ CategoriesPage                 useListCategoriesQuery()
 
 Folders: `app/` (store, router, the lazily loaded pages in `pages.tsx`, typed hooks), `api/` (the one API slice plus
 one `injectEndpoints` file per domain), `features/` (auth, menu, packages,
-events, announcements, settings, toasts), `components/ui` and `components/layout`,
+events, announcements, settings, sales, toasts), `components/ui` and `components/layout`,
 `lib/`, `types/api.ts` — which mirrors `api/Klowee.Api/Contracts/` exactly.
+
+### Sales screens (phase 2)
+
+The **Sales** sidebar group sits at the top, and signing in lands on the
+Dashboard (`/`). Decision 017 covers the order-entry design.
+
+| Route | Screen |
+|---|---|
+| `/` | Dashboard: month stat cards, outstanding tabs (with Settle), top drinks, a hand-drawn SVG chart of the last 12 months |
+| `/sales/orders` | Orders list: date range (default this month), customer, status filters; pages from the API |
+| `/sales/orders/new`, `/sales/orders/:id/edit` | Order form: a page, not a modal; gated on a published office menu |
+| `/sales/orders/:id` | Order detail: drinks with snapshot prices and warnings, payments, inline Add payment |
+| `/sales/customers` | Customers list, new/edit, activate/deactivate, delete |
+| `/sales/customers/:id` | Customer detail: Settle tab, Merge into…, Adjust stamps; Orders and Loyalty ledger tabs |
+
+- **`api/salesApi.ts`** adds four tag types (`Customer`, `Order`, `Loyalty`,
+  `Report`). Every mutation that moves money (order create, edit or delete;
+  payment add or delete; settle; merge) invalidates the order(s) and the whole
+  `Customer`, `Loyalty` and `Report` types. One payment changes the order, two
+  people's tabs, a ledger and every dashboard figure, so the lists, details,
+  balances and stats all refresh without a reload. The map is in handover 12's
+  report.
+- **The order form** keeps a local `OrderDraft` (`features/sales/orders/orderDraft.ts`)
+  and previews totals with `lib/pricing.ts`, which mirrors the API's
+  `PricingService` with the same test cases. The API's saved totals replace the
+  preview.
+- **`components/ui/Combobox.tsx`** is the searchable select (ARIA combobox: type
+  to filter, ↑/↓, Enter, Escape), used for customers, payers and the merge target.
 
 ### How auth is attached
 

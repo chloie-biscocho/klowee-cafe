@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  monthRange,
+  shiftMonth,
   formatManilaDateTime,
   isoToManilaLocal,
   manilaLocalToIso,
@@ -42,5 +44,17 @@ describe('display helpers', () => {
   it("knows today's date in Manila", () => {
     expect(todayInManila(new Date('2026-05-21T17:00:00Z'))).toBe('2026-05-22')
     expect(todayInManila(new Date('2026-05-21T15:59:00Z'))).toBe('2026-05-21')
+  })
+})
+
+describe('monthRange and shiftMonth', () => {
+  it('gives the first and last day of the month, leap years included', () => {
+    expect(monthRange('2026-11-08')).toEqual(['2026-11-01', '2026-11-30'])
+    expect(monthRange('2028-02-10')).toEqual(['2028-02-01', '2028-02-29'])
+  })
+
+  it('moves by whole months across a year end', () => {
+    expect(shiftMonth('2026-01-15', -1)).toBe('2025-12-01')
+    expect(shiftMonth('2026-12-01', 1)).toBe('2027-01-01')
   })
 })

@@ -17,6 +17,8 @@
   --color-success-soft: #e8f3ec;
   --color-danger: #b4322e;
   --color-danger-soft: #fbecec;
+  --color-warning: #b7791f;
+  --color-warning-soft: #fdf5e6;
 
   --font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }

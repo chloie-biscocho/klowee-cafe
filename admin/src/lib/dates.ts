@@ -60,3 +60,18 @@ const dateTimeFormat = new Intl.DateTimeFormat('en-PH', {
 export function formatManilaDateTime(iso: string): string {
   return dateTimeFormat.format(new Date(iso))
 }
+
+/** The calendar month a date falls in, as API dates: "2026-11-08" → ["2026-11-01", "2026-11-30"]. */
+export function monthRange(isoDate: string): [string, string] {
+  const [year, month] = isoDate.split('-').map(Number) as [number, number]
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const mm = String(month).padStart(2, '0')
+  return [`${year}-${mm}-01`, `${year}-${mm}-${String(last).padStart(2, '0')}`]
+}
+
+/** The same day-of-month arithmetic for the month picker: "2026-01-15", -1 → "2025-12-01". */
+export function shiftMonth(isoDate: string, by: number): string {
+  const [year, month] = isoDate.split('-').map(Number) as [number, number]
+  const shifted = new Date(Date.UTC(year, month - 1 + by, 1))
+  return shifted.toISOString().slice(0, 10)
+}
