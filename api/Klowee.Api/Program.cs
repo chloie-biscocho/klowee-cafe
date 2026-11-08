@@ -150,6 +150,14 @@ builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<ISiteSettingService, SiteSettingService>();
 builder.Services.AddScoped<IPublicHomeService, PublicHomeService>();
 
+// Phase 2: office sales (docs/decisions/016-orders-and-payments-model.md).
+builder.Services.AddSingleton<IPricingService, PricingService>();
+builder.Services.AddScoped<ILoyaltyService, LoyaltyService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+
 // ---- Media storage ----
 // Supabase Storage over its REST API (docs/decisions/009-media-storage.md).
 // The service role key is a secret: it lives in user-secrets locally and an

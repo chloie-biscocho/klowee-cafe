@@ -61,7 +61,7 @@ public class PublicHomeService : IPublicHomeService
 
         return new PublicHomeDto(
             Settings: settings
-                .Where(s => SiteSettingService.KnownKeys.Contains(s.Key))
+                .Where(s => SiteSettingService.KnownKeys.Contains(s.Key) && !SiteSettingService.InternalKeys.Contains(s.Key))
                 .ToDictionary(s => s.Key, s => s.Value, StringComparer.Ordinal),
 
             Announcement: announcement is null

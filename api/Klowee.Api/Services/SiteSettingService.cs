@@ -25,7 +25,19 @@ public class SiteSettingService : ISiteSettingService
         "book_body",
         "instagram_url",
         "facebook_url",
-        "contact_email"
+        "contact_email",
+        LoyaltyStampsPerRewardKey
+    };
+
+    /// <summary>Stamps needed for one free drink. Operational, so not sent to the public site.</summary>
+    public const string LoyaltyStampsPerRewardKey = "loyalty_stamps_per_reward";
+
+    public const int DefaultLoyaltyStampsPerReward = 10;
+
+    /// <summary>Settings the business uses internally; everything else in <see cref="KnownKeys"/> is public copy.</summary>
+    public static readonly IReadOnlySet<string> InternalKeys = new HashSet<string>(StringComparer.Ordinal)
+    {
+        LoyaltyStampsPerRewardKey
     };
 
     private readonly KloweeDbContext _db;
@@ -38,6 +50,18 @@ public class SiteSettingService : ISiteSettingService
             .OrderBy(s => s.Key)
             .Select(s => new SiteSettingDto(s.Key, s.Value))
             .ToListAsync(cancellationToken);
+
+    /// <summary>Stamps per free drink: the saved setting, or 10 when it was never set.</summary>
+    public async Task<int> GetLoyaltyStampsPerRewardAsync(CancellationToken cancellationToken)
+    {
+        var value = await _db.SiteSettings
+            .AsNoTracking()
+            .Where(s => s.Key == LoyaltyStampsPerRewardKey)
+            .Select(s => s.Value)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return int.TryParse(value, out var perReward) && perReward >= 1 ? perReward : DefaultLoyaltyStampsPerReward;
+    }
 
     public async Task<IReadOnlyList<SiteSettingDto>> UpsertAsync(
         IReadOnlyList<SiteSettingRequest> settings,
@@ -63,6 +87,14 @@ public class SiteSettingService : ISiteSettingService
         if (duplicate is not null)
         {
             throw new ValidationFailedException($"Setting '{duplicate.Key}' appears more than once.");
+        }
+
+        var stamps = settings.FirstOrDefault(s => s.Key == LoyaltyStampsPerRewardKey);
+        if (stamps is not null
+            && (!int.TryParse(stamps.Value, out var perReward) || perReward < 1 || perReward > 1000))
+        {
+            throw new ValidationFailedException(
+                $"{LoyaltyStampsPerRewardKey} must be a whole number from 1 to 1000.");
         }
 
         var keys = settings.Select(s => s.Key).ToList();
