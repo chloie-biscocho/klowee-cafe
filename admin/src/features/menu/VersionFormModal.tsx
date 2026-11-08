@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm, useWatch } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
@@ -13,7 +13,7 @@ interface VersionFormModalProps {
   open: boolean
   /** `null` creates a version; anything else edits that version's details. */
   editing: { id: string; name: string; effectiveFrom: string; notes: string | null } | null
-  /** Candidates for "copy items from"; filtered to the chosen context. */
+  /** Candidates for "copy items from": every version, grouped by context (an office menu often starts from the pop-up one). */
   versions: MenuVersionSummaryDto[]
   initial?: Partial<VersionValues>
   saving: boolean
@@ -30,7 +30,7 @@ export function VersionFormModal({
   onClose,
   onSubmit,
 }: VersionFormModalProps) {
-  const { register, handleSubmit, control, formState } = useForm<VersionValues>({
+  const { register, handleSubmit, formState } = useForm<VersionValues>({
     resolver: zodResolver(versionSchema),
     defaultValues: {
       name: editing?.name ?? initial?.name ?? '',
@@ -41,10 +41,6 @@ export function VersionFormModal({
     },
   })
 
-  // Subscribing to one field keeps the "copy items from" list in step with the
-  // context select without re-rendering the form on every keystroke elsewhere.
-  const context = useWatch({ control, name: 'context' })
-  const copyCandidates = versions.filter((version) => version.context === context)
 
   return (
     <Modal
@@ -97,11 +93,18 @@ export function VersionFormModal({
             {...register('copyFromVersionId')}
           >
             <option value="">Start empty</option>
-            {copyCandidates.map((version) => (
-              <option key={version.id} value={version.id}>
-                {version.name} ({version.itemCount} items)
-              </option>
-            ))}
+            {MENU_CONTEXTS.map((group) => {
+              const candidates = versions.filter((version) => version.context === group)
+              return candidates.length === 0 ? null : (
+                <optgroup key={group} label={MENU_CONTEXT_LABELS[group]}>
+                  {candidates.map((version) => (
+                    <option key={version.id} value={version.id}>
+                      {version.name} ({version.itemCount} items)
+                    </option>
+                  ))}
+                </optgroup>
+              )
+            })}
           </Select>
         )}
 

@@ -44,6 +44,30 @@ public class MenuVersionTests : IClassFixture<KloweeApiFactory>
         Assert.Contains(created.Items, i => i.IsFeatured);
     }
 
+    /// <summary>
+    /// The office menu usually starts from the pop-up one, so copying across
+    /// contexts must work: the copy takes the new version's context.
+    /// </summary>
+    [Fact]
+    public async Task Create_CanCopyItemsFromAVersionOfAnotherContext()
+    {
+        var source = await SeedDraftVersionWithItemsAsync("CrossCopy", MenuContext.PopUp);
+        var client = await _factory.CreateOwnerClientAsync();
+
+        var response = await client.PostAsJsonAsync("/api/menu/versions", new CreateMenuVersionRequest
+        {
+            Name = "Office copied from pop-up",
+            Context = MenuContext.Office,
+            EffectiveFrom = new DateOnly(2026, 11, 8),
+            CopyFromVersionId = source.VersionId
+        }, KloweeApiFactory.Json);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = (await response.Content.ReadFromJsonAsync<MenuVersionDetailDto>(KloweeApiFactory.Json))!;
+        Assert.Equal(MenuContext.Office, created.Context);
+        Assert.Equal(source.ItemIds.OrderBy(id => id), created.Items.Select(i => i.MenuItemId).OrderBy(id => id));
+    }
+
     [Fact]
     public async Task ReplaceItems_OnPublishedVersion_Returns409()
     {
