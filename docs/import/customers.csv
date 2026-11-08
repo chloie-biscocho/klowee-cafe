@@ -1,0 +1,85 @@
+raw_name,canonical_name,rows,hint
+Al,Al,1,
+Alvin,Alvin,3,
+Alyssa,Alyssa,10,
+April,April,14,
+Ate Gaga,Gaga,2,honorific dropped: Gaga: same person? check
+Boss O,Boss O,3,
+Brader,Brader,1,
+Carl,Carl,1,
+Chloie,Chloie,48,
+Christian,Christian,13,
+Clark,Clark,29,
+clark,Clark,4,"same name, different case or spacing"
+Clark 1,Clark 1,1,numbered name: kept apart; one person or several?
+Clark 2,Clark 2,1,numbered name: kept apart; one person or several?
+Clark 3,Clark 3,1,numbered name: kept apart; one person or several?
+Clark 4,Clark 4,1,numbered name: kept apart; one person or several?
+Conrad,Conrad,9,
+Conrad 2,Conrad 2,1,numbered name: kept apart; one person or several?
+Dean,Dean,45,
+Dunstan,Dunstan,2,
+Gaga,Gaga,5,
+Gorby,Gorby,4,
+Greg,Greg,28,
+Hope,Hope,1,
+Ian,Ianberg,2,short for Ianberg: same person? check
+Ianberg,Ianberg,17,
+Irish,Irish,64,
+Jayvee,Jayvee,16,
+Jean,Jean,1,
+Jii,Jii,4,
+Jo,Jo,1,
+Jonzee,Jonzee,1,
+Joshua,Joshua,1,
+Joy,Joy,2,
+June,June,53,
+Kara,Kara,2,
+Karen,Karen,5,
+Kee,Kee,28,
+kee,Kee,8,"same name, different case or spacing"
+Kesha,Kesha,78,
+Kesha & Chloie,Kesha & Chloie,1,not a single plain name: check
+klo,Klowe,1,short for Klowe: same person? check
+Klowe,Klowe,4,
+Kristine,Kristine,2,
+Lads,Ladz,1,one letter from Ladz: same person? check
+Ladz,Ladz,5,
+Lance,Lance,1,
+Lou,Lou,3,
+Lucky,Lucky,1,
+Ma'am Weng,Weng,1,honorific dropped: Weng: same person? check
+Marben,Marben,1,
+Maria,Maria,1,
+Menu Test,Menu Test,1,
+MJ,MJ,11,
+Mj,MJ,5,"same name, different case or spacing"
+Mother Earth,Mother Earth,1,
+Nat,Nat,10,
+Natasha,Natasha,3,
+Neil,Neil,1,
+office,office,2,"only ever a payer (c/o): map to a customer, or blank to skip those rows"
+Patrick,Patrick,2,
+Pierre,Pierre,3,
+Prince,Prince,43,
+Renz,Renz,7,
+renz,Renz,2,"same name, different case or spacing"
+Rowena,Rowena,1,
+Sam,Sam,1,
+Sheki,Sheki,53,
+sheki,Sheki,2,"same name, different case or spacing"
+Sheki 1,Sheki 1,1,numbered name: kept apart; one person or several?
+Sheki 2,Sheki 2,1,numbered name: kept apart; one person or several?
+Sheki 3,Sheki 3,1,numbered name: kept apart; one person or several?
+Stephen,Stephen,1,
+Visitor,Visitor,2,
+Visitor 1,Visitor 1,2,numbered name: kept apart; one person or several?
+Visitor 2,Visitor 2,2,numbered name: kept apart; one person or several?
+Visitor 3,Visitor 3,1,numbered name: kept apart; one person or several?
+Visitor 4,Visitor 4,1,numbered name: kept apart; one person or several?
+Weng,Weng,12,
+Yelle,Yelly,1,one letter from Yelly: same person? check
+Yelley,Yelly,1,one letter from Yelly: same person? check
+Yelly,Yelly,4,
+Yem,Yem,12,
+Zainab,Zainab,3,

@@ -1,0 +1,130 @@
+raw_drink,unit_price,canonical_item,rows,hint
+13 drinks worth 89 pesos each,89,,1,no menu item matches; the text carries a price or count: check
+Americano,0,Americano,1,
+Americano,69,Americano,8,
+Americano,89,Americano,11,
+Americano,99,Americano,1,
+Americano,100,Americano,4,
+Americano,110,Americano,10,
+Banana Matcha,180,,8,candidates: Banana Matcha (Houseblend) / Banana Matcha (Okumidori)
+Berry Choco,0,,1,no menu item matches
+Berry Choco,140,,1,no menu item matches
+Berry Matcha,0,Berry Matcha,2,archived item
+Berry Matcha,140,Berry Matcha,15,archived item
+Berry Matcha,150,Berry Matcha,2,archived item
+Berry Matcha,160,Berry Matcha,1,archived item
+Berry Matcha,170,Berry Matcha,4,archived item
+Berry Matcha (₱140) - ₱89,51,Berry Matcha,1,archived item; the text carries a price or count: check
+Blueberry fizz,0,Blueberry Fizz,1,archived item
+Blueberry Fizz,49,Blueberry Fizz,1,archived item
+Blueberry Fizz,99,Blueberry Fizz,5,archived item
+Blueberry Fizz,100,Blueberry Fizz,1,archived item
+Blueberry Fizz,198,Blueberry Fizz,1,archived item
+Blueberry Matcha,140,Berry Matcha,1,partial match: check
+Cafe Latte,89,Cafe Latte,2,
+Caramel Latte,130,,1,no menu item matches
+Caramel Macchiato,130,,1,no menu item matches
+Caramel Macchiatto,0,,2,no menu item matches
+Caramel Macchiatto,130,,3,no menu item matches
+Caramel Machiatto,0,,1,no menu item matches
+Caramel Machiatto,130,,3,no menu item matches
+Cinnamon Cloud,0,Cinnamon Cloud,1,
+Cinnamon Cloud,30,Cinnamon Cloud,1,
+Cinnamon Cloud,75,Cinnamon Cloud,1,
+Cinnamon Cloud,80,Cinnamon Cloud,3,
+Cinnamon Cloud,100,Cinnamon Cloud,1,
+Cinnamon Cloud,125,Cinnamon Cloud,2,
+Cinnamon Cloud,130,Cinnamon Cloud,12,
+Cinnamon Cloud,160,Cinnamon Cloud,17,
+Classic Ube Latte,180,Classic Ube Latte,3,
+Cloud Americano,130,Cloud Americano,3,
+Cloud Biscoff Matcha,190,,2,candidates: Cloud Biscoff Matcha (Houseblend) / Cloud Biscoff Matcha (Okumidori)
+Cloud Biscoff Matcha,230,,1,candidates: Cloud Biscoff Matcha (Houseblend) / Cloud Biscoff Matcha (Okumidori)
+Coffee Float,165,,2,no menu item matches
+Dirty Matcha,0,Dirty Matcha,2,
+Dirty Matcha,70,Dirty Matcha,1,
+Dirty Matcha,140,Dirty Matcha,8,
+Dirty Matcha,150,Dirty Matcha,5,
+Dirty Matcha,160,Dirty Matcha,1,
+Dreamy Ube,150,Dreamy Ube Milk,1,partial match: check
+Espresso Shot for Test/Photo,0,,1,no menu item matches
+Hazelnut,130,,3,candidates: Hazelnut Latte / Iced Choco-Hazelnut
+Hazelnut latte,0,Hazelnut Latte,9,
+Hazelnut Latte,65,Hazelnut Latte,2,
+Hazelnut latte,115,Hazelnut Latte,1,
+Hazelnut Latte,120,Hazelnut Latte,1,
+Hazelnut latte,130,Hazelnut Latte,54,
+Hazelnut latte,140,Hazelnut Latte,4,
+Hazelnut latte,160,Hazelnut Latte,12,
+Hazelnut latte,280,Hazelnut Latte,1,
+Hazelnut Latte (₱130) - ₱89,41,Hazelnut Latte,1,the text carries a price or count: check
+Her-She Latte,0,,2,no menu item matches
+Her-She Latte,72.5,,2,no menu item matches
+Her-She Latte,120,,22,no menu item matches
+Her-She Latte,130,,3,no menu item matches
+Hot Americano,69,Americano,1,partial match: check
+Hot Matcha,120,,1,no menu item matches
+Iced Choco Hazelnut,140,Iced Choco-Hazelnut,4,
+Matcha Berry,140,Berry Matcha,1,"same words, other order: check"
+Matcha Float,175,,1,no menu item matches
+Matcha Latte,0,Matcha Latte,1,archived item
+Matcha Latte,120,Matcha Latte,14,archived item
+Matcha Latte,130,Matcha Latte,10,archived item
+Matcha Latte,150,Matcha Latte,1,archived item
+Matcha Latte,180,Matcha Latte,2,archived item
+Matcha Latte,200,Matcha Latte,2,archived item
+Matcha Latte,210,Matcha Latte,1,archived item
+Mocha,160,,1,no menu item matches
+Oat Biscoff Latte,0,Oat Biscoff Latte,3,
+Oat Biscoff Latte,80,Oat Biscoff Latte,3,
+Oat Biscoff Latte,95,Oat Biscoff Latte,2,
+Oat Biscoff Latte,150,Oat Biscoff Latte,3,
+Oat Biscoff Latte,160,Oat Biscoff Latte,38,
+Oat Biscoff Latte,180,Oat Biscoff Latte,16,
+Oat Biscoff Latte,190,Oat Biscoff Latte,16,
+Oat Biscoff Latte,380,Oat Biscoff Latte,1,
+Oat Milky Biscoff,130,Oat Milky Biscoff,1,
+Oat Milky Biscoff,150,Oat Milky Biscoff,1,
+Oat Milky Biscoff,160,Oat Milky Biscoff,1,
+Seasalt Cloud Matcha,210,,2,candidates: Sea Salt Cloud Matcha (Houseblend) / Sea Salt Cloud Matcha (Okumidori)
+Seasalt Cream Latte,0,Sea Salt Cream,1,partial match: check
+Seasalt Cream Latte,150,Sea Salt Cream,3,partial match: check
+Seasalt Cream Latte,160,Sea Salt Cream,9,partial match: check
+Seasalt Latte,150,,4,no menu item matches
+Seasalt Latte,160,,3,no menu item matches
+Seasalt Matcha,200,,4,no menu item matches
+Signature Oat Matcha,200,,1,candidates: Signature Oat Matcha (Houseblend) / Signature Oat Matcha (Okumidori)
+Spanish Latte,0,Spanish Latte,10,
+Spanish Latte,60,Spanish Latte,1,
+Spanish Latte,67.5,Spanish Latte,1,
+Spanish Latte,120,Spanish Latte,76,
+Spanish Latte,125,Spanish Latte,6,
+Spanish Latte,150,Spanish Latte,24,
+Spanish Latte,165,Spanish Latte,1,
+Spanish Latte,500,Spanish Latte,1,
+Spanish Spice,0,,4,no menu item matches
+Spanish Spice,125,,51,no menu item matches
+Spanish Spice,130,,1,no menu item matches
+Spanish Spice,145,,1,no menu item matches
+Strawbean Latte,0,,1,no menu item matches
+Strawbean Latte,140,,16,no menu item matches
+Strawberry Matcha,220,,1,candidates: Strawberry Matcha (Houseblend) / Strawberry Matcha (Okumidori)
+Strawberry Milk,120,Strawberry Milk,5,
+Strawberry Milk,140,Strawberry Milk,1,
+Strawberry Milk,160,Strawberry Milk,1,
+Strawberry Swoon,0,Strawberry Swoon,1,
+Strawberry Swoon,99,Strawberry Swoon,16,
+Strawberry Swoon,100,Strawberry Swoon,1,
+Strawberry Swoon,140,Strawberry Swoon,2,
+Sunrise Berry,130,Sunrise Berry,1,
+Sunrise Berry,140,Sunrise Berry,9,
+Ube Cloud Matcha,105,,1,candidates: Ube Cloud Matcha (Houseblend) / Ube Cloud Matcha (Okumidori)
+Ube Latte,80,Classic Ube Latte,1,renamed in Nov 2026
+Ube Latte,140,Classic Ube Latte,1,renamed in Nov 2026
+Ube Latte,160,Classic Ube Latte,20,renamed in Nov 2026
+Ube Latte,180,Classic Ube Latte,2,renamed in Nov 2026
+Ube Oat Latte,0,Ube Oat Latte,1,
+Ube Oat Latte,105,Ube Oat Latte,1,
+Ube Oat Latte,170,Ube Oat Latte,1,
+Ube Oat Latte,190,Ube Oat Latte,2,
+Ube Oat Latte,210,Ube Oat Latte,2,
