@@ -55,7 +55,7 @@ public class MenuCategoryService : IMenuCategoryService
 
         // The query filter already excludes soft-deleted items, so this counts
         // live items only.
-        var itemsInUse = await _db.MenuItems.CountAsync(i => i.CategoryId == id, cancellationToken);
+        var itemsInUse = await _db.MenuItems.CountAsync(i => i.CategoryId == id && !i.IsArchived, cancellationToken);
         if (itemsInUse > 0)
         {
             throw new ConflictException(

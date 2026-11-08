@@ -36,23 +36,27 @@ public class MenuVersionService : IMenuVersionService
             .FirstOrDefaultAsync(v => v.Id == id, cancellationToken)
             ?? throw NotFoundException.For("Menu version", id);
 
-        var items = await _db.MenuVersionItems
+        var lines = await _db.MenuVersionItems
             .AsNoTracking()
             .Where(vi => vi.MenuVersionId == id)
-            .OrderBy(vi => vi.MenuItem!.Category!.SortOrder)
-            .ThenBy(vi => vi.SortOrder)
-            .ThenBy(vi => vi.MenuItem!.Name)
-            .Select(vi => new MenuVersionItemDto(
-                vi.Id,
-                vi.MenuItemId,
-                vi.MenuItem!.Name,
-                vi.MenuItem!.CategoryId,
-                vi.MenuItem!.Category!.Name,
-                vi.Price,
-                vi.IsAvailable,
-                vi.IsFeatured,
-                vi.SortOrder))
+            .Select(vi => new
+            {
+                vi.Id, vi.MenuItemId, ItemName = vi.MenuItem!.Name, vi.MenuItem!.CategoryId,
+                vi.Price, vi.IsAvailable, vi.IsFeatured, vi.SortOrder,
+            })
             .ToListAsync(cancellationToken);
+        var categories = await MenuItemService.CategoriesAsync(_db, cancellationToken);
+
+        // Category names come from every category, deleted ones included, so a
+        // retired drink in a deleted category still shows in the version it was priced in.
+        var items = lines
+            .OrderBy(l => categories[l.CategoryId].SortOrder)
+            .ThenBy(l => l.SortOrder)
+            .ThenBy(l => l.ItemName)
+            .Select(l => new MenuVersionItemDto(
+                l.Id, l.MenuItemId, l.ItemName, l.CategoryId, categories[l.CategoryId].Name,
+                l.Price, l.IsAvailable, l.IsFeatured, l.SortOrder))
+            .ToList();
 
         return new MenuVersionDetailDto(
             version.Id, version.Name, version.Context, version.EffectiveFrom,

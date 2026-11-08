@@ -3,6 +3,7 @@ import {
   useCreateCategoryMutation,
   useDeleteCategoryMutation,
   useListCategoriesQuery,
+  useListItemsQuery,
   useUpdateCategoryMutation,
 } from '../../api/menuApi'
 import { Button } from '../../components/ui/Button'
@@ -12,10 +13,13 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { SkeletonRows, Table, Td, Th } from '../../components/ui/Table'
 import { useToastedAction } from '../../features/toasts/useToastedAction'
 import type { MenuCategoryDto } from '../../types/api'
+import { archivedOnly } from './categoryGroups'
 import { CategoryRow, NewCategoryRow } from './CategoryRow'
 
 export function CategoriesPage() {
   const { data: categories, isLoading } = useListCategoriesQuery()
+  const { data: items } = useListItemsQuery({ includeArchived: true })
+  const retired = archivedOnly(items ?? [])
   const [createCategory, { isLoading: isCreating }] = useCreateCategoryMutation()
   const [updateCategory, { isLoading: isUpdating }] = useUpdateCategoryMutation()
   const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation()
@@ -61,7 +65,12 @@ export function CategoriesPage() {
                 />
               ) : (
                 <tr key={category.id}>
-                  <Td className="font-medium">{category.name}</Td>
+                  <Td className="font-medium">
+                    {category.name}
+                    {retired.has(category.id) && (
+                      <span className="ml-2 text-xs font-normal text-muted">(archived items only)</span>
+                    )}
+                  </Td>
                   <Td className="text-muted">{category.sortOrder}</Td>
                   <Td className="text-right">
                     <div className="flex justify-end gap-1.5">

@@ -12,24 +12,41 @@ public class MenuItemService : IMenuItemService
 
     public MenuItemService(KloweeDbContext db) => _db = db;
 
-    public async Task<IReadOnlyList<MenuItemDto>> ListAsync(bool includeArchived, CancellationToken cancellationToken) =>
-        await _db.MenuItems
+    public async Task<IReadOnlyList<MenuItemDto>> ListAsync(bool includeArchived, CancellationToken cancellationToken)
+    {
+        var items = await _db.MenuItems
             .AsNoTracking()
             .Where(i => includeArchived || !i.IsArchived)
-            .OrderBy(i => i.Category!.SortOrder)
-            .ThenBy(i => i.Name)
-            .Select(i => new MenuItemDto(
-                i.Id, i.Name, i.Description, i.CategoryId, i.Category!.Name, i.PhotoUrl, i.IsArchived))
             .ToListAsync(cancellationToken);
+        var categories = await CategoriesAsync(_db, cancellationToken);
 
-    public async Task<MenuItemDto> GetAsync(Guid id, CancellationToken cancellationToken) =>
-        await _db.MenuItems
+        return items
+            .OrderBy(i => categories[i.CategoryId].SortOrder)
+            .ThenBy(i => i.Name)
+            .Select(i => ToDto(i, categories))
+            .ToList();
+    }
+
+    public async Task<MenuItemDto> GetAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var item = await _db.MenuItems.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id, cancellationToken)
+            ?? throw NotFoundException.For("Menu item", id);
+        return ToDto(item, await CategoriesAsync(_db, cancellationToken));
+    }
+
+    /// <summary>
+    /// Every category's name and order, deleted ones included. An archived item
+    /// can sit in a deleted category (handover 14), and joining through the
+    /// soft-delete filter would drop it from the list and from old versions.
+    /// </summary>
+    internal static async Task<Dictionary<Guid, (string Name, int SortOrder)>> CategoriesAsync(KloweeDbContext db, CancellationToken cancellationToken) =>
+        await db.MenuCategories
+            .IgnoreQueryFilters()
             .AsNoTracking()
-            .Where(i => i.Id == id)
-            .Select(i => new MenuItemDto(
-                i.Id, i.Name, i.Description, i.CategoryId, i.Category!.Name, i.PhotoUrl, i.IsArchived))
-            .FirstOrDefaultAsync(cancellationToken)
-        ?? throw NotFoundException.For("Menu item", id);
+            .ToDictionaryAsync(c => c.Id, c => (c.Name, c.SortOrder), cancellationToken);
+
+    private static MenuItemDto ToDto(MenuItem i, Dictionary<Guid, (string Name, int SortOrder)> categories) =>
+        new(i.Id, i.Name, i.Description, i.CategoryId, categories[i.CategoryId].Name, i.PhotoUrl, i.IsArchived);
 
     public async Task<MenuItemDto> CreateAsync(MenuItemRequest request, CancellationToken cancellationToken)
     {
@@ -73,6 +90,12 @@ public class MenuItemService : IMenuItemService
     {
         var item = await _db.MenuItems.FirstOrDefaultAsync(i => i.Id == id, cancellationToken)
             ?? throw NotFoundException.For("Menu item", id);
+
+        // An archived item may sit in a deleted category; it can't come back to life there.
+        if (!isArchived && item.IsArchived && !await _db.MenuCategories.AnyAsync(c => c.Id == item.CategoryId, cancellationToken))
+        {
+            throw new ConflictException($"Menu item '{item.Name}' is in a deleted category. Move it to a category first.");
+        }
 
         item.IsArchived = isArchived;
         await _db.SaveChangesAsync(cancellationToken);

@@ -64,6 +64,11 @@ browser  ─►  [ CORS ]  ─►  [ Authentication ]  ─►  [ Authorization ]
 - **DbContext** applies the soft-delete query filter and stamps
   `created_at`/`updated_at`/`created_by` on save, so no query or write has to
   remember to.
+- **A parent is refused deletion only while a live row depends on it.** A
+  category can be deleted once all its items are archived; those items keep
+  their `category_id`, and the item list and version details read category
+  names past the filter (`MenuItemService.CategoriesAsync`) so history still
+  shows "Fruit soda". Unarchiving an item in a deleted category is a 409.
 
 Errors leave in one shape everywhere: `ProblemDetails`. Validation failures are
 400 (automatic, from `[ApiController]` plus data annotations), missing rows 404,
