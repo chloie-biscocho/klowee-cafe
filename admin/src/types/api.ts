@@ -312,3 +312,203 @@ export interface ProblemDetails {
   /** Present on the automatic 400 from `[ApiController]` model validation. */
   errors?: Record<string, string[]>
 }
+
+// ---- Sales (phase 2, decision 016) ----
+
+export const PAYMENT_STATUSES = ['Unpaid', 'Partial', 'Paid'] as const
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number]
+
+export const PAYMENT_CHANNELS = ['Cash', 'GCash', 'BusinessGCash', 'CIMB', 'BPI', 'Maya', 'Other'] as const
+export type PaymentChannel = (typeof PAYMENT_CHANNELS)[number]
+
+export const PAYMENT_CHANNEL_LABELS: Record<PaymentChannel, string> = {
+  Cash: 'Cash',
+  GCash: 'GCash',
+  BusinessGCash: 'Business GCash',
+  CIMB: 'CIMB',
+  BPI: 'BPI',
+  Maya: 'Maya',
+  Other: 'Other',
+}
+
+export const DISCOUNT_TYPES = ['None', 'Percent', 'Fixed', 'LoyaltyFree'] as const
+export type DiscountType = (typeof DISCOUNT_TYPES)[number]
+
+export type LoyaltyReason = 'Earned' | 'Redeemed' | 'Adjustment'
+
+export interface PersonRef {
+  id: string
+  name: string
+}
+
+export interface CustomerSummaryDto {
+  id: string
+  name: string
+  nickname: string | null
+  notes: string | null
+  isActive: boolean
+  /** The tab: orders this customer pays for, minus payments. */
+  outstandingBalance: number
+  loyaltyBalance: number
+  availableRewards: number
+  lastOrderOn: string | null
+}
+
+export interface CustomerDetailDto extends CustomerSummaryDto {
+  recentOrders: OrderSummaryDto[]
+}
+
+export interface CustomerRequest {
+  name: string
+  nickname: string | null
+  notes: string | null
+  isActive: boolean
+}
+
+export interface LoyaltyEntryDto {
+  id: string
+  delta: number
+  reason: LoyaltyReason
+  orderId: string | null
+  notes: string | null
+  createdAt: string
+}
+
+export interface LoyaltyAdjustRequest {
+  delta: number
+  notes: string | null
+}
+
+export interface OrderSummaryDto {
+  id: string
+  orderedOn: string
+  customer: PersonRef
+  payer: PersonRef | null
+  itemCount: number
+  /** "Spanish Latte ×2, Americano" */
+  items: string
+  total: number
+  paid: number
+  status: PaymentStatus
+}
+
+export interface OrderItemAddOnDto {
+  id: string
+  addOnId: string
+  name: string
+  unitPrice: number
+}
+
+export interface OrderItemDto {
+  id: string
+  menuVersionItemId: string
+  menuItemId: string
+  name: string
+  menuVersionName: string
+  quantity: number
+  unitPrice: number
+  lineTotal: number
+  addOns: OrderItemAddOnDto[]
+}
+
+export interface PaymentDto {
+  id: string
+  orderId: string
+  amount: number
+  channel: PaymentChannel
+  paidOn: string
+  reference: string | null
+  notes: string | null
+}
+
+export interface OrderDetailDto {
+  id: string
+  context: 'Office'
+  orderedOn: string
+  customer: PersonRef
+  payer: PersonRef | null
+  notes: string | null
+  discountType: DiscountType
+  discountValue: number
+  subtotal: number
+  discountAmount: number
+  total: number
+  paid: number
+  balance: number
+  status: PaymentStatus
+  items: OrderItemDto[]
+  payments: PaymentDto[]
+  warnings: string[]
+}
+
+export interface OrderLineRequest {
+  menuVersionItemId: string
+  quantity: number
+  addOnIds: string[]
+}
+
+export interface OrderRequest {
+  customerId: string
+  payerId: string | null
+  orderedOn: string
+  notes: string | null
+  discountType: DiscountType
+  discountValue: number
+  items: OrderLineRequest[]
+}
+
+export interface PaymentRequest {
+  amount: number
+  channel: PaymentChannel
+  paidOn: string
+  reference: string | null
+  notes: string | null
+}
+
+export interface PagedResult<T> {
+  items: T[]
+  page: number
+  pageSize: number
+  totalCount: number
+}
+
+export interface ChannelTotalDto {
+  channel: PaymentChannel
+  amount: number
+  count: number
+}
+
+export interface TopItemDto {
+  menuItemId: string
+  name: string
+  quantity: number
+}
+
+export interface SummaryReportDto {
+  from: string
+  to: string
+  revenue: number
+  collected: number
+  outstanding: number
+  orderCount: number
+  drinkCount: number
+  byChannel: ChannelTotalDto[]
+  topItems: TopItemDto[]
+  newCustomers: number
+}
+
+export interface OutstandingRowDto {
+  customerId: string
+  name: string
+  balance: number
+  oldestUnpaidOn: string
+  orderCount: number
+}
+
+export interface MonthlyRowDto {
+  month: number
+  revenue: number
+  collected: number
+  orders: number
+  drinks: number
+}
