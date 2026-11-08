@@ -10,7 +10,9 @@ public sealed record SheetRow(
     string Name, string Drink, object? Price, object? ExtraShot, object? OatMilk, object? Total,
     string Status, string Channel, string Notes, object? DatePaid);
 
-public sealed record TabResult(string Tab, string Fate, int Rows);
+/// <param name="Revenue">The tab's own "Total Revenue" cell (A3), when it has one.</param>
+/// <param name="ArTotal">The tab's own "AR Total" cell, when it has one.</param>
+public sealed record TabResult(string Tab, string Fate, int Rows, decimal? Revenue = null, decimal? ArTotal = null);
 
 /// <summary>
 /// Reads the office-sales tabs of the owners' workbook. The workbook holds
@@ -66,7 +68,8 @@ public static class Workbook
 
             var tabRows = ReadTab(sheet);
             rows.AddRange(tabRows);
-            tabs.Add(new TabResult(sheet.Name, "read", tabRows.Count));
+            var (revenue, ar) = SummaryCells(sheet);
+            tabs.Add(new TabResult(sheet.Name, "read", tabRows.Count, revenue, ar));
         }
 
         var missing = OfficeTabs.Except(workbook.Worksheets.Select(s => s.Name)).ToList();
@@ -119,6 +122,25 @@ public static class Workbook
         entry.Delete();
         using var writer = new StreamWriter(zip.CreateEntry(name).Open());
         writer.Write(changed);
+    }
+
+    /// <summary>
+    /// A label row ("Total Revenue", "G-Cash Total", "AR Total", …) sits in rows
+    /// 1–8 with its values two rows below; Total Revenue is in column A.
+    /// October 2026's A1 says "F", so column A is read whenever the row carries totals.
+    /// </summary>
+    private static (decimal? Revenue, decimal? Ar) SummaryCells(IXLWorksheet sheet)
+    {
+        for (var r = 1; r <= 8; r++)
+        {
+            var labels = Enumerable.Range(1, 14).Select(c => Label(sheet, r, c)).ToList();
+            if (!labels.Any(l => l.EndsWith(" total"))) continue;
+            decimal? At(int c) => Value(sheet, r + 2, c) is double d ? (decimal)d : null;
+            var ar = labels.FindIndex(l => l == "ar total");
+            return (At(1), ar >= 0 ? At(ar + 1) : null);
+        }
+
+        return (null, null);
     }
 
     private static string WhyIgnored(string tab)

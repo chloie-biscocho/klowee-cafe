@@ -190,3 +190,30 @@ public static class Mappings
         return prev[b.Length];
     }
 }
+
+public static class MappingFiles
+{
+    /// <summary>customers.csv as raw-name key → canonical name ("" when blank).</summary>
+    public static Dictionary<string, string> Customers(string path) => Read(path, row => Mappings.Key(row[0]), 1);
+
+    /// <summary>drinks.csv as (drink, unit price) key → menu item name ("" when blank).</summary>
+    public static Dictionary<string, string> Drinks(string path) => Read(path,
+        row => Planner.DrinkKey(row[0], decimal.Parse(row[1], System.Globalization.CultureInfo.InvariantCulture)), 2);
+
+    private static Dictionary<string, string> Read(string path, Func<List<string>, string> key, int valueColumn)
+    {
+        if (!File.Exists(path)) throw new ImportException($"{path} not found: run parse first.");
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in Csv.Read(path).Skip(1))
+        {
+            var cells = row.Concat(Enumerable.Repeat("", 5)).ToList();
+            var k = key(cells);
+            var value = cells[valueColumn].Trim();
+            if (map.TryGetValue(k, out var other) && !other.Equals(value, StringComparison.OrdinalIgnoreCase))
+                throw new ImportException($"{Path.GetFileName(path)}: \"{cells[0]}\" is mapped twice, to \"{other}\" and \"{value}\".");
+            map[k] = value;
+        }
+
+        return map;
+    }
+}

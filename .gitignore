@@ -30,3 +30,5 @@ Thumbs.db
 docs/import/*.xlsx
 docs/import/parsed.csv
 docs/import/summary.txt
+docs/import/plan.txt
+docs/import/reconcile.txt
