@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import {
   useCreateVersionMutation,
   useDeleteVersionMutation,
@@ -20,6 +20,8 @@ import {
 } from '../../types/api'
 import { VersionFormModal } from './VersionFormModal'
 import { VersionRow } from './VersionRow'
+import { todayInManila } from '../../lib/dates'
+import { splitHistorical } from './versionGroups'
 
 export function VersionsPage() {
   const [context, setContext] = useState<MenuContext | ''>('')
@@ -33,6 +35,9 @@ export function VersionsPage() {
   const [setPublished] = useSetVersionPublishedMutation()
   const [deleteVersion, { isLoading: isDeleting }] = useDeleteVersionMutation()
   const run = useToastedAction()
+
+  const [showHistorical, setShowHistorical] = useState(false)
+  const { active, historical } = splitHistorical(versions ?? [], allVersions ?? versions ?? [], todayInManila())
 
   const [isFormOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<MenuVersionSummaryDto | null>(null)
@@ -80,20 +85,25 @@ export function VersionsPage() {
           </thead>
           <tbody>
             {isLoading && <SkeletonRows columns={6} />}
-            {versions?.map((version) => (
-              <VersionRow
-                key={version.id}
-                version={version}
-                onEdit={() => openForm(version)}
-                onDelete={() => setPendingDelete(version)}
-                onTogglePublish={() =>
-                  run(
-                    setPublished({ id: version.id, isPublished: !version.isPublished }),
-                    version.isPublished ? 'Version unpublished.' : 'Version published.',
-                  )
-                }
-              />
+            {[...active, ...(showHistorical ? historical : [])].map((version, index) => (
+              <Fragment key={version.id}>
+                {index === active.length && <HistoricalToggle count={historical.length} open onToggle={() => setShowHistorical(false)} />}
+                <VersionRow
+                  version={version}
+                  onEdit={() => openForm(version)}
+                  onDelete={() => setPendingDelete(version)}
+                  onTogglePublish={() =>
+                    run(
+                      setPublished({ id: version.id, isPublished: !version.isPublished }),
+                      version.isPublished ? 'Version unpublished.' : 'Version published.',
+                    )
+                  }
+                />
+              </Fragment>
             ))}
+            {historical.length > 0 && !showHistorical && (
+              <HistoricalToggle count={historical.length} open={false} onToggle={() => setShowHistorical(true)} />
+            )}
           </tbody>
         </Table>
 
@@ -160,5 +170,18 @@ export function VersionsPage() {
         }}
       />
     </>
+  )
+}
+
+/** The divider row that opens or closes the historical group at the bottom of the list. */
+function HistoricalToggle({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
+  return (
+    <tr>
+      <td colSpan={6} className="border-t border-line bg-canvas px-4 py-2">
+        <button type="button" className="text-xs font-semibold text-muted hover:text-ink" aria-expanded={open} onClick={onToggle}>
+          {open ? '▾' : '▸'} Historical ({count})
+        </button>
+      </td>
+    </tr>
   )
 }
