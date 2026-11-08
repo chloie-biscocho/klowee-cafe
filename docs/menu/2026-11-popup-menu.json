@@ -1,0 +1,171 @@
+{
+  "popUpVersionName": "Pop-up menu Nov 2026",
+  "officeDraftName": "Office menu Nov 2026",
+  "source": "The owners' printed pop-up menu (two pages), transcribed for handover 12a on 2026-11-08. Office prices start equal to pop-up prices; the owners adjust and publish the office version themselves.",
+  "renames": {
+    "Classic Ube Latte": [
+      "Ube Latte"
+    ]
+  },
+  "categories": [
+    {
+      "name": "Coffee",
+      "items": [
+        {
+          "name": "Americano",
+          "price": 110
+        },
+        {
+          "name": "Cloud Americano",
+          "price": 130
+        },
+        {
+          "name": "Cafe Latte",
+          "price": 130
+        },
+        {
+          "name": "Spanish Latte",
+          "price": 150,
+          "featured": true
+        },
+        {
+          "name": "Sea Salt Cream",
+          "price": 160
+        },
+        {
+          "name": "Strawberry Bean",
+          "price": 160
+        },
+        {
+          "name": "Dark Mocha Latte",
+          "price": 170
+        },
+        {
+          "name": "Dirty Matcha",
+          "price": 190
+        }
+      ]
+    },
+    {
+      "name": "Signature Coffee",
+      "items": [
+        {
+          "name": "Cinnamon Cloud",
+          "price": 160
+        },
+        {
+          "name": "Hazelnut Latte",
+          "price": 160
+        },
+        {
+          "name": "Classic Ube Latte",
+          "price": 180
+        },
+        {
+          "name": "Oat Biscoff Latte",
+          "price": 190
+        },
+        {
+          "name": "Ube Oat Latte",
+          "price": 210
+        }
+      ]
+    },
+    {
+      "name": "Non-Coffee",
+      "items": [
+        {
+          "name": "Strawberry Milk",
+          "price": 140,
+          "featured": true
+        },
+        {
+          "name": "Iced Choco-Hazelnut",
+          "price": 140
+        },
+        {
+          "name": "Dreamy Ube Milk",
+          "price": 150
+        },
+        {
+          "name": "Oat Milky Biscoff",
+          "price": 160
+        }
+      ]
+    },
+    {
+      "name": "Refreshers",
+      "items": [
+        {
+          "name": "Strawberry Swoon",
+          "price": 140
+        },
+        {
+          "name": "Sunrise Berry",
+          "price": 140,
+          "featured": true
+        }
+      ]
+    },
+    {
+      "name": "Houseblend Matcha",
+      "itemDescription": "oat milk + ceremonial matcha, creamy and earthy with a hint of bitterness",
+      "items": [
+        {
+          "name": "Signature Oat Matcha (Houseblend)",
+          "price": 160
+        },
+        {
+          "name": "Sea Salt Cloud Matcha (Houseblend)",
+          "price": 170
+        },
+        {
+          "name": "Ube Cloud Matcha (Houseblend)",
+          "price": 180
+        },
+        {
+          "name": "Strawberry Matcha (Houseblend)",
+          "price": 180
+        },
+        {
+          "name": "Banana Matcha (Houseblend)",
+          "price": 180
+        },
+        {
+          "name": "Cloud Biscoff Matcha (Houseblend)",
+          "price": 190
+        }
+      ]
+    },
+    {
+      "name": "Okumidori Matcha",
+      "itemDescription": "oat milk + premium okumidori matcha, bold umami, minimal bitterness with smooth clean finish",
+      "items": [
+        {
+          "name": "Signature Oat Matcha (Okumidori)",
+          "price": 200
+        },
+        {
+          "name": "Sea Salt Cloud Matcha (Okumidori)",
+          "price": 210
+        },
+        {
+          "name": "Ube Cloud Matcha (Okumidori)",
+          "price": 220
+        },
+        {
+          "name": "Strawberry Matcha (Okumidori)",
+          "price": 220
+        },
+        {
+          "name": "Banana Matcha (Okumidori)",
+          "price": 220
+        },
+        {
+          "name": "Cloud Biscoff Matcha (Okumidori)",
+          "price": 230
+        }
+      ]
+    }
+  ]
+}

@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ContentSync", "..\tools\Con
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ContentSync.Tests", "..\tools\ContentSync.Tests\ContentSync.Tests.csproj", "{B322786E-7918-45CE-8488-AEECF6F25EA1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MenuLoad", "..\tools\MenuLoad\MenuLoad.csproj", "{E2F73484-113D-47A5-962A-523D68D80372}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{B322786E-7918-45CE-8488-AEECF6F25EA1}.Release|x64.Build.0 = Release|Any CPU
 		{B322786E-7918-45CE-8488-AEECF6F25EA1}.Release|x86.ActiveCfg = Release|Any CPU
 		{B322786E-7918-45CE-8488-AEECF6F25EA1}.Release|x86.Build.0 = Release|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Debug|x64.Build.0 = Debug|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Debug|x86.Build.0 = Debug|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Release|x64.ActiveCfg = Release|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Release|x64.Build.0 = Release|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Release|x86.ActiveCfg = Release|Any CPU
+		{E2F73484-113D-47A5-962A-523D68D80372}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
