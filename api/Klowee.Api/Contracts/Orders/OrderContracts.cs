@@ -71,12 +71,14 @@ public record PaymentDto(
     string? Reference,
     string? Notes);
 
+/// <param name="Items">The drinks, as the owners would say them: "Spanish Latte ×2, Americano".</param>
 public record OrderSummaryDto(
     Guid Id,
     DateOnly OrderedOn,
     PersonRef Customer,
     PersonRef? Payer,
     int ItemCount,
+    string Items,
     decimal Total,
     decimal Paid,
     PaymentStatus Status);

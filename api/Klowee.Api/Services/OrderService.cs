@@ -85,14 +85,41 @@ public class OrderService : IOrderService
             .ToListAsync(cancellationToken);
         var rows = loaded.OrderByDescending(o => o.OrderedOn).ThenByDescending(o => o.CreatedAt).ToList();
 
-        var paid = await _db.PaidByOrderAsync(rows.Select(r => r.Id).ToList(), cancellationToken);
+        var orderIds = rows.Select(r => r.Id).ToList();
+        var paid = await _db.PaidByOrderAsync(orderIds, cancellationToken);
+        var items = await ItemsSummaryAsync(orderIds, cancellationToken);
 
         return rows.Select(r =>
         {
             var amount = paid.GetValueOrDefault(r.Id);
-            return new OrderSummaryDto(r.Id, r.OrderedOn, r.Customer, r.Payer, r.Drinks, r.Total, amount,
-                SalesQueries.StatusFor(r.Total, amount));
+            return new OrderSummaryDto(r.Id, r.OrderedOn, r.Customer, r.Payer, r.Drinks,
+                items.GetValueOrDefault(r.Id, string.Empty), r.Total, amount, SalesQueries.StatusFor(r.Total, amount));
         }).ToList();
+    }
+
+    /// <summary>"Spanish Latte ×2, Americano" per order, lines in their order, names looked up past soft-deletes.</summary>
+    private async Task<Dictionary<Guid, string>> ItemsSummaryAsync(List<Guid> orderIds, CancellationToken cancellationToken)
+    {
+        var lines = await _db.OrderItems
+            .AsNoTracking()
+            .Where(i => orderIds.Contains(i.OrderId))
+            .Select(i => new { i.OrderId, i.MenuVersionItemId, i.Quantity, i.SortOrder })
+            .ToListAsync(cancellationToken);
+
+        var versionItemIds = lines.Select(l => l.MenuVersionItemId).Distinct().ToList();
+        var names = await _db.MenuVersionItems
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(vi => versionItemIds.Contains(vi.Id))
+            .Select(vi => new { vi.Id, vi.MenuItem!.Name })
+            .ToDictionaryAsync(vi => vi.Id, vi => vi.Name, cancellationToken);
+
+        return lines
+            .GroupBy(l => l.OrderId)
+            .ToDictionary(
+                g => g.Key,
+                g => string.Join(", ", g.OrderBy(l => l.SortOrder).Select(l =>
+                    names.GetValueOrDefault(l.MenuVersionItemId, "?") + (l.Quantity > 1 ? $" ×{l.Quantity}" : ""))));
     }
 
     public async Task<OrderDetailDto> GetAsync(Guid id, CancellationToken cancellationToken)

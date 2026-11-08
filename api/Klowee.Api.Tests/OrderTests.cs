@@ -264,6 +264,12 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
             $"/api/orders?customerId={kee.Id}", KloweeApiFactory.Json);
         Assert.Equal([newer.Id, older.Id], all!.Items.Select(o => o.Id));
 
+        // The table's one-line items summary.
+        var multi = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte, 2, m.OatMilk), Line(m.Americano)], orderedOn: new DateOnly(2026, 9, 1)));
+        var listed = await client.GetFromJsonAsync<PagedResult<OrderSummaryDto>>(
+            $"/api/orders?customerId={kee.Id}&to=2026-09-30", KloweeApiFactory.Json);
+        Assert.Equal("Latte orders ×2, Americano orders", Assert.Single(listed!.Items, o => o.Id == multi.Id).Items);
+
         var partial = await client.GetFromJsonAsync<PagedResult<OrderSummaryDto>>(
             $"/api/orders?customerId={kee.Id}&status=Partial", KloweeApiFactory.Json);
         Assert.Equal(newer.Id, Assert.Single(partial!.Items).Id);
@@ -274,7 +280,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
         Assert.Equal(older.Id, Assert.Single(october!.Items).Id);
 
         var paged = await client.GetFromJsonAsync<PagedResult<OrderSummaryDto>>(
-            $"/api/orders?customerId={kee.Id}&page=2&pageSize=1", KloweeApiFactory.Json);
+            $"/api/orders?customerId={kee.Id}&from=2026-10-01&page=2&pageSize=1", KloweeApiFactory.Json);
         Assert.Equal(2, paged!.TotalCount);
         Assert.Equal(older.Id, Assert.Single(paged.Items).Id);
     }
