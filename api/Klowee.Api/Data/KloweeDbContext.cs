@@ -38,6 +38,12 @@ public class KloweeDbContext : DbContext
     public DbSet<EventPhoto> EventPhotos => Set<EventPhoto>();
     public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<SiteSetting> SiteSettings => Set<SiteSetting>();
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<OrderItemAddOn> OrderItemAddOns => Set<OrderItemAddOn>();
+    public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<LoyaltyEntry> LoyaltyEntries => Set<LoyaltyEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

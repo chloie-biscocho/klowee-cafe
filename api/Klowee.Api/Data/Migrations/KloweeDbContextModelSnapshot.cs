@@ -125,6 +125,61 @@ namespace Klowee.Api.Data.Migrations
                     b.ToTable("announcements", (string)null);
                 });
 
+            modelBuilder.Entity("Klowee.Api.Entities.Customer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Nickname")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("nickname");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_customers");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_customers_name")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.ToTable("customers", (string)null);
+                });
+
             modelBuilder.Entity("Klowee.Api.Entities.Event", b =>
                 {
                     b.Property<Guid>("Id")
@@ -250,6 +305,65 @@ namespace Klowee.Api.Data.Migrations
                         .HasDatabaseName("ix_event_photos_event_id");
 
                     b.ToTable("event_photos", (string)null);
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.LoyaltyEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<int>("Delta")
+                        .HasColumnType("integer")
+                        .HasColumnName("delta");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_loyalty_entries");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_loyalty_entries_customer_id");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("ix_loyalty_entries_order_id");
+
+                    b.ToTable("loyalty_entries", (string)null);
                 });
 
             modelBuilder.Entity("Klowee.Api.Entities.MenuCategory", b =>
@@ -478,6 +592,205 @@ namespace Klowee.Api.Data.Migrations
                     b.ToTable("menu_version_items", (string)null);
                 });
 
+            modelBuilder.Entity("Klowee.Api.Entities.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Context")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("context");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("discount_amount");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("discount_type");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("discount_value");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateOnly>("OrderedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("ordered_on");
+
+                    b.Property<Guid?>("PayerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payer_id");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("subtotal");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("total");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_orders");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_orders_customer_id");
+
+                    b.HasIndex("OrderedOn")
+                        .HasDatabaseName("ix_orders_ordered_on");
+
+                    b.HasIndex("PayerId")
+                        .HasDatabaseName("ix_orders_payer_id");
+
+                    b.ToTable("orders", (string)null);
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.OrderItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("line_total");
+
+                    b.Property<Guid>("MenuVersionItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("menu_version_item_id");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("unit_price");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_order_items");
+
+                    b.HasIndex("MenuVersionItemId")
+                        .HasDatabaseName("ix_order_items_menu_version_item_id");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("ix_order_items_order_id");
+
+                    b.ToTable("order_items", (string)null);
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.OrderItemAddOn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("AddOnId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("add_on_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid>("OrderItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_item_id");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("unit_price");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_order_item_add_ons");
+
+                    b.HasIndex("AddOnId")
+                        .HasDatabaseName("ix_order_item_add_ons_add_on_id");
+
+                    b.HasIndex("OrderItemId")
+                        .HasDatabaseName("ix_order_item_add_ons_order_item_id");
+
+                    b.ToTable("order_item_add_ons", (string)null);
+                });
+
             modelBuilder.Entity("Klowee.Api.Entities.Package", b =>
                 {
                     b.Property<Guid>("Id")
@@ -584,6 +897,71 @@ namespace Klowee.Api.Data.Migrations
                         .HasDatabaseName("ix_package_inclusions_package_id");
 
                     b.ToTable("package_inclusions", (string)null);
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("channel");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<DateOnly>("PaidOn")
+                        .HasColumnType("date")
+                        .HasColumnName("paid_on");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("reference");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payments");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("ix_payments_order_id");
+
+                    b.HasIndex("PaidOn")
+                        .HasDatabaseName("ix_payments_paid_on");
+
+                    b.ToTable("payments", (string)null);
                 });
 
             modelBuilder.Entity("Klowee.Api.Entities.SiteSetting", b =>
@@ -702,6 +1080,26 @@ namespace Klowee.Api.Data.Migrations
                     b.Navigation("Event");
                 });
 
+            modelBuilder.Entity("Klowee.Api.Entities.LoyaltyEntry", b =>
+                {
+                    b.HasOne("Klowee.Api.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_loyalty_entries_customers_customer_id");
+
+                    b.HasOne("Klowee.Api.Entities.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_loyalty_entries_orders_order_id");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("Klowee.Api.Entities.MenuItem", b =>
                 {
                     b.HasOne("Klowee.Api.Entities.MenuCategory", "Category")
@@ -735,6 +1133,68 @@ namespace Klowee.Api.Data.Migrations
                     b.Navigation("MenuVersion");
                 });
 
+            modelBuilder.Entity("Klowee.Api.Entities.Order", b =>
+                {
+                    b.HasOne("Klowee.Api.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_orders_customers_customer_id");
+
+                    b.HasOne("Klowee.Api.Entities.Customer", "Payer")
+                        .WithMany()
+                        .HasForeignKey("PayerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_orders_customers_payer_id");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Payer");
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.OrderItem", b =>
+                {
+                    b.HasOne("Klowee.Api.Entities.MenuVersionItem", "MenuVersionItem")
+                        .WithMany()
+                        .HasForeignKey("MenuVersionItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_order_items_menu_version_items_menu_version_item_id");
+
+                    b.HasOne("Klowee.Api.Entities.Order", "Order")
+                        .WithMany("Items")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_order_items_orders_order_id");
+
+                    b.Navigation("MenuVersionItem");
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.OrderItemAddOn", b =>
+                {
+                    b.HasOne("Klowee.Api.Entities.AddOn", "AddOn")
+                        .WithMany()
+                        .HasForeignKey("AddOnId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_order_item_add_ons_add_ons_add_on_id");
+
+                    b.HasOne("Klowee.Api.Entities.OrderItem", "OrderItem")
+                        .WithMany("AddOns")
+                        .HasForeignKey("OrderItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_order_item_add_ons_order_items_order_item_id");
+
+                    b.Navigation("AddOn");
+
+                    b.Navigation("OrderItem");
+                });
+
             modelBuilder.Entity("Klowee.Api.Entities.PackageInclusion", b =>
                 {
                     b.HasOne("Klowee.Api.Entities.Package", "Package")
@@ -745,6 +1205,18 @@ namespace Klowee.Api.Data.Migrations
                         .HasConstraintName("fk_package_inclusions_packages_package_id");
 
                     b.Navigation("Package");
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.Payment", b =>
+                {
+                    b.HasOne("Klowee.Api.Entities.Order", "Order")
+                        .WithMany("Payments")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_payments_orders_order_id");
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("Klowee.Api.Entities.Event", b =>
@@ -765,6 +1237,18 @@ namespace Klowee.Api.Data.Migrations
             modelBuilder.Entity("Klowee.Api.Entities.MenuVersion", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.Order", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.OrderItem", b =>
+                {
+                    b.Navigation("AddOns");
                 });
 
             modelBuilder.Entity("Klowee.Api.Entities.Package", b =>
