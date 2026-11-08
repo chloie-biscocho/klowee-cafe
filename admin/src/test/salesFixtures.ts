@@ -103,11 +103,14 @@ export const outstanding: OutstandingRowDto[] = [
   { customerId: kee.id, name: 'Kee', balance: 320, oldestUnpaidOn: '2026-10-27', orderCount: 2 },
 ]
 
-export const monthly = (year: number): MonthlyRowDto[] =>
-  Array.from({ length: 12 }, (_, index) => ({
-    month: index + 1,
-    revenue: year === 2026 && index === 10 ? 1250 : year === 2026 && index === 9 ? 800 : 0,
-    collected: year === 2026 && index === 10 ? 940 : year === 2026 && index === 9 ? 800 : 0,
-    orders: 0,
-    drinks: 0,
-  }))
+/** One row per month from `from` to `to` ("2026-11"); history starts in May 2025, with ₱800 in Oct 2026 and ₱1,250 in Nov 2026. */
+export const monthly = (from: string | null, to: string): MonthlyRowDto[] => {
+  const [fy, fm] = (from ?? '2025-05').split('-').map(Number) as [number, number]
+  const [ty, tm] = to.split('-').map(Number) as [number, number]
+  return Array.from({ length: (ty - fy) * 12 + tm - fm + 1 }, (_, index) => {
+    const year = fy + Math.floor((fm - 1 + index) / 12)
+    const month = ((fm - 1 + index) % 12) + 1
+    const amount = year === 2026 && month === 11 ? 1250 : year === 2026 && month === 10 ? 800 : 0
+    return { year, month, revenue: amount, collected: amount === 1250 ? 940 : amount, orders: 0, drinks: 0 }
+  })
+}

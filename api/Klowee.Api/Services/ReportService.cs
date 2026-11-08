@@ -109,17 +109,45 @@ public class ReportService : IReportService
             throw new ValidationFailedException("'year' must be between 2000 and 2100.");
         }
 
-        var orders = (await LoadOrdersAsync(cancellationToken)).Where(o => o.OrderedOn.Year == y).ToList();
-        var payments = (await LoadPaymentsAsync(cancellationToken)).Where(p => p.PaidOn.Year == y).ToList();
+        return await MonthlyRangeAsync(new DateOnly(y, 1, 1), new DateOnly(y, 12, 1), cancellationToken);
+    }
 
-        return Enumerable.Range(1, 12)
-            .Select(month =>
+    public const int MaxMonths = 240;
+
+    public async Task<IReadOnlyList<MonthlyRowDto>> MonthlyRangeAsync(DateOnly? from, DateOnly to, CancellationToken cancellationToken)
+    {
+        var orders = await LoadOrdersAsync(cancellationToken);
+        var payments = await LoadPaymentsAsync(cancellationToken);
+
+        // "All": from the first month with an order (or just `to` when there are none).
+        var first = from ?? (orders.Count > 0 ? orders.Min(o => o.OrderedOn) : to);
+        var start = new DateOnly(first.Year, first.Month, 1);
+        var end = new DateOnly(to.Year, to.Month, 1);
+        if (start > end)
+        {
+            throw new ValidationFailedException("'from' must not be after 'to'.");
+        }
+
+        var count = (end.Year - start.Year) * 12 + end.Month - start.Month + 1;
+        if (count > MaxMonths)
+        {
+            throw new ValidationFailedException($"A range can cover at most {MaxMonths} months.");
+        }
+
+        static int Key(DateOnly d) => d.Year * 12 + d.Month - 1;
+        var ordersByMonth = orders.ToLookup(o => Key(o.OrderedOn));
+        var paidByMonth = payments.ToLookup(p => Key(p.PaidOn));
+
+        return Enumerable.Range(0, count)
+            .Select(i =>
             {
-                var monthOrders = orders.Where(o => o.OrderedOn.Month == month).ToList();
+                var month = start.AddMonths(i);
+                var monthOrders = ordersByMonth[Key(month)].ToList();
                 return new MonthlyRowDto(
-                    month,
+                    month.Year,
+                    month.Month,
                     monthOrders.Sum(o => o.Total),
-                    payments.Where(p => p.PaidOn.Month == month).Sum(p => p.Amount),
+                    paidByMonth[Key(month)].Sum(p => p.Amount),
                     monthOrders.Count,
                     monthOrders.SelectMany(o => o.Lines).Sum(l => l.Quantity));
             })

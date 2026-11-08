@@ -7,13 +7,28 @@ export function niceMax(value: number): number {
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/** The twelve months ending with the one `isoDate` falls in, oldest first: [{ year, month (1–12), key, label }]. */
-export function lastTwelveMonths(isoDate: string) {
+export type ChartRange = '12' | '24' | 'all'
+
+/** The `/reports/monthly` range for a choice, ending with the month `isoDate` falls in. "all" leaves `from` out: the API starts at the first month with an order. */
+export function rangeParams(range: ChartRange, isoDate: string): { from?: string; to: string } {
+  const to = isoDate.slice(0, 7)
+  if (range === 'all') return { to }
   const [year, month] = isoDate.split('-').map(Number) as [number, number]
-  return Array.from({ length: 12 }, (_, index) => {
-    const offset = month - 11 + index // 1-based month; ≤ 0 means last year
-    const y = offset <= 0 ? year - 1 : year
-    const m = offset <= 0 ? offset + 12 : offset
-    return { year: y, month: m, key: `${y}-${String(m).padStart(2, '0')}`, label: `${MONTHS[m - 1]}${m === 1 || index === 0 ? ` ${String(y).slice(2)}` : ''}` }
-  })
+  const start = new Date(Date.UTC(year, month - Number(range), 1))
+  return { from: start.toISOString().slice(0, 7), to }
+}
+
+/** API rows → chart months, labelled "Nov", with the year on January and on the first bar ("Dec 25"). */
+export function toChartMonths(rows: { year: number; month: number; revenue: number; collected: number }[]) {
+  return rows.map((row, index) => ({
+    key: `${row.year}-${String(row.month).padStart(2, '0')}`,
+    label: `${MONTHS[row.month - 1]}${row.month === 1 || index === 0 ? ` ${String(row.year).slice(2)}` : ''}`,
+    revenue: row.revenue,
+    collected: row.collected,
+  }))
+}
+
+/** Up to 36 bars every month is labelled; beyond that only every third, starting with the first, so labels never overlap. */
+export function showsLabel(index: number, count: number): boolean {
+  return count <= 36 || index % 3 === 0
 }

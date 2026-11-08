@@ -38,8 +38,10 @@ export const handlers = [
   http.get(`${API}/orders/:id`, () => HttpResponse.json(unpaidOrder)),
   http.get(`${API}/reports/summary`, () => HttpResponse.json(summary)),
   http.get(`${API}/reports/outstanding`, () => HttpResponse.json(outstanding)),
-  http.get(`${API}/reports/monthly`, ({ request }) =>
-    HttpResponse.json(monthly(Number(new URL(request.url).searchParams.get('year'))))),
+  http.get(`${API}/reports/monthly`, ({ request }) => {
+    const params = new URL(request.url).searchParams
+    return HttpResponse.json(monthly(params.get('from'), params.get('to')!))
+  }),
 ]
 
 export const server = setupServer(...handlers)

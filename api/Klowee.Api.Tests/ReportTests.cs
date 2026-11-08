@@ -113,8 +113,49 @@ public class ReportTests : IClassFixture<KloweeApiFactory>
         var rows = (await client.GetFromJsonAsync<List<MonthlyRowDto>>("/api/reports/monthly?year=2026", KloweeApiFactory.Json))!;
 
         Assert.Equal(Enumerable.Range(1, 12), rows.Select(r => r.Month));
+        Assert.All(rows, r => Assert.Equal(2026, r.Year));
         Assert.Equal((10, 464m, 320m, 2, 3), (rows[9].Month, rows[9].Revenue, rows[9].Collected, rows[9].Orders, rows[9].Drinks));
         Assert.Equal((11, 740m, 524m, 3, 6), (rows[10].Month, rows[10].Revenue, rows[10].Collected, rows[10].Orders, rows[10].Drinks));
         Assert.All(rows.Where(r => r.Month < 10 || r.Month == 12), r => Assert.Equal(0m, r.Revenue + r.Collected));
+    }
+
+    [Fact]
+    public async Task MonthlyRange_OneRowPerMonth_AcrossYears_EmptyMonthsZero()
+    {
+        var client = await SeedAsync();
+
+        var rows = (await client.GetFromJsonAsync<List<MonthlyRowDto>>("/api/reports/monthly?from=2026-09&to=2027-02", KloweeApiFactory.Json))!;
+
+        Assert.Equal(
+            [(2026, 9), (2026, 10), (2026, 11), (2026, 12), (2027, 1), (2027, 2)],
+            rows.Select(r => (r.Year, r.Month)));
+        Assert.Equal((464m, 320m, 2, 3), (rows[1].Revenue, rows[1].Collected, rows[1].Orders, rows[1].Drinks));
+        Assert.Equal((740m, 524m, 3, 6), (rows[2].Revenue, rows[2].Collected, rows[2].Orders, rows[2].Drinks));
+        Assert.All(rows.Where((_, i) => i is not 1 and not 2), r => Assert.Equal(0m, r.Revenue + r.Collected));
+    }
+
+    [Fact]
+    public async Task MonthlyRange_WithoutFrom_StartsAtTheFirstMonthWithAnOrder()
+    {
+        var client = await SeedAsync();
+
+        var rows = (await client.GetFromJsonAsync<List<MonthlyRowDto>>("/api/reports/monthly?to=2026-12", KloweeApiFactory.Json))!;
+
+        Assert.Equal([(2026, 10), (2026, 11), (2026, 12)], rows.Select(r => (r.Year, r.Month)));
+    }
+
+    [Theory]
+    [InlineData("from=2026-11&to=2026-10")]
+    [InlineData("year=2026&from=2026-01&to=2026-02")]
+    [InlineData("from=2026-01")]
+    [InlineData("from=2026-1&to=2026-02")]
+    [InlineData("from=2000-01&to=2026-12")]
+    public async Task MonthlyRange_BadInput_400(string query)
+    {
+        var client = await SeedAsync();
+
+        var response = await client.GetAsync($"/api/reports/monthly?{query}");
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

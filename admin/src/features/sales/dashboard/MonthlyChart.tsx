@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { formatPeso } from '../../../lib/format'
-import { niceMax } from './chartScale'
+import { niceMax, showsLabel } from './chartScale'
 
 export interface ChartMonth {
   /** "2026-11" */
@@ -19,12 +19,12 @@ const PLOT_H = HEIGHT - PAD.top - PAD.bottom
 const short = (amount: number) => (amount >= 1000 ? `₱${(amount / 1000).toLocaleString('en-PH', { maximumFractionDigits: 1 })}k` : `₱${amount}`)
 
 /**
- * Revenue and collected for the last twelve months, drawn by hand: a y scale
+ * Revenue and collected per month, drawn by hand: a y scale
  * from 0 to a round maximum, one band per month holding two bars, gridlines
  * with labels, and a tooltip for the hovered month. No chart library for one
  * chart (decision 017).
  */
-export function MonthlyChart({ months }: { months: ChartMonth[] }) {
+export function MonthlyChart({ months, label }: { months: ChartMonth[]; label: string }) {
   const [hovered, setHovered] = useState<number | null>(null)
   const max = niceMax(Math.max(0, ...months.flatMap((m) => [m.revenue, m.collected])))
   const y = (amount: number) => PAD.top + PLOT_H - (amount / max) * PLOT_H
@@ -39,7 +39,7 @@ export function MonthlyChart({ months }: { months: ChartMonth[] }) {
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="h-auto w-full"
         role="img"
-        aria-label="Revenue and collected, last twelve months"
+        aria-label={`Revenue and collected, ${label}`}
         onMouseLeave={() => setHovered(null)}
       >
         {ticks.map((tick) => (
@@ -57,9 +57,11 @@ export function MonthlyChart({ months }: { months: ChartMonth[] }) {
               <rect x={x} y={PAD.top} width={band} height={PLOT_H} className={hovered === index ? 'fill-canvas' : 'fill-transparent'} />
               <rect x={x + band / 2 - bar - 1} y={y(month.revenue)} width={bar} height={PAD.top + PLOT_H - y(month.revenue)} className="fill-accent" rx="2" />
               <rect x={x + band / 2 + 1} y={y(month.collected)} width={bar} height={PAD.top + PLOT_H - y(month.collected)} className="fill-success" rx="2" />
-              <text x={x + band / 2} y={HEIGHT - 8} textAnchor="middle" className="fill-muted text-[10px]">
-                {month.label}
-              </text>
+              {showsLabel(index, months.length) && (
+                <text x={x + band / 2} y={HEIGHT - 8} textAnchor="middle" className="fill-muted text-[10px]">
+                  {month.label}
+                </text>
+              )}
             </g>
           )
         })}

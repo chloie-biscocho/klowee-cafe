@@ -29,4 +29,5 @@ public record OutstandingRowDto(
     DateOnly OldestUnpaidOn,
     int OrderCount);
 
-public record MonthlyRowDto(int Month, decimal Revenue, decimal Collected, int Orders, int Drinks);
+/// <param name="Year">Added with the from/to form, so a range spanning years is unambiguous.</param>
+public record MonthlyRowDto(int Year, int Month, decimal Revenue, decimal Collected, int Orders, int Drinks);

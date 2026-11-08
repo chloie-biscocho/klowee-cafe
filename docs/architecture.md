@@ -303,7 +303,7 @@ Customers ─┬─ drinks ─> Order ─< OrderItem ─< OrderItemAddOn
 | `/api/customers` | list with tab balance, stamps, rewards, last order; CRUD; activate/deactivate; delete refused while orders exist; `merge-into/{targetId}`; `loyalty` ledger and `loyalty/adjust`; `settle` |
 | `/api/orders` | paged list (dates, customer, derived status); detail with items, add-ons, payments, warnings; create, replace (409 once paid against), delete |
 | `/api/orders/{id}/payments` | add (409 on overpayment), delete |
-| `/api/reports` | `summary` (revenue by order date, collected by payment date, outstanding, channels, top items, new customers), `outstanding`, `monthly` |
+| `/api/reports` | `summary` (revenue by order date, collected by payment date, outstanding, channels, top items, new customers), `outstanding`, `monthly` (`?year=` for a calendar year, or `?from=YYYY-MM&to=YYYY-MM` for any range up to 240 months, zero rows for empty months; no `from` starts at the first month with an order) |
 
 - **Services:**
   - `PricingService`: arithmetic only, no database.

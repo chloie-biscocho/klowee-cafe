@@ -506,6 +506,7 @@ export interface OutstandingRowDto {
 }
 
 export interface MonthlyRowDto {
+  year: number
   month: number
   revenue: number
   collected: number

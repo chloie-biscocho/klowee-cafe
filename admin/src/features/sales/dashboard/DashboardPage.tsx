@@ -8,10 +8,16 @@ import { Table, Td, Th } from '../../../components/ui/Table'
 import { monthRange, shiftMonth, todayInManila } from '../../../lib/dates'
 import { formatDate, formatPeso } from '../../../lib/format'
 import { SettleModal } from '../customers/SettleModal'
-import { lastTwelveMonths } from './chartScale'
+import { type ChartRange, rangeParams, toChartMonths } from './chartScale'
 import { MonthlyChart } from './MonthlyChart'
 
 const monthTitle = new Intl.DateTimeFormat('en-PH', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+
+const RANGES: { value: ChartRange; label: string; description: string }[] = [
+  { value: '12', label: '12 months', description: 'last 12 months' },
+  { value: '24', label: '24 months', description: 'last 24 months' },
+  { value: 'all', label: 'All', description: 'every month since the first order' },
+]
 
 export function DashboardPage() {
   const today = todayInManila()
@@ -21,15 +27,10 @@ export function DashboardPage() {
 
   const { data: summary } = useGetSummaryQuery({ from, to })
   const { data: outstanding } = useGetOutstandingQuery()
-  const year = Number(today.slice(0, 4))
-  const { data: thisYear } = useGetMonthlyQuery(year)
-  const { data: lastYear } = useGetMonthlyQuery(year - 1)
+  const [range, setRange] = useState<ChartRange>('12')
+  const { data: monthly } = useGetMonthlyQuery(rangeParams(range, today))
   const [settling, setSettling] = useState<{ id: string; name: string; balance: number } | null>(null)
-
-  const chartMonths = lastTwelveMonths(today).map(({ year: y, month: m, key, label }) => {
-    const row = (y === year ? thisYear : lastYear)?.find((r) => r.month === m)
-    return { key, label, revenue: row?.revenue ?? 0, collected: row?.collected ?? 0 }
-  })
+  const chartMonths = toChartMonths(monthly ?? [])
 
   const stats = [
     { label: 'Revenue', value: summary ? formatPeso(summary.revenue) : '…', note: 'orders this month' },
@@ -124,8 +125,17 @@ export function DashboardPage() {
       </div>
 
       <Card className="p-4">
-        <h2 className="mb-3 text-sm font-semibold">Last twelve months</h2>
-        <MonthlyChart months={chartMonths} />
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Revenue by month</h2>
+          <div className="flex gap-1" role="group" aria-label="Chart range">
+            {RANGES.map(({ value, label }) => (
+              <Button key={value} size="sm" variant={range === value ? 'primary' : 'ghost'} aria-pressed={range === value} onClick={() => setRange(value)}>
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <MonthlyChart months={chartMonths} label={RANGES.find((r) => r.value === range)!.description} />
       </Card>
 
       {settling && <SettleModal customer={settling} onClose={() => setSettling(null)} />}

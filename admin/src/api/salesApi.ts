@@ -149,8 +149,9 @@ export const salesApi = baseApi.injectEndpoints({
       query: () => '/reports/outstanding',
       providesTags: ['Report'],
     }),
-    getMonthly: build.query<MonthlyRowDto[], number>({
-      query: (year) => ({ url: '/reports/monthly', params: { year } }),
+    /** One row per month to `to` ("2026-11"); without `from`, from the first month with an order. */
+    getMonthly: build.query<MonthlyRowDto[], { from?: string; to: string }>({
+      query: (params) => ({ url: '/reports/monthly', params }),
       providesTags: ['Report'],
     }),
   }),
