@@ -1,7 +1,6 @@
-================================================================
-ofl/fuzzybubbles/OFL.txt (github.com/google/fonts)
-================================================================
-Copyright 2005 The Fuzzy Bubbles Project Authors (https://github.com/googlefonts/fuzzy-bubbles)
+=== young-serif ===
+
+Copyright 2023 The Young Serif Project Authors (https://github.com/noirblancrouge/YoungSerif)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
@@ -95,14 +94,13 @@ DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 
-================================================================
-ofl/manrope/OFL.txt (github.com/google/fonts)
-================================================================
-Copyright 2018 The Manrope Project Authors (https://github.com/googlefonts/manrope)
+=== karla ===
+
+Copyright 2019 The Karla Project Authors (https://github.com/googlefonts/karla)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
-http://scripts.sil.org/OFL
+https://scripts.sil.org/OFL
 
 
 -----------------------------------------------------------
@@ -192,10 +190,9 @@ DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 
-================================================================
-ofl/caveat/OFL.txt (github.com/google/fonts)
-================================================================
-Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)
+=== shantell-sans ===
+
+Copyright 2022 The Shantell Sans Project Authors (https://github.com/arrowtype/shantell-sans)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

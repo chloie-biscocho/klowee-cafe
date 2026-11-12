@@ -1,154 +1,293 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens, exactly as docs/design-brief.md lists them. Components use
- * these through Tailwind utilities (`bg-paper`, `text-cobalt`, `font-heading`);
- * no hex value appears anywhere else in the app.
+ * "Sky and layers" (docs/design-brief.md). The colour tokens are the mockup's
+ * own (docs/mockups/klowee-home-v7.html), light here and dark below; the page
+ * follows the device's scheme and has no switch. Components use them through
+ * utilities (`bg-sky`, `text-deep`, `font-serif`); no hex value appears in a
+ * component. Tailwind's default palette is off, so a stray colour fails the build.
  */
 @theme {
-  /* Tailwind's default palette is switched off, so an off-brief colour is a
-     build-time typo rather than a quiet design drift. */
   --color-*: initial;
-  --color-navy: #1c2b6b;
-  --color-cobalt: #2446c7;
-  --color-sky: #8fcbf2;
-  --color-sky-light: #c9e6f7;
-  --color-paper: #f7f3e8;
-  --color-pink: #f4b8c8;
+  --color-sky: #a9d6f5;
+  --color-deep: #1b2f7a;
+  --color-ink: #16204a;
+  --color-cloud: #ffffff;
+  --color-panel: #ffffff;
+  --color-soft: #3f4c80;
+  --color-line: rgb(27 47 122 / 0.18);
+  --color-ph: #d6ecfb;
+  --color-ph-ink: #4e6aa8;
+  --color-paper: #fbf9e8;
+  --color-menu-ink: #1f3fa6;
+  --color-menu-soft: #5c6386;
+  --color-menu-rule: rgb(31 63 166 / 0.28);
+  --color-pink: #ee7c9b;
   --color-yellow: #ffd84d;
-  --color-ink-muted: #6b75a3;
-  /* Polaroid frames and clouds; the brief names white for both. */
-  --color-white: #ffffff;
+  /* The yellow stickers keep navy ink in both schemes. */
+  --color-sticker-ink: #1c2b6b;
   --color-transparent: transparent;
-  /* The brief's alternative dashed-divider tint. */
-  --color-divider: #c9d2f1;
 
-  --font-heading: 'Fuzzy Bubbles', 'Fuzzy Bubbles Fallback', 'Comic Sans MS', 'Chalkboard SE', cursive;
-  --font-hand: 'Caveat', 'Segoe Print', 'Bradley Hand', cursive;
-  --font-body: 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: 'Young Serif', 'Young Serif Fallback', 'Young Serif Fallback Times', Georgia, serif;
+  --font-sans: Karla, 'Helvetica Neue', Arial, sans-serif;
+  --font-hand: 'Shantell Sans', 'Comic Neue', 'Trebuchet MS', sans-serif;
 
-  /* The brief's breakpoints: 480px and 900px. */
   --breakpoint-sm: 480px;
-  --breakpoint-md: 900px;
-  --container-page: 1120px;
-  --container-prose: 65ch;
+  --breakpoint-md: 760px;
+  --breakpoint-lg: 900px;
+  --container-page: 1000px;
+}
 
-  --radius-card: 18px;
-
-  --animate-settle: settle 400ms ease-out both;
-  @keyframes settle {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-sky: #1a2452;
+    --color-deep: #c9d8ff;
+    --color-ink: #eaf0ff;
+    --color-cloud: #2a3672;
+    --color-panel: #222d63;
+    --color-soft: #b4c0ec;
+    --color-line: rgb(201 216 255 / 0.22);
+    --color-ph: #2b3875;
+    --color-ph-ink: #afc0f2;
+    --color-paper: #12172b;
+    --color-menu-ink: #9db6ff;
+    --color-menu-soft: #a9b0cf;
+    --color-menu-rule: rgb(157 182 255 / 0.3);
+    --color-pink: #f08aa8;
   }
 }
 
 /*
- * The three families, self-hosted from public/fonts/ (SIL Open Font License,
- * public/fonts/OFL.txt). The exact files Google Fonts serves, latin and
- * latin-ext subsets only; latin-ext carries the peso sign. unicode-range
- * means a page only downloads the subsets it uses. Manrope and Caveat are
- * variable fonts: one file per subset covers every weight the brief uses.
+ * Self-hosted from public/fonts/ (SIL Open Font License, public/fonts/OFL.txt):
+ * the files Google Fonts serves, latin and latin-ext only (latin-ext carries
+ * the peso sign), so a page downloads only the subsets it uses. Karla and
+ * Shantell Sans are variable: one file per subset covers 400 to 700.
  */
 @font-face {
-  font-family: 'Fuzzy Bubbles';
-  font-style: normal;
-  font-weight: 700;
+  font-family: 'Young Serif';
+  font-weight: 400;
   font-display: swap;
-  src: url('/fonts/fuzzy-bubbles-latin.woff2') format('woff2');
+  src: url('/fonts/young-serif-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Fuzzy Bubbles';
-  font-style: normal;
-  font-weight: 700;
+  font-family: 'Young Serif';
+  font-weight: 400;
   font-display: swap;
-  src: url('/fonts/fuzzy-bubbles-latin-ext.woff2') format('woff2');
+  src: url('/fonts/young-serif-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Manrope';
-  font-style: normal;
+  font-family: 'Karla';
   font-weight: 400 700;
   font-display: swap;
-  src: url('/fonts/manrope-latin.woff2') format('woff2');
+  src: url('/fonts/karla-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Manrope';
-  font-style: normal;
+  font-family: 'Karla';
   font-weight: 400 700;
   font-display: swap;
-  src: url('/fonts/manrope-latin-ext.woff2') format('woff2');
+  src: url('/fonts/karla-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Caveat';
-  font-style: normal;
-  font-weight: 500 600;
+  font-family: 'Shantell Sans';
+  font-weight: 400 700;
   font-display: swap;
-  src: url('/fonts/caveat-latin.woff2') format('woff2');
+  src: url('/fonts/shantell-sans-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Caveat';
-  font-style: normal;
-  font-weight: 500 600;
+  font-family: 'Shantell Sans';
+  font-weight: 400 700;
   font-display: swap;
-  src: url('/fonts/caveat-latin-ext.woff2') format('woff2');
+  src: url('/fonts/shantell-sans-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 /*
- * What the headings show while Fuzzy Bubbles is still downloading. Arial (or
- * its metric twins), stretched to Fuzzy Bubbles 700's average glyph width and
- * vertical metrics, so a heading wraps onto the same number of lines before
- * and after the swap and nothing below it moves. Numbers measured from the
- * font files: average advance 0.527em vs Arial's 0.447em; ascent 0.90,
- * descent 0.35, no line gap.
+ * What the serif headings show while Young Serif downloads: Georgia (or Times
+ * New Roman) scaled to Young Serif's average glyph width and given its
+ * vertical metrics, so the hero heading wraps onto the same lines before and
+ * after the swap. Measured from the font files: Young Serif's average advance
+ * over English text is 0.501em (Georgia 0.437em, Times 0.398em); ascent 1.046,
+ * descent 0.366, no line gap; overrides are divided by size-adjust.
  */
 @font-face {
-  font-family: 'Fuzzy Bubbles Fallback';
-  src: local('Arial'), local('ArialMT'), local('Helvetica'), local('Liberation Sans'), local('Roboto');
-  size-adjust: 117.79%;
-  ascent-override: 76.41%;
-  descent-override: 29.71%;
+  font-family: 'Young Serif Fallback';
+  src: local('Georgia');
+  size-adjust: 114.56%;
+  ascent-override: 91.31%;
+  descent-override: 31.95%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Young Serif Fallback Times';
+  src: local('Times New Roman'), local('TimesNewRomanPSMT'), local('Liberation Serif');
+  size-adjust: 125.85%;
+  ascent-override: 83.11%;
+  descent-override: 29.08%;
   line-gap-override: 0%;
 }
 
 html {
   scroll-behavior: smooth;
-  /* Anchor jumps land below the sticky nav instead of under it. */
-  scroll-padding-top: 5rem;
+  overflow-x: clip;
 }
 
 body {
-  background-color: var(--color-paper);
-  color: var(--color-navy);
-  font-family: var(--font-body);
-  font-size: 16px;
+  background-color: var(--color-sky);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1.06rem;
   line-height: 1.55;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
 }
 
-/* One focus treatment everywhere: a cobalt ring keyboard users can always see. */
 :focus-visible {
-  outline: 2px solid var(--color-cobalt);
+  outline: 3px solid var(--color-deep);
   outline-offset: 3px;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
-/* The one page-load moment, and the only motion on the page. */
+section[id] {
+  scroll-margin-top: 16px;
+}
+
+/* ---- The three animations: drifting clouds, filling cups, drawing ovals ---- */
+
+/* Clouds: a pill with two round puffs, sizes and drift from the mockup. Transform only. */
+.cloud {
+  position: absolute;
+  z-index: 0;
+  border-radius: 999px;
+  background: var(--color-cloud);
+  animation: drift var(--t, 32s) ease-in-out infinite alternate;
+  will-change: transform;
+}
+.cloud::before,
+.cloud::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: var(--color-cloud);
+}
+.cloud-1 { width: 190px; height: 54px; left: -30px; top: 70px; --d: 140px; --t: 30s; }
+.cloud-1::before { width: 76px; height: 76px; left: 34px; top: -36px; }
+.cloud-1::after { width: 54px; height: 54px; left: 96px; top: -22px; }
+.cloud-2 { width: 150px; height: 44px; right: -10px; top: 210px; --d: -160px; --t: 36s; }
+.cloud-2::before { width: 60px; height: 60px; left: 26px; top: -28px; }
+.cloud-2::after { width: 44px; height: 44px; left: 76px; top: -18px; }
+.cloud-3 { width: 110px; height: 32px; right: 16%; top: 26px; opacity: 0.85; --d: -110px; --t: 26s; }
+.cloud-3::before { width: 44px; height: 44px; left: 20px; top: -20px; }
+.cloud-3::after { width: 32px; height: 32px; left: 56px; top: -13px; }
+.cloud-4 { width: 130px; height: 38px; left: 4%; top: 370px; opacity: 0.85; --d: 130px; --t: 32s; }
+.cloud-4::before { width: 52px; height: 52px; left: 24px; top: -24px; }
+.cloud-4::after { width: 38px; height: 38px; left: 66px; top: -15px; }
+.cloud-5 { width: 96px; height: 28px; left: 15%; top: 216px; opacity: 0.75; --d: 90px; --t: 24s; }
+.cloud-5::before { width: 38px; height: 38px; left: 18px; top: -17px; }
+.cloud-5::after { width: 28px; height: 28px; left: 48px; top: -11px; }
+.cloud-6 { width: 140px; height: 40px; right: 3%; top: 452px; opacity: 0.9; --d: -120px; --t: 40s; }
+.cloud-6::before { width: 56px; height: 56px; left: 26px; top: -26px; }
+.cloud-6::after { width: 40px; height: 40px; left: 72px; top: -16px; }
+@media (max-width: 760px) {
+  .cloud-1 { top: 40px; left: -80px; }
+  .cloud-2 { right: -70px; }
+  .cloud-3 { right: 8%; top: 8px; }
+  .cloud-4 { top: 430px; left: -40px; }
+  .cloud-5 { display: none; }
+  .cloud-6 { top: 560px; right: -50px; }
+}
+@keyframes drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--d, 60px)); }
+}
+
+/* Cups: three layers clipped to a tapered glass; a sky-coloured cover shrinks away once to "fill" it. */
+.cup-glass {
+  position: absolute;
+  inset: 11px 0 0 0;
+  clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);
+  background: linear-gradient(to bottom, var(--a) 0 var(--s1), var(--b) var(--s1) var(--s2), var(--c) var(--s2) 100%);
+}
+.cup-glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-sky);
+  transform-origin: top;
+  animation: fill 0.9s cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
+  animation-delay: calc(var(--i) * 0.07s + 0.25s);
+}
+@keyframes fill {
+  to { transform: scaleY(0); }
+}
+
+/* Marker ovals: the path is drawn in once, when the menu sheet first scrolls into view. */
+.oval-path {
+  fill: none;
+  stroke: var(--color-pink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.92;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.inked .oval-path {
+  animation: draw 0.8s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+  animation-delay: calc(var(--i) * 0.12s);
+}
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* The shelf scrolls, but shows no scrollbar; arrows and swipe move it. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Menu drinks: the plus/minus marker replaces the default disclosure triangle. */
+.drink > summary {
+  list-style: none;
+}
+.drink > summary::-webkit-details-marker {
+  display: none;
+}
+.drink > summary::before {
+  content: '+';
+  flex: none;
+  width: 0.8em;
+  color: var(--color-pink);
+  font-weight: 700;
+}
+.drink[open] > summary::before {
+  content: '\2212';
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  .animate-settle {
+  .cloud {
     animation: none;
+  }
+  .cup-glass::after {
+    animation: none;
+    transform: scaleY(0);
+  }
+  .oval-path,
+  .inked .oval-path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .polaroid {
+    transition: none;
   }
 }
