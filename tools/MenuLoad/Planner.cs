@@ -38,7 +38,7 @@ public static class Planner
             if (existing.Name != category.Name || existing.SortOrder != index)
             {
                 steps.Add(new Step("update", $"category \"{existing.Name}\" → \"{category.Name}\", sort {existing.SortOrder} → {index}",
-                    () => api.UpdateCategoryAsync(existing.Id, category.Name, index)));
+                    () => api.UpdateCategoryAsync(existing.Id, category.Name, index, existing.Description)));
             }
         }
 

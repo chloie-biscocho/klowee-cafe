@@ -9,6 +9,7 @@ public class MenuCategoryConfiguration : IEntityTypeConfiguration<MenuCategory>
     public void Configure(EntityTypeBuilder<MenuCategory> builder)
     {
         builder.Property(c => c.Name).IsRequired().HasMaxLength(80);
+        builder.Property(c => c.Description).HasMaxLength(200);
         builder.HasIndex(c => c.Name).IsUnique().HasFilter(SoftDelete.Filter);
 
         builder.HasMany(c => c.Items)

@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace Klowee.MenuLoad;
 
 // The admin API's shapes, as much of them as the loader reads.
-public record Category(Guid Id, string Name, int SortOrder);
+public record Category(Guid Id, string Name, int SortOrder, string? Description);
 public record Item(Guid Id, string Name, string? Description, Guid CategoryId, string CategoryName, string? PhotoUrl, bool IsArchived);
 public record VersionSummary(Guid Id, string Name, string Context, DateOnly EffectiveFrom, bool IsPublished, int ItemCount);
 public record VersionItem(Guid Id, Guid MenuItemId, string Name, decimal Price, bool IsAvailable, bool IsFeatured, int SortOrder);
@@ -50,7 +50,9 @@ public sealed class Api : IDisposable
     public Task<VersionDetail> CurrentAsync(string context) => GetAsync<VersionDetail>($"menu/versions/current?context={context}");
 
     public Task<Category> CreateCategoryAsync(string name, int sortOrder) => SendAsync<Category>(HttpMethod.Post, "menu/categories", new { name, sortOrder });
-    public Task<Category> UpdateCategoryAsync(Guid id, string name, int sortOrder) => SendAsync<Category>(HttpMethod.Put, $"menu/categories/{id}", new { name, sortOrder });
+    /// <summary>The PUT replaces every field, so the description is sent back as it was.</summary>
+    public Task<Category> UpdateCategoryAsync(Guid id, string name, int sortOrder, string? description) =>
+        SendAsync<Category>(HttpMethod.Put, $"menu/categories/{id}", new { name, sortOrder, description });
 
     public Task<Item> CreateItemAsync(string name, string description, Guid categoryId) =>
         SendAsync<Item>(HttpMethod.Post, "menu/items", new { name, description, categoryId });

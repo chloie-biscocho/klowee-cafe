@@ -34,7 +34,7 @@ public record PublicMenuItemDto(
     string? PhotoUrl,
     bool IsFeatured);
 
-public record PublicMenuCategoryDto(Guid Id, string Name, IReadOnlyList<PublicMenuItemDto> Items);
+public record PublicMenuCategoryDto(Guid Id, string Name, string? Description, IReadOnlyList<PublicMenuItemDto> Items);
 
 public record PublicMenuDto(
     string VersionName,

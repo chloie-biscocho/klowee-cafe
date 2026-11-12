@@ -115,6 +115,7 @@ public class PublicHomeService : IPublicHomeService
             {
                 CategoryId = vi.MenuItem!.CategoryId,
                 CategoryName = vi.MenuItem!.Category!.Name,
+                CategoryDescription = vi.MenuItem!.Category!.Description,
                 CategorySortOrder = vi.MenuItem!.Category!.SortOrder,
                 Item = new PublicMenuItemDto(
                     vi.MenuItemId,
@@ -127,12 +128,13 @@ public class PublicHomeService : IPublicHomeService
             .ToListAsync(cancellationToken);
 
         var categories = rows
-            .GroupBy(row => new { row.CategoryId, row.CategoryName, row.CategorySortOrder })
+            .GroupBy(row => new { row.CategoryId, row.CategoryName, row.CategoryDescription, row.CategorySortOrder })
             .OrderBy(group => group.Key.CategorySortOrder)
             .ThenBy(group => group.Key.CategoryName)
             .Select(group => new PublicMenuCategoryDto(
                 group.Key.CategoryId,
                 group.Key.CategoryName,
+                group.Key.CategoryDescription,
                 group.Select(row => row.Item).ToList()))
             .ToList();
 

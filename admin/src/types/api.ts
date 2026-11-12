@@ -47,11 +47,14 @@ export interface MenuCategoryDto {
   id: string
   name: string
   sortOrder: number
+  /** Optional line under the name on the public menu. */
+  description: string | null
 }
 
 export interface MenuCategoryRequest {
   name: string
   sortOrder: number
+  description: string | null
 }
 
 // ---- Menu items ----

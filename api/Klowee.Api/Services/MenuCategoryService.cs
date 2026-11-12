@@ -17,7 +17,7 @@ public class MenuCategoryService : IMenuCategoryService
             .AsNoTracking()
             .OrderBy(c => c.SortOrder)
             .ThenBy(c => c.Name)
-            .Select(c => new MenuCategoryDto(c.Id, c.Name, c.SortOrder))
+            .Select(c => new MenuCategoryDto(c.Id, c.Name, c.SortOrder, c.Description))
             .ToListAsync(cancellationToken);
 
     public async Task<MenuCategoryDto> CreateAsync(MenuCategoryRequest request, CancellationToken cancellationToken)
@@ -25,12 +25,12 @@ public class MenuCategoryService : IMenuCategoryService
         var name = request.Name.Trim();
         await EnsureNameIsFreeAsync(name, excludingId: null, cancellationToken);
 
-        var category = new MenuCategory { Name = name, SortOrder = request.SortOrder };
+        var category = new MenuCategory { Name = name, SortOrder = request.SortOrder, Description = Clean(request.Description) };
 
         _db.MenuCategories.Add(category);
         await _db.SaveChangesAsync(cancellationToken);
 
-        return new MenuCategoryDto(category.Id, category.Name, category.SortOrder);
+        return new MenuCategoryDto(category.Id, category.Name, category.SortOrder, category.Description);
     }
 
     public async Task<MenuCategoryDto> UpdateAsync(Guid id, MenuCategoryRequest request, CancellationToken cancellationToken)
@@ -43,9 +43,10 @@ public class MenuCategoryService : IMenuCategoryService
 
         category.Name = name;
         category.SortOrder = request.SortOrder;
+        category.Description = Clean(request.Description);
         await _db.SaveChangesAsync(cancellationToken);
 
-        return new MenuCategoryDto(category.Id, category.Name, category.SortOrder);
+        return new MenuCategoryDto(category.Id, category.Name, category.SortOrder, category.Description);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken)
@@ -65,6 +66,9 @@ public class MenuCategoryService : IMenuCategoryService
         category.DeletedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
     }
+
+    private static string? Clean(string? description) =>
+        string.IsNullOrWhiteSpace(description) ? null : description.Trim();
 
     /// <summary>
     /// Mirrors the partial unique index on menu_categories.name so a duplicate

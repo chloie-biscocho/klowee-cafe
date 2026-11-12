@@ -70,6 +70,7 @@ export function CategoriesPage() {
                     {retired.has(category.id) && (
                       <span className="ml-2 text-xs font-normal text-muted">(archived items only)</span>
                     )}
+                    {category.description && <p className="mt-0.5 text-xs font-normal text-muted">{category.description}</p>}
                   </Td>
                   <Td className="text-muted">{category.sortOrder}</Td>
                   <Td className="text-right">

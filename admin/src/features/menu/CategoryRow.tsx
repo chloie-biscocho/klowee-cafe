@@ -1,9 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { useForm, type UseFormRegisterReturn } from 'react-hook-form'
+import type { z } from 'zod'
 import { Button } from '../../components/ui/Button'
 import { Td } from '../../components/ui/Table'
 import type { MenuCategoryDto } from '../../types/api'
 import { categorySchema, type CategoryValues } from './schemas'
+
+type CategoryInput = z.input<typeof categorySchema>
 
 const cellInput =
   'h-8 w-full rounded-md border border-line bg-surface px-2 text-sm focus:border-accent'
@@ -20,9 +23,9 @@ export function CategoryRow({
   onSave: (values: CategoryValues) => void
   onCancel: () => void
 }) {
-  const { register, handleSubmit, formState } = useForm<CategoryValues>({
+  const { register, handleSubmit, formState } = useForm<CategoryInput, unknown, CategoryValues>({
     resolver: zodResolver(categorySchema),
-    defaultValues: { name: category.name, sortOrder: category.sortOrder },
+    defaultValues: { name: category.name, sortOrder: category.sortOrder, description: category.description ?? '' },
   })
 
   return (
@@ -37,6 +40,7 @@ export function CategoryRow({
         {formState.errors.name && (
           <p className="mt-1 text-xs text-danger">{formState.errors.name.message}</p>
         )}
+        <DescriptionInput label="Category description" register={register('description')} error={formState.errors.description?.message} />
       </Td>
       <Td>
         <input
@@ -70,14 +74,14 @@ export function NewCategoryRow({
   nextSortOrder: number
   onCreate: (values: CategoryValues) => Promise<{ ok: boolean }>
 }) {
-  const { register, handleSubmit, reset, formState } = useForm<CategoryValues>({
+  const { register, handleSubmit, reset, formState } = useForm<CategoryInput, unknown, CategoryValues>({
     resolver: zodResolver(categorySchema),
-    defaultValues: { name: '', sortOrder: nextSortOrder },
+    defaultValues: { name: '', sortOrder: nextSortOrder, description: '' },
   })
 
   const submit = handleSubmit(async (values) => {
     const created = await onCreate(values)
-    if (created.ok) reset({ name: '', sortOrder: values.sortOrder + 10 })
+    if (created.ok) reset({ name: '', sortOrder: values.sortOrder + 10, description: '' })
   })
 
   return (
@@ -92,6 +96,7 @@ export function NewCategoryRow({
         {formState.errors.name && (
           <p className="mt-1 text-xs text-danger">{formState.errors.name.message}</p>
         )}
+        <DescriptionInput label="New category description" register={register('description')} error={formState.errors.description?.message} />
       </Td>
       <Td>
         <input
@@ -107,5 +112,15 @@ export function NewCategoryRow({
         </Button>
       </Td>
     </tr>
+  )
+}
+
+/** The optional line shown under a category's name on the public menu. */
+function DescriptionInput({ label, register, error }: { label: string; register: UseFormRegisterReturn; error?: string }) {
+  return (
+    <>
+      <input aria-label={label} placeholder="Description (optional)" className={`${cellInput} mt-1.5`} {...register} />
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
+    </>
   )
 }

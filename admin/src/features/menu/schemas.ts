@@ -14,6 +14,12 @@ const requiredText = (label: string, max: number) =>
 export const categorySchema = z.object({
   name: requiredText('Name', 80),
   sortOrder: z.coerce.number<number>().int('Sort order must be a whole number.').min(0).max(9999),
+  /** Optional; a blank one is sent as null. */
+  description: z
+    .string()
+    .trim()
+    .max(200, 'Keep the description under 200 characters.')
+    .transform((value) => (value === '' ? null : value)),
 })
 export type CategoryValues = z.infer<typeof categorySchema>
 

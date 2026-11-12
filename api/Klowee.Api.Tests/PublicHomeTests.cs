@@ -74,6 +74,19 @@ public class PublicHomeTests : IClassFixture<KloweeApiFactory>
     }
 
     [Fact]
+    public async Task Home_MenuCategoriesCarryTheirDescription()
+    {
+        _factory.Clock.Today = Today;
+        await SeedAsync();
+
+        var client = await _factory.CreateAnonymousClientAsync();
+        var home = await client.GetFromJsonAsync<PublicHomeDto>("/api/public/home", KloweeApiFactory.Json);
+
+        var category = Assert.Single(home!.Menu!.Categories, c => c.Name == "Public coffee");
+        Assert.Equal("oat milk + ceremonial matcha", category.Description);
+    }
+
+    [Fact]
     public async Task Home_PutsUpcomingEventsBeforePastOnes()
     {
         _factory.Clock.Today = Today;
@@ -131,7 +144,7 @@ public class PublicHomeTests : IClassFixture<KloweeApiFactory>
 
         db.Packages.AddRange(live, retired);
 
-        var category = new MenuCategory { Name = "Public coffee", SortOrder = 1 };
+        var category = new MenuCategory { Name = "Public coffee", SortOrder = 1, Description = "oat milk + ceremonial matcha" };
         var available = new MenuItem { Name = "Available Latte", Description = "Nice", Category = category };
         var soldOut = new MenuItem { Name = "Sold Out Latte", Description = string.Empty, Category = category };
         var draftOnly = new MenuItem { Name = "Draft Only Latte", Description = string.Empty, Category = category };
