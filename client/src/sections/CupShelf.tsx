@@ -80,6 +80,7 @@ export function CupShelf({ menu }: { menu: PublicMenu | null }) {
               className="relative h-[106px] w-[72px] flex-none snap-start md:h-[132px] md:w-[92px]"
             >
               <div className="cup-glass" style={style} />
+              <div className="cup-cover" style={style} aria-hidden="true" />
               <div className="absolute -inset-x-1 top-0 h-[15px] rounded-lg bg-cloud" />
             </div>
           )

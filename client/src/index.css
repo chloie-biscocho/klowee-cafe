@@ -206,17 +206,22 @@ section[id] {
   to { transform: translateX(var(--d, 60px)); }
 }
 
-/* Cups: three layers clipped to a tapered glass; a sky-coloured cover shrinks away once to "fill" it. */
-.cup-glass {
+/*
+ * Cups: three layers in a tapered glass. The "fill" is a sky-coloured cover of
+ * the same shape that shrinks away once. The cover is the glass's sibling, not
+ * a child: a transform animating inside a clip-path is repainted on the main
+ * thread every frame, while this one runs on the compositor.
+ */
+.cup-glass,
+.cup-cover {
   position: absolute;
   inset: 11px 0 0 0;
   clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);
+}
+.cup-glass {
   background: linear-gradient(to bottom, var(--a) 0 var(--s1), var(--b) var(--s1) var(--s2), var(--c) var(--s2) 100%);
 }
-.cup-glass::after {
-  content: '';
-  position: absolute;
-  inset: 0;
+.cup-cover {
   background: var(--color-sky);
   transform-origin: top;
   animation: fill 0.9s cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
@@ -278,7 +283,7 @@ section[id] {
   .cloud {
     animation: none;
   }
-  .cup-glass::after {
+  .cup-cover {
     animation: none;
     transform: scaleY(0);
   }
