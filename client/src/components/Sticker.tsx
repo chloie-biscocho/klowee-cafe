@@ -1,20 +1,10 @@
 import type { ReactNode } from 'react'
 
-/** Yellow pill, navy border, a handwritten word, tilted 5 to 8 degrees. */
-export function Sticker({
-  children,
-  tilt = 'right',
-  className = '',
-}: {
-  children: ReactNode
-  tilt?: 'left' | 'right'
-  className?: string
-}) {
+/** The yellow tilted sticker: "best seller" on the menu, "next" or "latest" on a polaroid. */
+export function Sticker({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <span
-      className={`inline-block rounded-full border-2 border-navy bg-yellow px-3 py-0.5 font-hand text-xl leading-tight font-semibold text-navy ${
-        tilt === 'right' ? 'rotate-6' : '-rotate-6'
-      } ${className}`}
+      className={`inline-block -rotate-4 rounded-full border-[1.5px] border-sticker-ink bg-yellow px-2.5 font-hand text-[0.72rem] font-bold whitespace-nowrap text-sticker-ink ${className}`}
     >
       {children}
     </span>

@@ -1,13 +1,10 @@
-/**
- * The pop-up tent as a line doodle, for empty states. Hand-drawn feel, cobalt
- * strokes only, so it reads as an illustration rather than an icon.
- */
+/** The pop-up tent as a line doodle, for empty and error states. */
 export function TentSketch({ className = '' }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 160 120"
       aria-hidden="true"
-      className={`fill-none stroke-cobalt ${className}`}
+      className={`fill-none stroke-deep ${className}`}
       strokeWidth="3"
       strokeLinecap="round"
       strokeLinejoin="round"
