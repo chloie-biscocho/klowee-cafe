@@ -17,11 +17,11 @@ export function formatPeso(amount: number): string {
 // Plain dates are formatted as UTC so no visitor's zone can shift the day.
 const fullDate = new Intl.DateTimeFormat('en-PH', {
   day: 'numeric',
-  month: 'short',
+  month: 'long',
   year: 'numeric',
   timeZone: 'UTC',
 })
-const monthDay = new Intl.DateTimeFormat('en-PH', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+const monthDay = new Intl.DateTimeFormat('en-PH', { day: 'numeric', month: 'long', timeZone: 'UTC' })
 
 const asUtc = (isoDate: string) => new Date(`${isoDate}T00:00:00Z`)
 
@@ -40,4 +40,9 @@ export function formatDateRange(startsOn: string, endsOn: string): string {
       ? String(Number(endsOn.slice(8, 10)))
       : monthDay.format(asUtc(endsOn))
   return `${monthDay.format(asUtc(startsOn))} to ${end}, ${startsOn.slice(0, 4)}`
+}
+
+/** Menu prices print like the paper menu: "150", or "99.50" when not whole. */
+export function formatMenuPrice(amount: number): string {
+  return Number.isInteger(amount) ? String(amount) : amount.toFixed(2)
 }

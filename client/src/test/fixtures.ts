@@ -48,23 +48,34 @@ export const fullHome: PublicHome = {
     coverPhotoUrl: null,
   },
   menu: {
-    versionName: 'April 2026 pop-up',
-    effectiveFrom: '2026-04-01',
+    versionName: 'Pop-up menu Nov 2026',
+    effectiveFrom: '2026-11-08',
     categories: [
       {
         id: 'c-coffee',
         name: 'Coffee',
+        description: null,
         items: [
           { id: 'i-1', name: 'Americano', description: '', price: 110, photoUrl: null, isFeatured: false },
-          { id: 'i-2', name: 'Ube Latte', description: 'Purple and proud.', price: 160, photoUrl: null, isFeatured: true },
+          { id: 'i-2', name: 'Spanish Latte', description: 'Espresso, milk, and condensed milk.', price: 150, photoUrl: null, isFeatured: true },
         ],
       },
-      { id: 'c-empty', name: 'Seasonal', items: [] },
+      { id: 'c-empty', name: 'Seasonal', description: null, items: [] },
       {
-        id: 'c-matcha',
-        name: 'Matcha',
+        id: 'c-house',
+        name: 'Houseblend Matcha',
+        description: 'oat milk + ceremonial matcha',
         items: [
-          { id: 'i-3', name: 'Matcha Latte', description: '', price: 150, photoUrl: null, isFeatured: false },
+          { id: 'i-3', name: 'Banana Matcha (Houseblend)', description: '', price: 180, photoUrl: null, isFeatured: false },
+          { id: 'i-4', name: 'Mystery Fizz', description: '', price: 99.5, photoUrl: null, isFeatured: false },
+        ],
+      },
+      {
+        // Served before the API carried descriptions: no field at all.
+        id: 'c-oku',
+        name: 'Okumidori Matcha',
+        items: [
+          { id: 'i-5', name: 'Banana Matcha (Okumidori)', description: '', price: 220, photoUrl: null, isFeatured: false },
         ],
       },
     ],

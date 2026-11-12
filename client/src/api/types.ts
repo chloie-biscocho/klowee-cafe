@@ -33,6 +33,8 @@ export interface PublicMenuItem {
 export interface PublicMenuCategory {
   id: string
   name: string
+  /** Optional line under the name. Absent from payloads served before the API added it. */
+  description?: string | null
   items: PublicMenuItem[]
 }
 
