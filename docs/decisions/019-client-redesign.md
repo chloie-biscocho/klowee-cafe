@@ -25,9 +25,11 @@ request, no router, no store).
 - **The book section** as it was: heading, the book line from Settings, and
   Email, Instagram and Facebook buttons. No form yet.
 - **The yellow "best seller" sticker** on the menu.
-- **The announcement strip**, restyled as a deep-blue bar. It now shows only
-  an announcement or the next pop-up. The ticker fallback was dropped, because
-  a permanent strip with nothing new to say became noise.
+- **The ticker**, restyled as a slim deep-blue strip with a pulsing dot
+  (handover 15a; the owner chose it on 2026-11-13 over a paper note and a cloud
+  message). Same rule as before: the announcement, else the next pop-up, else
+  the fallback line from Settings, else nothing. Handover 15 first dropped the
+  fallback line; the owner wanted it kept.
 - Placeholders, the tent-sketch empty states, and every section surviving
   missing data.
 

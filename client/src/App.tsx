@@ -1,5 +1,4 @@
 import { useHomeData } from './api/useHomeData'
-import { AnnouncementBar } from './sections/AnnouncementBar'
 import { Book } from './sections/Book'
 import { CupShelf } from './sections/CupShelf'
 import { ErrorState } from './sections/ErrorState'
@@ -11,6 +10,7 @@ import { Menu } from './sections/menu/Menu'
 import { Packages } from './sections/Packages'
 import { Popups } from './sections/Popups'
 import { Story } from './sections/Story'
+import { Ticker } from './sections/Ticker'
 
 /**
  * The whole site: one request, one page, sections in the design brief's order.
@@ -30,7 +30,7 @@ export function App() {
         Skip to content
       </a>
 
-      {data && <AnnouncementBar home={data} />}
+      {home.status !== 'error' && <Ticker home={data} />}
       <div className="mx-auto max-w-page px-[22px]">
         <Header hasPackages={data ? data.packages.length > 0 : true} />
 

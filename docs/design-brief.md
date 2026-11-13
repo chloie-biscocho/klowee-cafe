@@ -62,9 +62,14 @@ font swaps in. Sentence case for headings; the menu prints in lowercase.
 - **Tent sketch:** the line doodle for empty and error states.
 
 ## Section order
-1. **Announcement bar:** deep strip above the header. The current announcement
-   (linked when it has a link), else "next pop-up: {name}, {dates}" linking to
-   `#popups`, else nothing. The old ticker fallback is no longer shown.
+1. **Ticker:** the slim strip (option 1 of `docs/mockups/klowee-ticker-options.html`,
+   chosen by the owner on 2026-11-13): full width above the header, `deep`
+   background, `sky` text, centred, 9px vertical padding, medium weight, one
+   line on desktop and wrapping on phones, a small round dot before the text
+   that pulses slowly (opacity, 1.8 s). First match wins: the current
+   announcement (linked when it has a link); else "**Next pop-up:** {name},
+   {dates}, {venue}." with a "See details" link to `#popups`; else the
+   `ticker_fallback` setting, the whole line linking to `#book`; else no strip.
 2. **Header:** "klowee cafe" wordmark and links: our story, menu, pop-ups,
    packages, book. Not sticky. The packages link goes when there are no packages.
 3. **Hero:** clouds, logo sticker, `hero_heading` (h1), `hero_body`, "Book the
@@ -104,14 +109,17 @@ Three animations, all stopped under `prefers-reduced-motion`:
 - **Ovals draw in** once, when the menu sheet first enters the viewport
   (`stroke-dashoffset` from 1 to 0 on a `pathLength="1"` path).
 
-Polaroids straighten with a 200ms transition. Nothing else moves.
+Polaroids straighten with a 200ms transition, and the ticker's dot pulses
+(opacity only, stopped under reduced motion). Nothing else moves.
 
 ## Loading, errors, layout shift
 - `index.html` ships the loading render (header, hero shell with the logo,
   quiet placeholder blocks) so the first screen paints from HTML; a test keeps
   it identical to `App`'s own loading render. React replaces it in place.
 - The hero holds its height while loading, so the page doesn't jump when the
-  text arrives. The announcement bar can only appear after the data does.
+  text arrives. The ticker's strip is reserved (one empty line) while loading,
+  because production always has at least the fallback line; a message that
+  wraps to two lines on a phone still shifts the page slightly (CLS 0.027).
 - Error: a white panel with the tent sketch, "the cart's offline for a sec, try
   again?" and a retry button; header and footer stay.
 

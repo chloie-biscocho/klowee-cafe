@@ -250,6 +250,14 @@ section[id] {
   to { stroke-dashoffset: 0; }
 }
 
+/* The ticker's dot pulses slowly, opacity only. */
+.ticker-dot {
+  animation: pulse 1.8s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% { opacity: 0.25; }
+}
+
 /* The shelf scrolls, but shows no scrollbar; arrows and swipe move it. */
 .no-scrollbar {
   scrollbar-width: none;
@@ -280,7 +288,8 @@ section[id] {
   html {
     scroll-behavior: auto;
   }
-  .cloud {
+  .cloud,
+  .ticker-dot {
     animation: none;
   }
   .cup-cover {

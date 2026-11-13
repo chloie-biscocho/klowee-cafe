@@ -15,20 +15,24 @@ export function paragraphs(text: string | null | undefined): string[] {
     .filter(Boolean)
 }
 
-/**
- * The strip above the header: the current announcement, else the next pop-up,
- * else nothing. Which event is next is the API's call (`nextEvent`).
- */
-export function announcementLine(home: PublicHome): { text: string; href: string | null } | null {
+/** What the ticker says: the current announcement, else the next pop-up, else the owners' fallback line. */
+export type TickerLine =
+  | { kind: 'announcement'; text: string; href: string | null }
+  | { kind: 'next'; name: string; dates: string; venue: string }
+  | { kind: 'fallback'; text: string }
+
+/** First match wins; null means the ticker is not rendered. Which event is next is the API's call. */
+export function tickerLine(home: PublicHome): TickerLine | null {
   const announcement = home.announcement
   if (announcement && announcement.text.trim() !== '') {
-    return { text: announcement.text.trim(), href: announcement.linkUrl }
+    return { kind: 'announcement', text: announcement.text.trim(), href: announcement.linkUrl }
   }
   if (home.nextEvent) {
-    const { name, startsOn, endsOn } = home.nextEvent
-    return { text: `next pop-up: ${name}, ${formatDateRange(startsOn, endsOn)}`, href: '#popups' }
+    const { name, startsOn, endsOn, venue } = home.nextEvent
+    return { kind: 'next', name, dates: formatDateRange(startsOn, endsOn), venue }
   }
-  return null
+  const fallback = setting(home, 'ticker_fallback')
+  return fallback ? { kind: 'fallback', text: fallback } : null
 }
 
 /**

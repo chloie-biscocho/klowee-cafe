@@ -276,9 +276,9 @@ index.html ── static loading shell (header, hero + logo) ── paints befor
 main.tsx ─► App ─► useHomeData()  ──►  fetch GET /api/public/home   (picks up the preload)
                      { status: loading | error | ready, data, retry }
                 │
-                ├─ loading ─► Header · Hero (shell) · LoadingState   (= the HTML shell)
+                ├─ loading ─► Ticker (reserved) · Header · Hero (shell) · LoadingState   (= the HTML shell)
                 ├─ error   ─► Header · ErrorState · Footer           (retry → the effect runs again)
-                └─ ready   ─► AnnouncementBar · Header · Hero · CupShelf · Story ·
+                └─ ready   ─► Ticker · Header · Hero · CupShelf · Story ·
                               Menu · Popups · Packages · Book · Footer
                               (src/sections/, each given the payload or a slice of it)
 ```
