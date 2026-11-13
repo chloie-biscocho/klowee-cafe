@@ -46,6 +46,9 @@ public record CustomerRewardDto(
     Guid? OrderId);
 
 /// <summary>A customer's place on one active club's card, derived from the ledger (decision 020).</summary>
+/// <param name="Membership">"member", "requested" or "none". Cards are by invitation (handover 16a); a non-member's position and rewards are empty.</param>
+/// <param name="MembershipId">The membership row, for taking the card away; null for "none".</param>
+/// <param name="JoinedOn">The first day orders stamp the card; null for "since the beginning" (carried-over cardholders) or no card.</param>
 /// <param name="Position">Slots filled on the current card.</param>
 /// <param name="Cycle">Completed cards (0-based index of the current one).</param>
 /// <param name="PendingDrinks">Drinks of this club on the customer's not-yet-paid orders.</param>
@@ -53,6 +56,9 @@ public record CustomerClubDto(
     Guid ClubId,
     string Name,
     LoyaltyClubStyle Style,
+    string Membership,
+    Guid? MembershipId,
+    DateOnly? JoinedOn,
     int SlotCount,
     int Position,
     int Cycle,
@@ -120,3 +126,20 @@ public record LoyaltyRedemptionDto(
     Guid? OrderId,
     string? Note,
     DateTimeOffset CreatedAt);
+
+/// <summary>Gives a customer a card (handover 16a): Active from today, and the cards that come with it.</summary>
+public record LoyaltyMembershipRequest
+{
+    [Required]
+    public Guid ClubId { get; init; }
+
+    [MaxLength(500)]
+    public string? Note { get; init; }
+}
+
+public record LoyaltyMembershipDto(
+    Guid Id,
+    Guid ClubId,
+    MembershipStatus Status,
+    DateOnly? JoinedOn,
+    string? Note);

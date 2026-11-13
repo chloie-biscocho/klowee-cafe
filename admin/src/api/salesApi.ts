@@ -5,6 +5,7 @@ import type {
   CustomerSummaryDto,
   LoyaltyAdjustRequest,
   LoyaltyEntryDto,
+  LoyaltyMembershipRequest,
   LoyaltyRedemptionRequest,
   MenuVersionDetailDto,
   MonthlyRowDto,
@@ -83,6 +84,25 @@ export const salesApi = baseApi.injectEndpoints({
     }),
     adjustStamps: build.mutation<LoyaltyEntryDto, { id: string; body: LoyaltyAdjustRequest }>({
       query: ({ id, body }) => ({ url: `/customers/${id}/loyalty/adjust`, method: 'POST', body }),
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'Customer', id },
+        { type: 'Customer', id: LIST_ID },
+        { type: 'Loyalty', id },
+        'LoyaltyClub',
+      ],
+    }),
+    /** Gives a card, active from today, with any card that comes with it (handover 16a). */
+    giveCard: build.mutation<unknown, { id: string; body: LoyaltyMembershipRequest }>({
+      query: ({ id, body }) => ({ url: `/customers/${id}/loyalty/memberships`, method: 'POST', body }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Customer', id }, { type: 'Customer', id: LIST_ID }, 'LoyaltyClub'],
+    }),
+    /** Takes a card away; `force` voids its stamps and used rewards (the API refuses without it). */
+    takeCard: build.mutation<void, { id: string; membershipId: string; force: boolean }>({
+      query: ({ id, membershipId, force }) => ({
+        url: `/customers/${id}/loyalty/memberships/${membershipId}`,
+        method: 'DELETE',
+        params: force ? { force: true } : undefined,
+      }),
       invalidatesTags: (_r, _e, { id }) => [
         { type: 'Customer', id },
         { type: 'Customer', id: LIST_ID },
@@ -185,6 +205,8 @@ export const {
   useDeleteCustomerMutation,
   useMergeCustomerMutation,
   useGetLoyaltyQuery,
+  useGiveCardMutation,
+  useTakeCardMutation,
   useRedeemRewardMutation,
   useUnredeemRewardMutation,
   useAdjustStampsMutation,

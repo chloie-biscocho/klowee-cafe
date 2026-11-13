@@ -31,7 +31,7 @@ public class LoyaltyMatchaClubTests : IClassFixture<KloweeApiFactory>
         var (client, m) = await SetupAsync();
         await SetMatchaAsync(client, false);
         var okumidori = await AddDrinkAsync(_factory, Suffix, "Okumidori Latte", 180m, categoryClub: LoyaltyClub.MatchaClubId);
-        var kee = await CreateCustomerAsync(client, "Kee before launch");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee before launch");
 
         var before = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(okumidori)], orderedOn: Today.AddDays(-1)));
         await EnsureAsync(await PayAsync(client, before.Id, before.Total));
@@ -64,7 +64,9 @@ public class LoyaltyMatchaClubTests : IClassFixture<KloweeApiFactory>
         // A coffee-category drink switched off: earns nothing.
         var tasting = await AddDrinkAsync(_factory, Suffix, "Tasting cup", 50m,
             categoryClub: LoyaltyClub.CoffeeClubId, mode: LoyaltyMode.None);
+        // Given the Coffee Club card today, while The Matcha Club is active: both cards.
         var kee = await CreateCustomerAsync(client, "Kee two cards");
+        await EnsureAsync(await client.PostAsJsonAsync($"/api/customers/{kee.Id}/loyalty/memberships", new { clubId = LoyaltyClub.CoffeeClubId }));
 
         var order = await CreateOrderAsync(client, OrderBody(kee.Id,
             [Line(m.Latte, 2), Line(houseblend), Line(dirty), Line(tasting, 4)]));
@@ -82,7 +84,7 @@ public class LoyaltyMatchaClubTests : IClassFixture<KloweeApiFactory>
         var (client, _) = await SetupAsync();
         await SetMatchaAsync(client, true);
         var matcha = await AddDrinkAsync(_factory, Suffix, "Ceremonial", 200m, categoryClub: LoyaltyClub.MatchaClubId);
-        var kee = await CreateCustomerAsync(client, "Kee coffee reward");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee coffee reward");
         await GiveStampsAsync(client, kee.Id, 11);
 
         var response = await PostOrderAsync(client, OrderBody(kee.Id, [RewardLine(matcha, await CoffeeRewardAsync(_factory, 12))]));

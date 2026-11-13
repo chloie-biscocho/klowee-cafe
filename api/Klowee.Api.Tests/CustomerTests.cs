@@ -21,7 +21,7 @@ public class CustomerTests : IClassFixture<KloweeApiFactory>
     public async Task ADuplicateName_Is409()
     {
         var (client, _) = await SetupAsync();
-        await CreateCustomerAsync(client, "Duplicate Dee");
+        await CreateCardholderAsync(_factory, client, "Duplicate Dee");
 
         var response = await client.PostAsJsonAsync("/api/customers", new { name = "Duplicate Dee" });
 
@@ -32,7 +32,7 @@ public class CustomerTests : IClassFixture<KloweeApiFactory>
     public async Task List_CarriesBalanceStampsRewardsAndLastOrder_AndSearchesNameAndNickname()
     {
         var (client, m) = await SetupAsync();
-        var jo = await CreateCustomerAsync(client, "Josephine List", nickname: "Jojo");
+        var jo = await CreateCardholderAsync(_factory, client, "Josephine List", nickname: "Jojo");
         await CreateOrderAsync(client, OrderBody(jo.Id, [Line(m.Latte)], orderedOn: new DateOnly(2026, 11, 3)));
         var paid = await CreateOrderAsync(client, OrderBody(jo.Id, [Line(m.Americano, 11)], orderedOn: new DateOnly(2026, 11, 5)));
         await EnsureAsync(await PayAsync(client, paid.Id, paid.Total));
@@ -54,7 +54,7 @@ public class CustomerTests : IClassFixture<KloweeApiFactory>
     public async Task Inactive_AreHiddenUnlessAskedFor()
     {
         var (client, _) = await SetupAsync();
-        var quiet = await CreateCustomerAsync(client, "Quiet Inactive");
+        var quiet = await CreateCardholderAsync(_factory, client, "Quiet Inactive");
         await client.PatchAsync($"/api/customers/{quiet.Id}/deactivate", null);
 
         var active = await client.GetFromJsonAsync<List<CustomerSummaryDto>>("/api/customers?q=Quiet", KloweeApiFactory.Json);
@@ -68,10 +68,10 @@ public class CustomerTests : IClassFixture<KloweeApiFactory>
     public async Task Delete_IsRefusedWhileTheyHaveOrders_EvenAsPayer_AndAllowedOtherwise()
     {
         var (client, m) = await SetupAsync();
-        var drinker = await CreateCustomerAsync(client, "Has Orders");
-        var payer = await CreateCustomerAsync(client, "Pays For Others");
+        var drinker = await CreateCardholderAsync(_factory, client, "Has Orders");
+        var payer = await CreateCardholderAsync(_factory, client, "Pays For Others");
         await CreateOrderAsync(client, OrderBody(drinker.Id, [Line(m.Latte)], payerId: payer.Id));
-        var nobody = await CreateCustomerAsync(client, "No Orders");
+        var nobody = await CreateCardholderAsync(_factory, client, "No Orders");
 
         Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/customers/{drinker.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/customers/{payer.Id}")).StatusCode);
@@ -83,9 +83,9 @@ public class CustomerTests : IClassFixture<KloweeApiFactory>
     public async Task Merge_MovesOrdersPaymentsPayerReferencesAndLoyalty_ThenDeletesTheDuplicate()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee Merge");
-        var dupe = await CreateCustomerAsync(client, "Kee (spreadsheet)");
-        var prince = await CreateCustomerAsync(client, "Prince Merge");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee Merge");
+        var dupe = await CreateCardholderAsync(_factory, client, "Kee (spreadsheet)");
+        var prince = await CreateCardholderAsync(_factory, client, "Prince Merge");
 
         var own = await CreateOrderAsync(client, OrderBody(dupe.Id, [Line(m.Latte)]));
         await EnsureAsync(await PayAsync(client, own.Id, own.Total));                            // dupe earns 1 stamp
@@ -115,7 +115,7 @@ public class CustomerTests : IClassFixture<KloweeApiFactory>
     public async Task Ledger_IsNewestFirst_AndAdjustWritesAnAdjustment()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee Ledger");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee Ledger");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte, 2)]));
         await EnsureAsync(await PayAsync(client, order.Id, order.Total));
 

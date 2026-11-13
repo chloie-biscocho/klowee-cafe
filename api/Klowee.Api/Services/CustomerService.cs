@@ -164,6 +164,7 @@ public class CustomerService : ICustomerService
         }
 
         await MoveRedemptionsAsync(id, targetId, cancellationToken);
+        await MoveMembershipsAsync(id, targetId, cancellationToken);
 
         source.DeletedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
@@ -208,6 +209,44 @@ public class CustomerService : ICustomerService
         foreach (var (redemption, cycle) in renumbered)
         {
             redemption.Cycle = cycle;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Moves the source's cards to the target. When both hold a card in the same
+    /// club, the one held longer wins (an Active card over a requested one, then
+    /// the earlier joined_on, null meaning "since the beginning").
+    /// </summary>
+    private async Task MoveMembershipsAsync(Guid sourceId, Guid targetId, CancellationToken cancellationToken)
+    {
+        var memberships = await _db.LoyaltyMemberships
+            .Where(m => m.CustomerId == sourceId || m.CustomerId == targetId)
+            .ToListAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        var keepers = new List<LoyaltyMembership>();
+
+        foreach (var club in memberships.GroupBy(m => m.ClubId))
+        {
+            var keep = club
+                .OrderBy(m => m.Status == MembershipStatus.Active ? 0 : 1)
+                .ThenBy(m => m.JoinedOn ?? DateOnly.MinValue)
+                .First();
+            foreach (var other in club.Where(m => m != keep))
+            {
+                other.DeletedAt = now;
+            }
+
+            keepers.Add(keep);
+        }
+
+        // Two saves: the losers leave before the winners move in, so the unique
+        // (customer, club) index never sees two live cards at once.
+        await _db.SaveChangesAsync(cancellationToken);
+        foreach (var keep in keepers)
+        {
+            keep.CustomerId = targetId;
         }
 
         await _db.SaveChangesAsync(cancellationToken);

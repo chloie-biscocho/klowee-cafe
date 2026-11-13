@@ -12,6 +12,11 @@ public class LoyaltyClubConfiguration : IEntityTypeConfiguration<LoyaltyClub>
         builder.HasIndex(c => c.Name).IsUnique().HasFilter(SoftDelete.Filter);
         builder.Property(c => c.Style).HasConversion<string>().HasMaxLength(32);
 
+        builder.HasOne(c => c.AutoJoinFromClub)
+            .WithMany()
+            .HasForeignKey(c => c.AutoJoinFromClubId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(c => c.Rewards)
             .WithOne(r => r.Club!)
             .HasForeignKey(r => r.ClubId)
@@ -62,5 +67,18 @@ public class DataMigrationConfiguration : IEntityTypeConfiguration<DataMigration
         builder.Property(m => m.Name).IsRequired().HasMaxLength(120);
         builder.Property(m => m.Summary).HasMaxLength(4000);
         builder.HasIndex(m => m.Name).IsUnique().HasFilter(SoftDelete.Filter);
+    }
+}
+
+public class LoyaltyMembershipConfiguration : IEntityTypeConfiguration<LoyaltyMembership>
+{
+    public void Configure(EntityTypeBuilder<LoyaltyMembership> builder)
+    {
+        builder.Property(m => m.Status).HasConversion<string>().HasMaxLength(32);
+        builder.Property(m => m.Note).HasMaxLength(500);
+        builder.HasIndex(m => new { m.CustomerId, m.ClubId }).IsUnique().HasFilter(SoftDelete.Filter);
+
+        builder.HasOne(m => m.Customer).WithMany().HasForeignKey(m => m.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(m => m.Club).WithMany().HasForeignKey(m => m.ClubId).OnDelete(DeleteBehavior.Restrict);
     }
 }

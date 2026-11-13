@@ -476,6 +476,10 @@ public class OrderService : IOrderService
         }
 
         var clubs = await LoyaltyClubMap.LoadAsync(_db, lines.Select(l => l.MenuVersionItemId).Distinct().ToList(), cancellationToken);
+        var cards = await _db.LoyaltyMemberships
+            .Where(m => m.CustomerId == request.CustomerId && m.Status == MembershipStatus.Active)
+            .Select(m => m.ClubId)
+            .ToListAsync(cancellationToken);
         var planned = new List<PlannedReward>();
         var kept = new HashSet<Guid>();
         var toAllocate = new List<(OrderItem Line, LoyaltyClubReward Reward)>();
@@ -494,6 +498,11 @@ public class OrderService : IOrderService
             if (!club.IsActive)
             {
                 throw new ConflictException($"{club.Name} isn't active, so its rewards can't be used.");
+            }
+
+            if (!cards.Contains(club.Id))
+            {
+                throw new ConflictException($"{customer.Name} has no {club.Name} card, so its rewards can't be used.");
             }
 
             if (reward.Type == LoyaltyRewardType.FreeAddOn && reward.AddOnId is null)

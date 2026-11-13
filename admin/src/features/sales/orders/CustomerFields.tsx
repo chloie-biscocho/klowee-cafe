@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useCreateCustomerMutation } from '../../../api/salesApi'
 import { Combobox, type ComboboxOption } from '../../../components/ui/Combobox'
 import { formatPeso } from '../../../lib/format'
-import { availableRewards, clubSummary } from '../../../lib/loyalty'
+import { availableRewards, clubSummary, memberClubs } from '../../../lib/loyalty'
 import type { CustomerSummaryDto } from '../../../types/api'
 import { useToastedAction } from '../../toasts/useToastedAction'
 import { CustomerFormModal } from '../customers/CustomerFormModal'
@@ -53,7 +53,8 @@ export function CustomerFields({
       {customer && (
         <p className="-mt-1 text-xs text-muted">
           Tab {formatPeso(customer.outstandingBalance)}
-          {customer.clubs.map((club) => (
+          {memberClubs(customer.clubs).length === 0 && ' · No loyalty card'}
+          {memberClubs(customer.clubs).map((club) => (
             <span key={club.clubId} className={availableRewards(club).length > 0 ? 'font-semibold text-success' : ''}>
               {' · '}
               {clubSummary(club)}

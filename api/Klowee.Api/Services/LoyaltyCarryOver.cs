@@ -30,7 +30,9 @@ public static class LoyaltyClubDefaults
 
         if (!existing.Contains(LoyaltyClub.MatchaClubId))
         {
-            db.LoyaltyClubs.Add(Club(LoyaltyClub.MatchaClubId, "The Matcha Club", LoyaltyClubStyle.Matcha, isActive: false, sortOrder: 2, shot));
+            var matcha = Club(LoyaltyClub.MatchaClubId, "The Matcha Club", LoyaltyClubStyle.Matcha, isActive: false, sortOrder: 2, shot);
+            matcha.AutoJoinFromClubId = LoyaltyClub.CoffeeClubId;   // Coffee cardholders get it (handover 16a)
+            db.LoyaltyClubs.Add(matcha);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -226,6 +228,14 @@ public class LoyaltyCarryOver
                     Delta = carried,
                     Reason = LoyaltyReason.Adjustment,
                     Notes = AdjustmentNote
+                });
+            }
+
+            if (!await _db.LoyaltyMemberships.AnyAsync(m => m.CustomerId == entries.Key && m.ClubId == coffee.Id, cancellationToken))
+            {
+                _db.LoyaltyMemberships.Add(new LoyaltyMembership
+                {
+                    CustomerId = entries.Key, ClubId = coffee.Id, Status = MembershipStatus.Active, JoinedOn = null
                 });
             }
 

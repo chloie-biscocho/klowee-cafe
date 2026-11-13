@@ -34,9 +34,9 @@ public class ReportTests : IClassFixture<KloweeApiFactory>
             return client;
         }
 
-        var a = await CreateCustomerAsync(client, "Report A");
-        var b = await CreateCustomerAsync(client, "Report B");
-        var c = await CreateCustomerAsync(client, "Report C");
+        var a = await CreateCardholderAsync(_factory, client, "Report A");
+        var b = await CreateCardholderAsync(_factory, client, "Report B");
+        var c = await CreateCardholderAsync(_factory, client, "Report C");
 
         var o1 = await CreateOrderAsync(client, OrderBody(a.Id, [Line(m.Latte, 2)], orderedOn: new DateOnly(2026, 10, 5)));
         await EnsureAsync(await PayAsync(client, o1.Id, 320m, PaymentChannel.GCash, new DateOnly(2026, 10, 6)));

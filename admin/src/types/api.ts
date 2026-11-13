@@ -385,10 +385,12 @@ export interface LoyaltyClubDto {
   isActive: boolean
   activatedOn: string | null
   sortOrder: number
+  /** Members of this other club get this card automatically. */
+  autoJoinFromClubId: string | null
   rewards: LoyaltyClubRewardDto[]
   /** The categories whose drinks feed this club. */
   categoryIds: string[]
-  /** Customers with at least one stamp entry on this club. */
+  /** Customers holding this card. */
   memberCount: number
 }
 
@@ -407,6 +409,7 @@ export interface LoyaltyClubRequest {
   slotCount: number
   isActive: boolean
   sortOrder: number
+  autoJoinFromClubId: string | null
   rewards: LoyaltyClubRewardRequest[]
   categoryIds: string[] | null
 }
@@ -426,11 +429,19 @@ export interface CustomerRewardDto {
   orderId: string | null
 }
 
+/** Cards are by invitation (handover 16a): only members collect stamps. */
+export type MembershipState = 'member' | 'requested' | 'none'
+
 /** A customer's place on one active club's card, derived from the ledger. */
 export interface CustomerClubDto {
   clubId: string
   name: string
   style: LoyaltyClubStyle
+  membership: MembershipState
+  /** For taking the card away; null without one. */
+  membershipId: string | null
+  /** The first day orders stamp it; null for "since the beginning" or no card. */
+  joinedOn: string | null
   slotCount: number
   /** Slots filled on the current card. */
   position: number
@@ -438,6 +449,11 @@ export interface CustomerClubDto {
   rewards: CustomerRewardDto[]
   /** Drinks of this club on unpaid orders: they stamp once paid. */
   pendingDrinks: number
+}
+
+export interface LoyaltyMembershipRequest {
+  clubId: string
+  note?: string | null
 }
 
 export interface LoyaltyRedemptionRequest {

@@ -11,6 +11,8 @@ export const clubSchema = z
     style: z.enum(LOYALTY_CLUB_STYLES),
     slotCount: z.coerce.number<number>().int('Slots are a whole number.').min(1).max(100),
     isActive: z.boolean(),
+    /** '' for none: a club whose members get this card automatically. */
+    autoJoinFromClubId: z.string(),
     rewards: z.array(
       z.object({
         slot: z.coerce.number<number>().int('Slot is a whole number.').min(1, 'Slot 1 or more.'),
@@ -46,6 +48,7 @@ export const clubDefaults = (club: LoyaltyClubDto | null): ClubInput => ({
   style: club?.style ?? 'Coffee',
   slotCount: club?.slotCount ?? 12,
   isActive: club?.isActive ?? false,
+  autoJoinFromClubId: club?.autoJoinFromClubId ?? '',
   rewards: (club?.rewards ?? []).map((r) => ({
     slot: r.slot,
     type: r.type,
@@ -62,6 +65,7 @@ export const toClubRequest = (values: ClubValues, sortOrder: number): LoyaltyClu
   slotCount: values.slotCount,
   isActive: values.isActive,
   sortOrder,
+  autoJoinFromClubId: values.autoJoinFromClubId === '' ? null : values.autoJoinFromClubId,
   rewards: values.rewards
     .map((r) => ({
       slot: r.slot,

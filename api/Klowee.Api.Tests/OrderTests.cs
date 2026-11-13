@@ -23,7 +23,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task Create_SnapshotsPrices_AndStoresTheTotals()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee snapshot");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee snapshot");
 
         var order = await CreateOrderAsync(client, OrderBody(kee.Id,
             [Line(m.Latte, 2, m.OatMilk), Line(m.Americano)]));
@@ -41,7 +41,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task Repricing_TheMenu_NeverChangesAnExistingOrder()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee repricing");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee repricing");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Americano)]));
 
         await _factory.WithDbAsync(async db =>
@@ -66,7 +66,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task Put_KeepsTheSnapshotOfALineThatStays_AndPricesANewLineNow()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee put snapshot");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee put snapshot");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Matcha, 1, m.ExtraShot)]));
 
         // The menu moves on after the sale...
@@ -100,7 +100,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task AnItemFromAnotherVersion_IsAllowed_WithAWarning()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee warning");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee warning");
 
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.OldPopUpLatte), Line(m.Americano)]));
 
@@ -113,7 +113,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task PercentDiscount_RoundsHalfUp_AndOutOfRangeIs400()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee percent");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee percent");
 
         // 145? No such price here: 110 × 12.5% = 13.75 exactly; use 3 Americanos: 330 × 12.5% = 41.25.
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Americano, 3)], DiscountType.Percent, 12.5m));
@@ -128,7 +128,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task FixedDiscount_AboveTheSubtotal_Is400()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee fixed");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee fixed");
 
         var ok = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Americano)], DiscountType.Fixed, 110m));
         Assert.Equal(0m, ok.Total);
@@ -141,7 +141,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task LoyaltyFree_IsHistoryOnly_NewAndEditedOrdersAre400()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee old discount");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee old discount");
         await GiveStampsAsync(client, kee.Id, 11);
 
         var create = await PostOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte)], DiscountType.LoyaltyFree));
@@ -156,7 +156,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task AnOrderWithPayments_CannotBeChanged()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee locked");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee locked");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte)]));
         await EnsureAsync(await PayAsync(client, order.Id, 50m));
 
@@ -171,7 +171,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task Delete_SoftDeletesItemsAddOnsAndPayments_AndVoidsItsLoyalty()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee delete");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee delete");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte, 2, m.OatMilk)]));
         await EnsureAsync(await PayAsync(client, order.Id, order.Total));
         Assert.Equal(2, await StampsAsync(client, kee.Id));
@@ -198,11 +198,11 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task PayingForYourself_IsJustPaying_AndAnInactiveCustomerCannotStartATab()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee self payer");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee self payer");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte)], payerId: kee.Id));
         Assert.Null(order.Payer);
 
-        var gone = await CreateCustomerAsync(client, "Kee inactive");
+        var gone = await CreateCardholderAsync(_factory, client, "Kee inactive");
         await client.PatchAsync($"/api/customers/{gone.Id}/deactivate", null);
         var response = await PostOrderAsync(client, OrderBody(gone.Id, [Line(m.Latte)]));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -212,7 +212,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task UnknownItemsAndAddOns_Are400()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee unknown");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee unknown");
 
         Assert.Equal(HttpStatusCode.BadRequest,
             (await PostOrderAsync(client, OrderBody(kee.Id, [Line(Guid.NewGuid())]))).StatusCode);
@@ -226,7 +226,7 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     public async Task List_FiltersByCustomerDatesAndDerivedStatus_NewestFirst()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee list");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee list");
         var older = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Americano)], orderedOn: new DateOnly(2026, 10, 1)));
         var newer = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Americano)], orderedOn: new DateOnly(2026, 11, 2)));
         await EnsureAsync(await PayAsync(client, newer.Id, 50m));

@@ -16,12 +16,33 @@ namespace Klowee.Api.Services;
 public class LoyaltyService : ILoyaltyService
 {
     private readonly KloweeDbContext _db;
+    private readonly IClock _clock;
 
-    public LoyaltyService(KloweeDbContext db) => _db = db;
+    public LoyaltyService(KloweeDbContext db, IClock clock)
+    {
+        _db = db;
+        _clock = clock;
+    }
 
     /// <summary>Whether an order on this date stamps this club: active, and on or after its launch.</summary>
     public static bool Earns(LoyaltyClub club, DateOnly orderedOn) =>
         club.IsActive && (club.ActivatedOn is null || orderedOn >= club.ActivatedOn);
+
+    /// <summary>
+    /// Whether a customer's order on this date stamps this club (handover 16a):
+    /// the club earns, and the customer holds its card since that date or before.
+    /// </summary>
+    public static bool Stamps(LoyaltyClub club, LoyaltyMembership? membership, DateOnly orderedOn) =>
+        Earns(club, orderedOn)
+        && membership is { Status: MembershipStatus.Active }
+        && (membership.JoinedOn is null || orderedOn >= membership.JoinedOn);
+
+    /// <summary>The customer's live Active memberships, by club.</summary>
+    private async Task<Dictionary<Guid, LoyaltyMembership>> MembershipsOfAsync(Guid customerId, CancellationToken cancellationToken) =>
+        await _db.LoyaltyMemberships
+            .AsNoTracking()
+            .Where(m => m.CustomerId == customerId && m.Status == MembershipStatus.Active)
+            .ToDictionaryAsync(m => m.ClubId, cancellationToken);
 
     public async Task<IReadOnlyList<LoyaltyEntryDto>> LedgerAsync(Guid customerId, Guid? clubId, CancellationToken cancellationToken)
     {
@@ -44,6 +65,7 @@ public class LoyaltyService : ILoyaltyService
     {
         await EnsureCustomerExistsAsync(customerId, cancellationToken);
         var club = await ActiveClubAsync(request.ClubId, cancellationToken);
+        await EnsureMemberAsync(customerId, club, cancellationToken);
 
         if (request.Delta == 0)
         {
@@ -72,6 +94,7 @@ public class LoyaltyService : ILoyaltyService
     {
         await EnsureCustomerExistsAsync(customerId, cancellationToken);
         var club = await ActiveClubAsync(request.ClubId, cancellationToken);
+        await EnsureMemberAsync(customerId, club, cancellationToken);
         var reward = club.Rewards.FirstOrDefault(r => r.Id == request.RewardId)
             ?? throw new ValidationFailedException($"Reward '{request.RewardId}' is not on {club.Name}.");
 
@@ -150,11 +173,25 @@ public class LoyaltyService : ILoyaltyService
             .ToLookup(r => (r.CustomerId, r.ClubId), r => r.Redemption);
 
         var pending = await PendingDrinksAsync(ids, clubs, cancellationToken);
+        var memberships = (await _db.LoyaltyMemberships
+                .AsNoTracking()
+                .Where(m => ids.Contains(m.CustomerId) && clubIds.Contains(m.ClubId))
+                .ToListAsync(cancellationToken))
+            .ToDictionary(m => (m.CustomerId, m.ClubId));
 
         foreach (var customerId in ids)
         {
             result[customerId] = clubs.Select(club =>
             {
+                memberships.TryGetValue((customerId, club.Id), out var membership);
+                if (membership is not { Status: MembershipStatus.Active })
+                {
+                    // No card (or only asked for one): nothing to show but the offer.
+                    return new CustomerClubDto(
+                        club.Id, club.Name, club.Style, membership is null ? "none" : "requested", membership?.Id, null,
+                        club.SlotCount, 0, 0, [], 0);
+                }
+
                 var card = LoyaltyCard.For(
                     sums.GetValueOrDefault((customerId, club.Id)),
                     club.SlotCount,
@@ -162,7 +199,8 @@ public class LoyaltyService : ILoyaltyService
                     redemptions[(customerId, club.Id)].ToList());
 
                 return new CustomerClubDto(
-                    club.Id, club.Name, club.Style, club.SlotCount, card.Position, card.Cycle,
+                    club.Id, club.Name, club.Style, "member", membership.Id, membership.JoinedOn,
+                    club.SlotCount, card.Position, card.Cycle,
                     card.Rewards.Select(v => new CustomerRewardDto(
                         v.RewardId, v.Slot, v.Label, v.Type, v.State.ToString().ToLowerInvariant(),
                         v.Cycle, v.RedemptionId, v.OrderId)).ToList(),
@@ -258,13 +296,14 @@ public class LoyaltyService : ILoyaltyService
         var lines = order.Items.Where(i => i.DeletedAt is null).OrderBy(i => i.SortOrder).ToList();
         var map = await LoyaltyClubMap.LoadAsync(_db, lines.Select(l => l.MenuVersionItemId).Distinct().ToList(), cancellationToken);
         var clubs = await _db.LoyaltyClubs.AsNoTracking().ToDictionaryAsync(c => c.Id, cancellationToken);
+        var memberships = await MembershipsOfAsync(order.CustomerId, cancellationToken);
 
         var drinks = new Dictionary<Guid, int>();
         foreach (var line in lines)
         {
             if (map.ForVersionItem(line.MenuVersionItemId) is { } clubId
                 && clubs.TryGetValue(clubId, out var club)
-                && Earns(club, order.OrderedOn))
+                && Stamps(club, memberships.GetValueOrDefault(clubId), order.OrderedOn))
             {
                 drinks[clubId] = drinks.GetValueOrDefault(clubId) + line.Quantity;
             }
@@ -282,7 +321,7 @@ public class LoyaltyService : ILoyaltyService
         return drinks.Where(d => d.Value > 0).ToDictionary(d => d.Key, d => d.Value);
     }
 
-    /// <summary>Drinks per (customer, club) on each customer's orders that aren't Paid yet.</summary>
+    /// <summary>Drinks per (customer, club) on each customer's orders that aren't Paid yet, counting only drinks that would stamp.</summary>
     private async Task<Dictionary<(Guid Customer, Guid Club), int>> PendingDrinksAsync(
         List<Guid> customerIds,
         List<LoyaltyClub> clubs,
@@ -312,19 +351,83 @@ public class LoyaltyService : ILoyaltyService
             .ToListAsync(cancellationToken);
         var map = await LoyaltyClubMap.LoadAsync(_db, lines.Select(l => l.MenuVersionItemId).Distinct().ToList(), cancellationToken);
         var byId = clubs.ToDictionary(c => c.Id);
+        var memberships = (await _db.LoyaltyMemberships
+                .AsNoTracking()
+                .Where(m => customerIds.Contains(m.CustomerId) && m.Status == MembershipStatus.Active)
+                .ToListAsync(cancellationToken))
+            .ToDictionary(m => (m.CustomerId, m.ClubId));
 
         foreach (var line in lines)
         {
             var order = open[line.OrderId];
             if (map.ForVersionItem(line.MenuVersionItemId) is { } clubId
                 && byId.TryGetValue(clubId, out var club)
-                && Earns(club, order.OrderedOn))
+                && Stamps(club, memberships.GetValueOrDefault((order.CustomerId, clubId)), order.OrderedOn))
             {
                 result[(order.CustomerId, clubId)] = result.GetValueOrDefault((order.CustomerId, clubId)) + line.Quantity;
             }
         }
 
         return result;
+    }
+
+    public async Task<LoyaltyMembershipDto> GiveCardAsync(
+        Guid customerId,
+        LoyaltyMembershipRequest request,
+        CancellationToken cancellationToken)
+    {
+        await EnsureCustomerExistsAsync(customerId, cancellationToken);
+        var club = await ActiveClubAsync(request.ClubId, cancellationToken);
+
+        var membership = await LoyaltyMemberships.GiveAsync(_db, customerId, club, _clock.Today, request.Note?.Trim(), cancellationToken);
+        return new LoyaltyMembershipDto(membership.Id, membership.ClubId, membership.Status, membership.JoinedOn, membership.Note);
+    }
+
+    public async Task TakeCardAsync(Guid customerId, Guid membershipId, bool force, CancellationToken cancellationToken)
+    {
+        var membership = await _db.LoyaltyMemberships
+            .Include(m => m.Club)
+            .FirstOrDefaultAsync(m => m.Id == membershipId && m.CustomerId == customerId, cancellationToken)
+            ?? throw NotFoundException.For("Membership", membershipId);
+
+        var entries = await _db.LoyaltyEntries
+            .Where(e => e.CustomerId == customerId && e.ClubId == membership.ClubId)
+            .ToListAsync(cancellationToken);
+        var redemptions = await _db.LoyaltyRedemptions
+            .Where(r => r.CustomerId == customerId && r.ClubId == membership.ClubId)
+            .ToListAsync(cancellationToken);
+
+        if ((entries.Count > 0 || redemptions.Count > 0) && !force)
+        {
+            throw new ConflictException(
+                $"This {membership.Club!.Name} card has {entries.Sum(e => e.Delta)} stamp(s) and {redemptions.Count} used reward(s). " +
+                "Take it away with force to void them.");
+        }
+
+        // Cards that came with this one stay: taking away the Coffee Club card leaves the Matcha Club card alone.
+        var now = DateTimeOffset.UtcNow;
+        foreach (var entry in entries)
+        {
+            entry.DeletedAt = now;
+        }
+
+        foreach (var redemption in redemptions)
+        {
+            redemption.DeletedAt = now;
+        }
+
+        membership.DeletedAt = now;
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task EnsureMemberAsync(Guid customerId, LoyaltyClub club, CancellationToken cancellationToken)
+    {
+        if (!await _db.LoyaltyMemberships.AnyAsync(
+                m => m.CustomerId == customerId && m.ClubId == club.Id && m.Status == MembershipStatus.Active,
+                cancellationToken))
+        {
+            throw new ConflictException($"This customer has no {club.Name} card. Give them one first.");
+        }
     }
 
     private static List<CardReward> Rewards(LoyaltyClub club) =>
@@ -355,4 +458,101 @@ public class LoyaltyService : ILoyaltyService
             throw NotFoundException.For("Customer", customerId);
         }
     }
+}
+
+/// <summary>
+/// Giving cards (handover 16a), shared by the customer endpoints and club
+/// activation. A club can name another whose members get its card
+/// automatically (The Matcha Club from The Coffee Club). Each call is
+/// idempotent: an existing card is left as it is, a requested one is activated.
+/// </summary>
+public static class LoyaltyMemberships
+{
+    /// <summary>Gives the card, and every active club's card that comes with it, from <paramref name="today"/>. Saves.</summary>
+    public static async Task<LoyaltyMembership> GiveAsync(
+        KloweeDbContext db, Guid customerId, LoyaltyClub club, DateOnly today, string? note, CancellationToken cancellationToken)
+    {
+        var given = new HashSet<Guid>();
+        var first = await GiveOneAsync(club.Id, note);
+        await db.SaveChangesAsync(cancellationToken);
+        return first;
+
+        async Task<LoyaltyMembership> GiveOneAsync(Guid clubId, string? withNote)
+        {
+            given.Add(clubId);
+            var membership = await FindAsync(db, customerId, clubId, cancellationToken);
+            if (membership is null)
+            {
+                membership = new LoyaltyMembership
+                {
+                    CustomerId = customerId, ClubId = clubId, Status = MembershipStatus.Active, JoinedOn = today, Note = withNote
+                };
+                db.LoyaltyMemberships.Add(membership);
+            }
+            else if (membership.Status == MembershipStatus.Requested)
+            {
+                membership.Status = MembershipStatus.Active;
+                membership.JoinedOn = today;
+            }
+
+            var followers = await db.LoyaltyClubs
+                .Where(c => c.AutoJoinFromClubId == clubId && c.IsActive)
+                .Select(c => c.Id)
+                .ToListAsync(cancellationToken);
+            foreach (var follower in followers.Where(f => !given.Contains(f)))
+            {
+                await GiveOneAsync(follower, null);
+            }
+
+            return membership;
+        }
+    }
+
+    /// <summary>
+    /// When <paramref name="club"/> is active and auto-joins from another club,
+    /// every Active member of that club gets its card from <paramref name="today"/>.
+    /// Returns how many cards were given. Saves.
+    /// </summary>
+    public static async Task<int> AutoJoinAsync(KloweeDbContext db, LoyaltyClub club, DateOnly today, CancellationToken cancellationToken)
+    {
+        if (!club.IsActive || club.AutoJoinFromClubId is not { } sourceId)
+        {
+            return 0;
+        }
+
+        var members = await db.LoyaltyMemberships
+            .Where(m => m.ClubId == sourceId && m.Status == MembershipStatus.Active)
+            .Select(m => m.CustomerId)
+            .ToListAsync(cancellationToken);
+        var existing = await db.LoyaltyMemberships
+            .Where(m => m.ClubId == club.Id)
+            .ToDictionaryAsync(m => m.CustomerId, cancellationToken);
+
+        var given = 0;
+        foreach (var customerId in members)
+        {
+            if (!existing.TryGetValue(customerId, out var membership))
+            {
+                db.LoyaltyMemberships.Add(new LoyaltyMembership
+                {
+                    CustomerId = customerId, ClubId = club.Id, Status = MembershipStatus.Active, JoinedOn = today
+                });
+                given++;
+            }
+            else if (membership.Status == MembershipStatus.Requested)
+            {
+                membership.Status = MembershipStatus.Active;
+                membership.JoinedOn = today;
+                given++;
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return given;
+    }
+
+    /// <summary>The live membership, saved or just added in this unit of work.</summary>
+    private static async Task<LoyaltyMembership?> FindAsync(KloweeDbContext db, Guid customerId, Guid clubId, CancellationToken cancellationToken) =>
+        db.LoyaltyMemberships.Local.FirstOrDefault(m => m.CustomerId == customerId && m.ClubId == clubId && m.DeletedAt is null)
+        ?? await db.LoyaltyMemberships.FirstOrDefaultAsync(m => m.CustomerId == customerId && m.ClubId == clubId, cancellationToken);
 }

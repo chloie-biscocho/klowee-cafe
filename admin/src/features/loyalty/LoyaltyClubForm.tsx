@@ -45,6 +45,16 @@ export function LoyaltyClubForm({
   const { fields, append, remove } = useFieldArray({ control, name: 'rewards' })
   const rewards = useWatch({ control, name: 'rewards' })
   const errors = formState.errors
+  // A card can come with another, but not with itself, nor through a loop back to itself.
+  const leadsBack = (candidate: LoyaltyClubDto): boolean => {
+    const seen = new Set<string>()
+    for (let at: string | null = candidate.id; at; at = clubs.find((c) => c.id === at)?.autoJoinFromClubId ?? null) {
+      if (at === club?.id || seen.has(at)) return true
+      seen.add(at)
+    }
+    return false
+  }
+  const sources = clubs.filter((c) => c.id !== club?.id && !leadsBack(c))
   const otherClub = (category: MenuCategoryDto) =>
     category.loyaltyClubId && category.loyaltyClubId !== club?.id
       ? clubs.find((c) => c.id === category.loyaltyClubId)?.name
@@ -89,6 +99,19 @@ export function LoyaltyClubForm({
             </span>
           </span>
         </label>
+
+        <Select
+          label="Comes with another card"
+          hint="Members of that card get this one automatically: everyone when this card is activated, and anyone given that card later."
+          {...register('autoJoinFromClubId')}
+        >
+          <option value="">No: given one by one</option>
+          {sources.map((source) => (
+            <option key={source.id} value={source.id}>
+              Members of {source.name} get this card automatically
+            </option>
+          ))}
+        </Select>
 
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-xs font-semibold text-muted">Rewards</legend>

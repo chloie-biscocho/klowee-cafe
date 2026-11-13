@@ -191,7 +191,7 @@ export function rewardOptions(
   customer: CustomerSummaryDto | undefined,
   order: OrderDetailDto | undefined,
 ): RewardOption[] {
-  const club = customer?.clubs.find((c) => c.clubId === item.loyaltyClubId)
+  const club = customer?.clubs.find((c) => c.clubId === item.loyaltyClubId && c.membership === 'member')
   if (!club) return []
 
   const ownOrder = order && order.customer.id === customer!.id ? order.id : null

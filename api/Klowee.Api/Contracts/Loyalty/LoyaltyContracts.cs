@@ -13,7 +13,8 @@ public record LoyaltyClubRewardDto(
     string Label);
 
 /// <param name="CategoryIds">The menu categories whose drinks feed this club (items may override).</param>
-/// <param name="MemberCount">Customers with at least one stamp entry on this club.</param>
+/// <param name="AutoJoinFromClubId">Members of that club get this card automatically.</param>
+/// <param name="MemberCount">Customers holding this card (Active memberships).</param>
 public record LoyaltyClubDto(
     Guid Id,
     string Name,
@@ -22,6 +23,7 @@ public record LoyaltyClubDto(
     bool IsActive,
     DateOnly? ActivatedOn,
     int SortOrder,
+    Guid? AutoJoinFromClubId,
     IReadOnlyList<LoyaltyClubRewardDto> Rewards,
     IReadOnlyList<Guid> CategoryIds,
     int MemberCount);
@@ -64,6 +66,9 @@ public record LoyaltyClubRequest
 
     [Range(0, int.MaxValue)]
     public int SortOrder { get; init; }
+
+    /// <summary>Members of this other club get this card automatically. Not itself, and no loops.</summary>
+    public Guid? AutoJoinFromClubId { get; init; }
 
     public List<LoyaltyClubRewardRequest> Rewards { get; init; } = [];
 

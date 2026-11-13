@@ -365,6 +365,10 @@ namespace Klowee.Api.Data.Migrations
                         .HasColumnType("date")
                         .HasColumnName("activated_on");
 
+                    b.Property<Guid?>("AutoJoinFromClubId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("auto_join_from_club_id");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -407,6 +411,9 @@ namespace Klowee.Api.Data.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_loyalty_clubs");
+
+                    b.HasIndex("AutoJoinFromClubId")
+                        .HasDatabaseName("ix_loyalty_clubs_auto_join_from_club_id");
 
                     b.HasIndex("Name")
                         .IsUnique()
@@ -551,6 +558,67 @@ namespace Klowee.Api.Data.Migrations
                         .HasDatabaseName("ix_loyalty_entries_order_id");
 
                     b.ToTable("loyalty_entries", (string)null);
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.LoyaltyMembership", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("ClubId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("club_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateOnly?>("JoinedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("joined_on");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_loyalty_memberships");
+
+                    b.HasIndex("ClubId")
+                        .HasDatabaseName("ix_loyalty_memberships_club_id");
+
+                    b.HasIndex("CustomerId", "ClubId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_loyalty_memberships_customer_id_club_id")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.ToTable("loyalty_memberships", (string)null);
                 });
 
             modelBuilder.Entity("Klowee.Api.Entities.LoyaltyRedemption", b =>
@@ -1379,6 +1447,17 @@ namespace Klowee.Api.Data.Migrations
                     b.Navigation("Event");
                 });
 
+            modelBuilder.Entity("Klowee.Api.Entities.LoyaltyClub", b =>
+                {
+                    b.HasOne("Klowee.Api.Entities.LoyaltyClub", "AutoJoinFromClub")
+                        .WithMany()
+                        .HasForeignKey("AutoJoinFromClubId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_loyalty_clubs_loyalty_clubs_auto_join_from_club_id");
+
+                    b.Navigation("AutoJoinFromClub");
+                });
+
             modelBuilder.Entity("Klowee.Api.Entities.LoyaltyClubReward", b =>
                 {
                     b.HasOne("Klowee.Api.Entities.AddOn", "AddOn")
@@ -1426,6 +1505,27 @@ namespace Klowee.Api.Data.Migrations
                     b.Navigation("Customer");
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.LoyaltyMembership", b =>
+                {
+                    b.HasOne("Klowee.Api.Entities.LoyaltyClub", "Club")
+                        .WithMany()
+                        .HasForeignKey("ClubId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_loyalty_memberships_loyalty_clubs_club_id");
+
+                    b.HasOne("Klowee.Api.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_loyalty_memberships_customers_customer_id");
+
+                    b.Navigation("Club");
+
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("Klowee.Api.Entities.LoyaltyRedemption", b =>

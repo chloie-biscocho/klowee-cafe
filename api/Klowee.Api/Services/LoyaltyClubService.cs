@@ -52,6 +52,7 @@ public class LoyaltyClubService : ILoyaltyClubService
         _db.LoyaltyClubs.Add(club);
         await _db.SaveChangesAsync(cancellationToken);
         await ApplyCategoriesAsync(club.Id, request.CategoryIds, cancellationToken);
+        await LoyaltyMemberships.AutoJoinAsync(_db, club, _clock.Today, cancellationToken);
         return await GetAsync(club.Id, cancellationToken);
     }
 
@@ -63,6 +64,7 @@ public class LoyaltyClubService : ILoyaltyClubService
         await ApplyAsync(club, request, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         await ApplyCategoriesAsync(club.Id, request.CategoryIds, cancellationToken);
+        await LoyaltyMemberships.AutoJoinAsync(_db, club, _clock.Today, cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -73,6 +75,9 @@ public class LoyaltyClubService : ILoyaltyClubService
         var club = await LoadAsync(id, cancellationToken);
         Activate(club, isActive);
         await _db.SaveChangesAsync(cancellationToken);
+
+        // Members of the club it comes with get its card, dated today. Idempotent.
+        await LoyaltyMemberships.AutoJoinAsync(_db, club, _clock.Today, cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 
@@ -94,6 +99,16 @@ public class LoyaltyClubService : ILoyaltyClubService
         }
 
         await ApplyCategoriesAsync(id, [], cancellationToken);
+        foreach (var membership in await _db.LoyaltyMemberships.Where(m => m.ClubId == id).ToListAsync(cancellationToken))
+        {
+            membership.DeletedAt = now;
+        }
+
+        foreach (var follower in await _db.LoyaltyClubs.Where(c => c.AutoJoinFromClubId == id).ToListAsync(cancellationToken))
+        {
+            follower.AutoJoinFromClubId = null;
+        }
+
         foreach (var item in await _db.MenuItems.Where(i => i.LoyaltyClubId == id).ToListAsync(cancellationToken))
         {
             item.LoyaltyMode = LoyaltyMode.Inherit;
@@ -148,8 +163,14 @@ public class LoyaltyClubService : ILoyaltyClubService
             }
         }
 
+        if (request.AutoJoinFromClubId is { } source)
+        {
+            await EnsureNoLoopAsync(club.Id, source, cancellationToken);
+        }
+
         club.Name = name;
         club.Style = request.Style;
+        club.AutoJoinFromClubId = request.AutoJoinFromClubId;
         club.SlotCount = request.SlotCount;
         club.SortOrder = request.SortOrder;
         Activate(club, request.IsActive);
@@ -174,6 +195,25 @@ public class LoyaltyClubService : ILoyaltyClubService
             reward.Percent = wanted.Type == LoyaltyRewardType.PercentOff ? wanted.Percent : null;
             reward.AddOnId = wanted.Type == LoyaltyRewardType.FreeAddOn ? wanted.AddOnId : null;
             reward.Label = wanted.Label.Trim();
+        }
+    }
+
+    /// <summary>"Members of X get this card": X must exist, not be this club, and not lead back to it.</summary>
+    private async Task EnsureNoLoopAsync(Guid clubId, Guid sourceId, CancellationToken cancellationToken)
+    {
+        var sources = await _db.LoyaltyClubs.ToDictionaryAsync(c => c.Id, c => c.AutoJoinFromClubId, cancellationToken);
+        if (!sources.ContainsKey(sourceId))
+        {
+            throw new ValidationFailedException($"Loyalty club '{sourceId}' does not exist.");
+        }
+
+        var seen = new HashSet<Guid>();
+        for (Guid? at = sourceId; at is { } current; at = sources.GetValueOrDefault(current))
+        {
+            if (current == clubId || !seen.Add(current))
+            {
+                throw new ValidationFailedException("A card can't come with itself, directly or through another card.");
+            }
         }
     }
 
@@ -223,18 +263,17 @@ public class LoyaltyClubService : ILoyaltyClubService
             .Where(c => c.LoyaltyClubId != null && ids.Contains(c.LoyaltyClubId.Value))
             .Select(c => new { c.Id, ClubId = c.LoyaltyClubId!.Value, c.SortOrder, c.Name })
             .ToListAsync(cancellationToken);
-        var members = (await _db.LoyaltyEntries
+        var members = (await _db.LoyaltyMemberships
                 .AsNoTracking()
-                .Where(e => ids.Contains(e.ClubId))
-                .Select(e => new { e.ClubId, e.CustomerId })
-                .Distinct()
+                .Where(m => ids.Contains(m.ClubId) && m.Status == MembershipStatus.Active)
+                .Select(m => m.ClubId)
                 .ToListAsync(cancellationToken))
-            .GroupBy(e => e.ClubId)
+            .GroupBy(id => id)
             .ToDictionary(g => g.Key, g => g.Count());
         var addOnNames = await _db.AddOns.IgnoreQueryFilters().AsNoTracking().ToDictionaryAsync(a => a.Id, a => a.Name, cancellationToken);
 
         return clubs.Select(c => new LoyaltyClubDto(
-            c.Id, c.Name, c.Style, c.SlotCount, c.IsActive, c.ActivatedOn, c.SortOrder,
+            c.Id, c.Name, c.Style, c.SlotCount, c.IsActive, c.ActivatedOn, c.SortOrder, c.AutoJoinFromClubId,
             c.Rewards.Where(r => r.DeletedAt is null).OrderBy(r => r.Slot)
                 .Select(r => new LoyaltyClubRewardDto(
                     r.Id, r.Slot, r.Type, r.Percent, r.AddOnId,

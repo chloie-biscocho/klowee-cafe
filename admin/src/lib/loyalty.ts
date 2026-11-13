@@ -13,6 +13,9 @@ export const rewardPhrase = (label: string) => label.toLowerCase()
 export const availableRewards = (club: CustomerClubDto): CustomerRewardDto[] =>
   club.rewards.filter((r) => r.state === 'available').sort((a, b) => a.cycle - b.cycle || a.slot - b.slot)
 
+/** The clubs the customer holds a card in: only these collect stamps (handover 16a). */
+export const memberClubs = (clubs: CustomerClubDto[]) => clubs.filter((c) => c.membership === 'member')
+
 /** "Coffee 6/12 · 1 reward" */
 export function clubSummary(club: CustomerClubDto): string {
   const rewards = availableRewards(club).length

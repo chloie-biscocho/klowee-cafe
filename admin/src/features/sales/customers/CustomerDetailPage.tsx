@@ -6,6 +6,7 @@ import { Card } from '../../../components/ui/Card'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { Spinner } from '../../../components/ui/Spinner'
 import { formatPeso } from '../../../lib/format'
+import { memberClubs } from '../../../lib/loyalty'
 import { useToastedAction } from '../../toasts/useToastedAction'
 import { OrdersTable } from '../orders/OrdersTable'
 import { blankToNull, type CustomerValues } from '../schemas'
@@ -75,7 +76,9 @@ export function CustomerDetailPage() {
               <ClubCard
                 key={club.clubId}
                 customerId={id}
+                customerName={customer.name}
                 club={club}
+                others={customer.clubs}
                 onAdjust={() => {
                   setAdjustClub(club.clubId)
                   setDialog('adjust')
@@ -108,7 +111,7 @@ export function CustomerDetailPage() {
             <OrdersTable orders={customer.recentOrders} />
           )
         ) : (
-          <LoyaltyLedger customerId={id} clubs={customer.clubs} />
+          <LoyaltyLedger customerId={id} clubs={memberClubs(customer.clubs)} />
         )}
       </Card>
 
@@ -117,7 +120,7 @@ export function CustomerDetailPage() {
         <SettleModal customer={{ id, name: customer.name, balance: customer.outstandingBalance }} onClose={() => setDialog(null)} />
       )}
       {dialog === 'adjust' && (
-        <AdjustStampsModal customer={customer} clubs={customer.clubs} clubId={adjustClub} onClose={() => setDialog(null)} />
+        <AdjustStampsModal customer={customer} clubs={memberClubs(customer.clubs)} clubId={adjustClub} onClose={() => setDialog(null)} />
       )}
       {dialog === 'merge' && <MergeModal customer={customer} onClose={() => setDialog(null)} />}
     </div>

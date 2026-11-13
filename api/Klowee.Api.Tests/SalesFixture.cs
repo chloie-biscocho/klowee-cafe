@@ -99,6 +99,26 @@ public static class SalesFixture
         return (await response.Content.ReadFromJsonAsync<CustomerDetailDto>(KloweeApiFactory.Json))!;
     }
 
+    /// <summary>
+    /// A customer holding a Coffee Club card "since the beginning" (joined_on
+    /// null), as the carry-over gives existing cardholders. Cards are by
+    /// invitation (handover 16a); without one a customer earns nothing.
+    /// </summary>
+    public static async Task<CustomerDetailDto> CreateCardholderAsync(
+        KloweeApiFactory factory, HttpClient client, string name, string? nickname = null)
+    {
+        var customer = await CreateCustomerAsync(client, name, nickname);
+        await factory.WithDbAsync(async db =>
+        {
+            db.LoyaltyMemberships.Add(new LoyaltyMembership
+            {
+                CustomerId = customer.Id, ClubId = LoyaltyClub.CoffeeClubId, Status = MembershipStatus.Active
+            });
+            return await db.SaveChangesAsync();
+        });
+        return customer;
+    }
+
     public static object Line(Guid menuVersionItemId, int quantity = 1, params Guid[] addOnIds) =>
         new { menuVersionItemId, quantity, addOnIds };
 

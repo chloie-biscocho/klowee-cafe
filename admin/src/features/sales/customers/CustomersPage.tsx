@@ -13,7 +13,7 @@ import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { SkeletonRows, Table, Td, Th } from '../../../components/ui/Table'
 import { formatDate, formatPeso } from '../../../lib/format'
-import { availableRewards, clubLabel } from '../../../lib/loyalty'
+import { availableRewards, clubLabel, memberClubs } from '../../../lib/loyalty'
 import type { CustomerSummaryDto } from '../../../types/api'
 import { useToastedAction } from '../../toasts/useToastedAction'
 import { blankToNull, type CustomerValues } from '../schemas'
@@ -22,6 +22,7 @@ import { CustomerFormModal } from './CustomerFormModal'
 export function CustomersPage() {
   const [search, setSearch] = useState('')
   const [includeInactive, setIncludeInactive] = useState(false)
+  const [cardholders, setCardholders] = useState(false)
   const { data: customers, isLoading, isFetching } = useListCustomersQuery({ includeInactive })
   const [createCustomer, { isLoading: isCreating }] = useCreateCustomerMutation()
   const [updateCustomer, { isLoading: isUpdating }] = useUpdateCustomerMutation()
@@ -38,7 +39,9 @@ export function CustomersPage() {
   // Every customer carries the same active clubs; one column each.
   const clubColumns = customers?.find((c) => c.clubs.length > 0)?.clubs ?? []
   const rows = (customers ?? []).filter(
-    (c) => term === '' || `${c.name} ${c.nickname ?? ''}`.toLowerCase().includes(term),
+    (c) =>
+      (term === '' || `${c.name} ${c.nickname ?? ''}`.toLowerCase().includes(term)) &&
+      (!cardholders || memberClubs(c.clubs).length > 0),
   )
 
   const save = async (values: CustomerValues) => {
@@ -70,6 +73,15 @@ export function CustomersPage() {
                 onChange={(event) => setIncludeInactive(event.target.checked)}
               />
               Show inactive
+            </label>
+            <label className="flex items-center gap-2 text-sm text-muted">
+              <input
+                type="checkbox"
+                className="size-4 accent-accent"
+                checked={cardholders}
+                onChange={(event) => setCardholders(event.target.checked)}
+              />
+              Has a card
             </label>
           </div>
           <Button variant="primary" size="sm" onClick={() => setEditing('new')}>
@@ -110,7 +122,9 @@ export function CustomersPage() {
                   const ready = club ? availableRewards(club).length : 0
                   return (
                     <Td key={column.clubId} className="whitespace-nowrap">
-                      {club ? (
+                      {club && club.membership !== 'member' ? (
+                        <span className="text-muted">no card</span>
+                      ) : club ? (
                         <>
                           <span className="tabular-nums">
                             {club.position}/{club.slotCount}

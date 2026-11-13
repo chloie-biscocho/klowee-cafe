@@ -36,6 +36,14 @@ public class LoyaltyClub : BaseEntity
 
     public int SortOrder { get; set; }
 
+    /// <summary>
+    /// Members of this other club get this club's card automatically: when this
+    /// club is activated, and whenever someone is given the other club's card.
+    /// The Matcha Club auto-joins from The Coffee Club (handover 16a).
+    /// </summary>
+    public Guid? AutoJoinFromClubId { get; set; }
+    public LoyaltyClub? AutoJoinFromClub { get; set; }
+
     public ICollection<LoyaltyClubReward> Rewards { get; set; } = new List<LoyaltyClubReward>();
 }
 
@@ -96,6 +104,39 @@ public class LoyaltyRedemption : BaseEntity
 
     public Guid? OrderItemId { get; set; }
     public OrderItem? OrderItem { get; set; }
+
+    public string? Note { get; set; }
+}
+
+public enum MembershipStatus
+{
+    /// <summary>The customer asked for a card; not yet given. Earns nothing.</summary>
+    Requested,
+
+    /// <summary>Holds the card: paid drinks of the club stamp it from <c>JoinedOn</c>.</summary>
+    Active
+}
+
+/// <summary>
+/// A customer's card in one club. Cards are by invitation (handover 16a): only
+/// an Active member's paid orders, dated on or after <see cref="JoinedOn"/>,
+/// stamp the club. One live row per (customer, club).
+/// </summary>
+public class LoyaltyMembership : BaseEntity
+{
+    public Guid CustomerId { get; set; }
+    public Customer? Customer { get; set; }
+
+    public Guid ClubId { get; set; }
+    public LoyaltyClub? Club { get; set; }
+
+    public MembershipStatus Status { get; set; }
+
+    /// <summary>
+    /// The first day orders stamp the card. Null while Requested; null on an
+    /// Active membership means "since the beginning" (only the carry-over writes that).
+    /// </summary>
+    public DateOnly? JoinedOn { get; set; }
 
     public string? Note { get; set; }
 }

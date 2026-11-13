@@ -19,7 +19,7 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
     public async Task Status_IsDerived_UnpaidThenPartialThenPaid()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee status");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee status");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte)]));
         Assert.Equal(PaymentStatus.Unpaid, order.Status);
 
@@ -36,7 +36,7 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
     public async Task Overpaying_Is409_AndRecordsNothing()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee overpay");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee overpay");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Americano)]));
 
         Assert.Equal(HttpStatusCode.Conflict, (await PayAsync(client, order.Id, 110.01m)).StatusCode);
@@ -50,7 +50,7 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
     public async Task BecomingPaid_EarnsAStampPerDrink_AndOnlyThen()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee stamps");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee stamps");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte, 2, m.OatMilk), Line(m.Americano)]));
 
         await EnsureAsync(await PayAsync(client, order.Id, 100m));
@@ -67,7 +67,7 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
     public async Task DeletingAPayment_BelowPaid_ReversesTheStamps()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee reverse");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee reverse");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte, 2)]));
         var paid = await (await PayAsync(client, order.Id, 320m)).Content.ReadFromJsonAsync<OrderDetailDto>(KloweeApiFactory.Json);
         Assert.Equal(2, await StampsAsync(client, kee.Id));
@@ -88,7 +88,7 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
     public async Task AFullyFreeOrder_IsPaidWithoutPayments_AndItsDrinkStillStamps()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee all free");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee all free");
         await GiveStampsAsync(client, kee.Id, 11);
         var freeDrink = await CoffeeRewardAsync(_factory, 12);
 
@@ -105,7 +105,7 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
     public async Task Settle_AllocatesOldestFirst_AcrossThreeOrders_IncludingAPartial()
     {
         var (client, m) = await SetupAsync();
-        var prince = await CreateCustomerAsync(client, "Prince settle");
+        var prince = await CreateCardholderAsync(_factory, client, "Prince settle");
         var oldest = await CreateOrderAsync(client, OrderBody(prince.Id, [Line(m.Latte)], orderedOn: new DateOnly(2026, 10, 1)));     // 160
         var middle = await CreateOrderAsync(client, OrderBody(prince.Id, [Line(m.Americano)], orderedOn: new DateOnly(2026, 10, 8)));  // 110
         var newest = await CreateOrderAsync(client, OrderBody(prince.Id, [Line(m.Matcha)], orderedOn: new DateOnly(2026, 10, 15)));    // 150
@@ -132,7 +132,7 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
     public async Task Settle_MoreThanTheTabOwes_Is409_AndRecordsNothing()
     {
         var (client, m) = await SetupAsync();
-        var prince = await CreateCustomerAsync(client, "Prince oversettle");
+        var prince = await CreateCardholderAsync(_factory, client, "Prince oversettle");
         var order = await CreateOrderAsync(client, OrderBody(prince.Id, [Line(m.Americano)]));
 
         var response = await client.PostAsJsonAsync($"/api/customers/{prince.Id}/settle", PaymentBody(110.01m));
@@ -145,8 +145,8 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
     public async Task ThePayersTab_HoldsTheOrdersTheyCover_AndSettleChargesThem()
     {
         var (client, m) = await SetupAsync();
-        var prince = await CreateCustomerAsync(client, "Prince covered");
-        var kee = await CreateCustomerAsync(client, "Kee covers");
+        var prince = await CreateCardholderAsync(_factory, client, "Prince covered");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee covers");
 
         // "Prince c/o Kee": Prince drinks, Kee pays.
         var order = await CreateOrderAsync(client, OrderBody(prince.Id, [Line(m.Latte)], payerId: kee.Id));
@@ -168,7 +168,7 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
     public async Task APaymentOnAMissingOrderOrOfAnotherOrder_Is404()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee 404");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee 404");
         var first = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte)]));
         var second = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte)]));
         var paid = await (await PayAsync(client, first.Id, 10m)).Content.ReadFromJsonAsync<OrderDetailDto>(KloweeApiFactory.Json);

@@ -103,6 +103,32 @@ public class CustomersController : ControllerBase
     public async Task<ActionResult<LoyaltyEntryDto>> Adjust(Guid id, LoyaltyAdjustRequest request, CancellationToken cancellationToken) =>
         Ok(await _loyalty.AdjustAsync(id, request, cancellationToken));
 
+    /// <summary>
+    /// Gives the customer a card: Active from today (business time zone), plus
+    /// every active card that comes with it. Activates a requested card.
+    /// </summary>
+    [HttpPost("{id:guid}/loyalty/memberships")]
+    [ProducesResponseType<LoyaltyMembershipDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<LoyaltyMembershipDto>> GiveCard(Guid id, LoyaltyMembershipRequest request, CancellationToken cancellationToken) =>
+        Ok(await _loyalty.GiveCardAsync(id, request, cancellationToken));
+
+    /// <summary>
+    /// Takes a card away. Refused (409) while it has stamps or used rewards,
+    /// unless <c>force=true</c>, which voids them. Cards that came with it stay.
+    /// </summary>
+    [HttpDelete("{id:guid}/loyalty/memberships/{membershipId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> TakeCard(Guid id, Guid membershipId, [FromQuery] bool force = false, CancellationToken cancellationToken = default)
+    {
+        await _loyalty.TakeCardAsync(id, membershipId, force, cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>Marks an available reward used without an order (the paper card says it was used).</summary>
     [HttpPost("{id:guid}/loyalty/redemptions")]
     [ProducesResponseType<LoyaltyRedemptionDto>(StatusCodes.Status200OK)]

@@ -17,6 +17,15 @@ public interface ILoyaltyService
     /// <summary>Makes a hand-marked reward available again. Refused (409) when an order used it.</summary>
     Task UnredeemAsync(Guid customerId, Guid redemptionId, CancellationToken cancellationToken);
 
+    /// <summary>Gives a card (Active from today) and the cards that come with it; activates a requested one.</summary>
+    Task<LoyaltyMembershipDto> GiveCardAsync(Guid customerId, LoyaltyMembershipRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Takes a card away. Refused (409) while it has live stamps or used
+    /// rewards, unless <paramref name="force"/>, which voids them.
+    /// </summary>
+    Task TakeCardAsync(Guid customerId, Guid membershipId, bool force, CancellationToken cancellationToken);
+
     /// <summary>Each customer's card on every active club, in club order.</summary>
     Task<Dictionary<Guid, IReadOnlyList<CustomerClubDto>>> CardsAsync(IReadOnlyCollection<Guid> customerIds, CancellationToken cancellationToken);
 

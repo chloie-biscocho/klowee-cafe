@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
-import { useRedeemRewardMutation, useUnredeemRewardMutation } from '../../../api/salesApi'
+import { useGiveCardMutation, useRedeemRewardMutation, useTakeCardMutation, useUnredeemRewardMutation } from '../../../api/salesApi'
 import { Button } from '../../../components/ui/Button'
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
+import { formatDate } from '../../../lib/format'
 import { clubLabel } from '../../../lib/loyalty'
 import type { CustomerClubDto, CustomerRewardDto } from '../../../types/api'
 import { useToastedAction } from '../../toasts/useToastedAction'
@@ -17,7 +20,58 @@ const STATE_STYLE: Record<CustomerRewardDto['state'], string> = {
  * and the rewards printed on their slots. Rewards can be marked used by hand
  * (from the paper card) or made available again, unless an order used them.
  */
-export function ClubCard({ customerId, club, onAdjust }: { customerId: string; club: CustomerClubDto; onAdjust: () => void }) {
+export function ClubCard({
+  customerId,
+  customerName,
+  club,
+  others = [],
+  onAdjust,
+}: {
+  customerId: string
+  customerName: string
+  club: CustomerClubDto
+  /** The customer's other cards, named in the take-away warning (they stay). */
+  others?: CustomerClubDto[]
+  onAdjust: () => void
+}) {
+  if (club.membership !== 'member') return <NoCard customerId={customerId} club={club} />
+  return <MemberCard customerId={customerId} customerName={customerName} club={club} others={others} onAdjust={onAdjust} />
+}
+
+/** Cards are by invitation (handover 16a): a quiet row and the one action. */
+function NoCard({ customerId, club }: { customerId: string; club: CustomerClubDto }) {
+  const [giveCard, { isLoading }] = useGiveCardMutation()
+  const run = useToastedAction()
+  return (
+    <section
+      aria-label={`${clubLabel(club.name)} card`}
+      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-line px-4 py-3 text-sm"
+    >
+      <span className="text-muted">
+        No {clubLabel(club.name)} card{club.membership === 'requested' && ' (asked for one)'}. Drinks earn no stamps.
+      </span>
+      <Button size="sm" loading={isLoading} onClick={() => void run(giveCard({ id: customerId, body: { clubId: club.clubId } }), `${club.name} card given.`)}>
+        Give card
+      </Button>
+    </section>
+  )
+}
+
+function MemberCard({
+  customerId,
+  customerName,
+  club,
+  others,
+  onAdjust,
+}: {
+  customerId: string
+  customerName: string
+  club: CustomerClubDto
+  others: CustomerClubDto[]
+  onAdjust: () => void
+}) {
+  const [takeCard, { isLoading: isTaking }] = useTakeCardMutation()
+  const [confirming, setConfirming] = useState(false)
   const [redeem, { isLoading: isRedeeming }] = useRedeemRewardMutation()
   const [unredeem, { isLoading: isUnredeeming }] = useUnredeemRewardMutation()
   const run = useToastedAction()
@@ -35,6 +89,20 @@ export function ClubCard({ customerId, club, onAdjust }: { customerId: string; c
   const makeAvailable = (reward: CustomerRewardDto) =>
     run(unredeem({ id: customerId, redemptionId: reward.redemptionId! }), `${reward.label} is available again.`)
 
+  // Anything on the card goes with it; the API wants that said out loud (force).
+  const stamps = club.cycle * club.slotCount + club.position
+  const used = club.rewards.filter((r) => r.state === 'used').length
+  const otherCards = others.filter((c) => c.clubId !== club.clubId && c.membership === 'member')
+  const takeAwayMessage = [
+    `Take ${customerName}'s ${club.name} card away? Their drinks stop earning stamps on it.`,
+    stamps > 0 || used > 0
+      ? `Its ${stamps} stamp${stamps === 1 ? '' : 's'}${used > 0 ? ` and ${used} used reward${used === 1 ? '' : 's'}` : ''} are voided.`
+      : '',
+    otherCards.length > 0 ? `Their ${otherCards.map((c) => c.name).join(' and ')} card stays.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
     <section aria-label={`${clubLabel(club.name)} card`} className="flex flex-col gap-3 rounded-lg border border-line p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -43,11 +111,17 @@ export function ClubCard({ customerId, club, onAdjust }: { customerId: string; c
           <span className="ml-2 text-sm font-normal text-muted">
             {club.position} of {club.slotCount}
             {club.cycle > 0 && ` · card ${club.cycle + 1}`}
+            {club.joinedOn && ` · since ${formatDate(club.joinedOn)}`}
           </span>
         </h3>
-        <Button size="sm" onClick={onAdjust}>
-          Adjust stamps
-        </Button>
+        <div className="flex gap-1.5">
+          <Button size="sm" onClick={onAdjust}>
+            Adjust stamps
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setConfirming(true)}>
+            Take card away
+          </Button>
+        </div>
       </div>
 
       <ol aria-label={`${club.position} of ${club.slotCount} slots filled`} className="flex flex-wrap gap-1.5">
@@ -112,6 +186,22 @@ export function ClubCard({ customerId, club, onAdjust }: { customerId: string; c
           </li>
         ))}
       </ul>
+
+      <ConfirmDialog
+        open={confirming}
+        title={`Take the ${club.name} card away`}
+        message={takeAwayMessage}
+        confirmLabel="Take card away"
+        loading={isTaking}
+        onCancel={() => setConfirming(false)}
+        onConfirm={async () => {
+          const taken = await run(
+            takeCard({ id: customerId, membershipId: club.membershipId!, force: stamps > 0 || used > 0 }),
+            `${club.name} card taken away.`,
+          )
+          if (taken.ok) setConfirming(false)
+        }}
+      />
     </section>
   )
 }

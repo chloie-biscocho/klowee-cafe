@@ -23,6 +23,7 @@ export const coffeeClub: LoyaltyClubDto = {
   isActive: true,
   activatedOn: null,
   sortOrder: 1,
+  autoJoinFromClubId: null,
   rewards: [
     { id: 'r-half', slot: 5, type: 'PercentOff', percent: 50, addOnId: null, addOnName: null, label: '50% OFF' },
     { id: 'r-shot', slot: 8, type: 'FreeAddOn', percent: null, addOnId: 'a0000000-0000-0000-0000-000000000002', addOnName: 'Extra shot', label: 'EXTRA SHOT' },
@@ -39,6 +40,7 @@ export const matchaClub: LoyaltyClubDto = {
   style: 'Matcha',
   isActive: false,
   sortOrder: 2,
+  autoJoinFromClubId: 'c0ffee00-0000-4000-8000-000000000001',
   categoryIds: [],
   memberCount: 0,
 }
@@ -48,6 +50,9 @@ export const coffeeCard = (position: number, states: CustomerRewardDto['state'][
   clubId: coffeeClub.id,
   name: coffeeClub.name,
   style: 'Coffee',
+  membership: 'member',
+  membershipId: 'mem-coffee',
+  joinedOn: null,
   slotCount: 12,
   position,
   cycle: 0,

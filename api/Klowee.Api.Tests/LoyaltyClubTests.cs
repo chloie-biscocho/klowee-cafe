@@ -42,7 +42,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task AnAvailableReward_IsApplied_UsedUp_AndShownOnTheLine()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee half off");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee half off");
         await GiveStampsAsync(client, kee.Id, 4);
         Assert.Equal("available", State(await CardAsync(client, kee.Id), 5));
 
@@ -60,7 +60,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task ARewardThatIsNotAvailable_Is409()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee too early");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee too early");
         await GiveStampsAsync(client, kee.Id, 3);
 
         var early = await PostOrderAsync(client, OrderBody(kee.Id, [RewardLine(m.Latte, await HalfOffAsync())]));
@@ -78,7 +78,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task ARewardOnADrinkOfAnotherClubOrNone_Is409()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee wrong card");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee wrong card");
         await GiveStampsAsync(client, kee.Id, 11);
         var refresher = await AddDrinkAsync(_factory, Suffix, "Refresher", 120m);   // a category with no club
 
@@ -91,7 +91,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task AReward_AffectsOneUnitOfTheLine()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee two lattes");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee two lattes");
         await GiveStampsAsync(client, kee.Id, 4);
 
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [RewardLine(m.Latte, await HalfOffAsync(), 2)]));
@@ -103,7 +103,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task FreeAddOn_AddsTheShotAtZero_OrFreesTheOneOnTheLine()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee shot");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee shot");
         await GiveStampsAsync(client, kee.Id, 7);
         var shot = await ShotAsync();
 
@@ -121,7 +121,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task FreeDrink_StillChargesTheOatMilk()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee free oat");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee free oat");
         await GiveStampsAsync(client, kee.Id, 11);
 
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [RewardLine(m.Latte, await FreeDrinkAsync(), 1, m.OatMilk)]));
@@ -134,7 +134,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task ReSaving_KeepsTheRedemption_RemovingTheRewardOrLineOrOrder_GivesItBack()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee resave");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee resave");
         await GiveStampsAsync(client, kee.Id, 4);
         var half = await HalfOffAsync();
 
@@ -169,8 +169,8 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task RewardsAndStamps_BelongToTheDrinker_WhoeverPays()
     {
         var (client, m) = await SetupAsync();
-        var prince = await CreateCustomerAsync(client, "Prince drinker");
-        var kee = await CreateCustomerAsync(client, "Kee payer");
+        var prince = await CreateCardholderAsync(_factory, client, "Prince drinker");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee payer");
         await GiveStampsAsync(client, prince.Id, 4);
 
         var order = await CreateOrderAsync(client, OrderBody(prince.Id, [RewardLine(m.Latte, await HalfOffAsync())], payerId: kee.Id));
@@ -186,7 +186,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task AnOrderWithPayments_CannotDropOrAddARewards()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee locked reward");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee locked reward");
         await GiveStampsAsync(client, kee.Id, 4);
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [RewardLine(m.Latte, await HalfOffAsync())]));
         await EnsureAsync(await PayAsync(client, order.Id, 10m));
@@ -203,7 +203,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task APaidOrder_StampsOnePerClubDrink_RewardDrinksIncluded_OthersNothing()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee stamping");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee stamping");
         await GiveStampsAsync(client, kee.Id, 4);
         var refresher = await AddDrinkAsync(_factory, Suffix, "Lemonade", 90m);
 
@@ -222,7 +222,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task AfterSlotTwelve_TheCardStartsAgain_AndUnusedRewardsStay()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee restart");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee restart");
         await GiveStampsAsync(client, kee.Id, 11);
 
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Americano, 3)]));
@@ -240,7 +240,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task ARewardCanBeMarkedUsedByHand_AndMadeAvailableAgain()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee paper card");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee paper card");
         await GiveStampsAsync(client, kee.Id, 6);
         var half = await HalfOffAsync();
         var url = $"/api/customers/{kee.Id}/loyalty/redemptions";
@@ -271,8 +271,8 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task Merge_AddsStampsPerClub_AndKeepsEveryUsedReward()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee merge card");
-        var dupe = await CreateCustomerAsync(client, "Kee card (sheet)");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee merge card");
+        var dupe = await CreateCardholderAsync(_factory, client, "Kee card (sheet)");
         var half = await HalfOffAsync();
         await GiveStampsAsync(client, kee.Id, 6);
         await GiveStampsAsync(client, dupe.Id, 5);
@@ -297,7 +297,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task TheLedger_FiltersByClub()
     {
         var (client, _) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee ledger club");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee ledger club");
         await GiveStampsAsync(client, kee.Id, 2);
 
         Assert.Single(await LedgerAsync(client, kee.Id, LoyaltyClub.CoffeeClubId));
@@ -310,7 +310,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task Clubs_AreListedWithRewardsCategoriesAndMembers()
     {
         var (client, _) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee member");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee member");
         await GiveStampsAsync(client, kee.Id, 1);
 
         var clubs = (await client.GetFromJsonAsync<List<LoyaltyClubDto>>("/api/loyalty/clubs", KloweeApiFactory.Json))!;
@@ -391,7 +391,7 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     public async Task AClubWithStamps_CannotBeDeleted_OnlyDeactivated()
     {
         var (client, _) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee keeps club");
+        var kee = await CreateCardholderAsync(_factory, client, "Kee keeps club");
         await GiveStampsAsync(client, kee.Id, 1);
 
         Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/loyalty/clubs/{LoyaltyClub.CoffeeClubId}")).StatusCode);
