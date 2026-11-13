@@ -12,7 +12,7 @@ import { useToastedAction } from '../../toasts/useToastedAction'
 import { StatusBadge } from '../StatusBadge'
 import { PaymentsSection } from './PaymentsSection'
 
-const DISCOUNT_LABEL = { None: '', Percent: '% off', Fixed: 'off', LoyaltyFree: 'Free drink (reward)' } as const
+const DISCOUNT_LABEL = { None: '', Percent: '% off', Fixed: 'off', LoyaltyFree: 'Free drink (old card)' } as const
 
 export function OrderDetailPage() {
   const { id = '' } = useParams()
@@ -106,6 +106,12 @@ export function OrderDetailPage() {
                       + {addOn.name} {formatPeso(addOn.unitPrice)}
                     </span>
                   ))}
+                  {item.reward && (
+                    <span className="block text-xs text-success">
+                      ★ {item.reward.label}
+                      {item.reward.amountOff > 0 ? ` −${formatPeso(item.reward.amountOff)}` : ' (given free)'}
+                    </span>
+                  )}
                 </Td>
                 <Td className="text-right">{item.quantity}</Td>
                 <Td className="text-right">{formatPeso(item.unitPrice)}</Td>

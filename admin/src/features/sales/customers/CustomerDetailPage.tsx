@@ -10,6 +10,7 @@ import { useToastedAction } from '../../toasts/useToastedAction'
 import { OrdersTable } from '../orders/OrdersTable'
 import { blankToNull, type CustomerValues } from '../schemas'
 import { AdjustStampsModal } from './AdjustStampsModal'
+import { ClubCard } from './ClubCard'
 import { CustomerFormModal } from './CustomerFormModal'
 import { LoyaltyLedger } from './LoyaltyLedger'
 import { MergeModal } from './MergeModal'
@@ -23,6 +24,7 @@ export function CustomerDetailPage() {
   const [updateCustomer, { isLoading: isSaving }] = useUpdateCustomerMutation()
   const run = useToastedAction()
   const [dialog, setDialog] = useState<Dialog>(null)
+  const [adjustClub, setAdjustClub] = useState<string | undefined>(undefined)
   const [tab, setTab] = useState<'orders' | 'loyalty'>('orders')
 
   if (isLoading) return <Spinner className="size-6 text-muted" />
@@ -52,9 +54,6 @@ export function CustomerDetailPage() {
           <p className={`text-3xl font-bold ${customer.outstandingBalance > 0 ? 'text-danger' : ''}`}>
             {formatPeso(customer.outstandingBalance)}
           </p>
-          <p className="mt-2 text-sm text-muted">
-            {customer.loyaltyBalance} stamps · {customer.availableRewards} free drink{customer.availableRewards === 1 ? '' : 's'} available
-          </p>
           {customer.notes && <p className="mt-2 max-w-prose text-sm">{customer.notes}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -62,12 +61,30 @@ export function CustomerDetailPage() {
           <Button variant="primary" disabled={customer.outstandingBalance <= 0} onClick={() => setDialog('settle')}>
             Settle tab
           </Button>
-          <Button onClick={() => setDialog('adjust')}>Adjust stamps</Button>
           <Button variant="danger" onClick={() => setDialog('merge')}>
             Merge into…
           </Button>
         </div>
       </Card>
+
+      {customer.clubs.length > 0 && (
+        <Card className="flex flex-col gap-3 p-5">
+          <h2 className="text-sm font-semibold">Loyalty cards</h2>
+          <div className="grid gap-3 xl:grid-cols-2">
+            {customer.clubs.map((club) => (
+              <ClubCard
+                key={club.clubId}
+                customerId={id}
+                club={club}
+                onAdjust={() => {
+                  setAdjustClub(club.clubId)
+                  setDialog('adjust')
+                }}
+              />
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card>
         <div role="tablist" className="flex gap-1 border-b border-line px-3 pt-2">
@@ -91,7 +108,7 @@ export function CustomerDetailPage() {
             <OrdersTable orders={customer.recentOrders} />
           )
         ) : (
-          <LoyaltyLedger customerId={id} />
+          <LoyaltyLedger customerId={id} clubs={customer.clubs} />
         )}
       </Card>
 
@@ -99,7 +116,9 @@ export function CustomerDetailPage() {
       {dialog === 'settle' && (
         <SettleModal customer={{ id, name: customer.name, balance: customer.outstandingBalance }} onClose={() => setDialog(null)} />
       )}
-      {dialog === 'adjust' && <AdjustStampsModal customer={customer} onClose={() => setDialog(null)} />}
+      {dialog === 'adjust' && (
+        <AdjustStampsModal customer={customer} clubs={customer.clubs} clubId={adjustClub} onClose={() => setDialog(null)} />
+      )}
       {dialog === 'merge' && <MergeModal customer={customer} onClose={() => setDialog(null)} />}
     </div>
   )

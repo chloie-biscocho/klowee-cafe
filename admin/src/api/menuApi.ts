@@ -34,6 +34,9 @@ export const menuApi = baseApi.injectEndpoints({
         { type: 'Category', id: LIST_ID },
         { type: 'Item', id: LIST_ID },
         'VersionDetail',
+        // A category's loyalty card changes the clubs' category lists and which card drinks stamp.
+        'LoyaltyClub',
+        'Customer',
       ],
     }),
     deleteCategory: build.mutation<void, string>({

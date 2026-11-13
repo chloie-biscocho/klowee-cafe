@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent, type Ref } from 'react'
 import { formatPeso } from '../../../lib/format'
 import type { AddOnDto } from '../../../types/api'
-import type { DraftLine, PickerItem } from './orderDraft'
+import type { DraftLine, PickerItem, RewardOption } from './orderDraft'
 
 interface ItemPickerProps {
   items: PickerItem[]
@@ -9,6 +9,8 @@ interface ItemPickerProps {
   lines: Record<string, DraftLine>
   onChange: (menuVersionItemId: string, line: DraftLine) => void
   filterRef?: Ref<HTMLInputElement>
+  /** The loyalty rewards a drink's line can carry for the chosen customer. */
+  rewardsFor?: (item: PickerItem) => RewardOption[]
 }
 
 /**
@@ -16,7 +18,7 @@ interface ItemPickerProps {
  * ↑/↓ to move the highlight, Enter adds one of the highlighted drink (again
  * for a second). The mouse gets − / + steppers and add-on checkboxes.
  */
-export function ItemPicker({ items, addOns, lines, onChange, filterRef }: ItemPickerProps) {
+export function ItemPicker({ items, addOns, lines, onChange, filterRef, rewardsFor = () => [] }: ItemPickerProps) {
   const [filter, setFilter] = useState('')
   const [active, setActive] = useState(0)
 
@@ -76,6 +78,7 @@ export function ItemPicker({ items, addOns, lines, onChange, filterRef }: ItemPi
                 const line = lineOf(item.menuVersionItemId)
                 const isHighlighted = item === highlighted
                 const lineAddOns = addOns.filter((a) => a.isActive || line.addOnIds.includes(a.id))
+                const rewards = line.quantity > 0 ? rewardsFor(item) : []
                 return (
                   <li
                     key={item.menuVersionItemId}
@@ -128,6 +131,30 @@ export function ItemPicker({ items, addOns, lines, onChange, filterRef }: ItemPi
                             {addOn.name} +{formatPeso(addOn.price)}
                           </label>
                         ))}
+                      </div>
+                    )}
+                    {rewards.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-2 pl-1" role="group" aria-label={`Rewards for ${item.name}`}>
+                        {rewards.map((reward) => {
+                          const on = line.rewardId === reward.rewardId
+                          return (
+                            <button
+                              key={reward.rewardId}
+                              type="button"
+                              role="switch"
+                              aria-checked={on}
+                              disabled={!reward.enabled}
+                              title={reward.enabled ? undefined : 'Already on another drink in this order.'}
+                              className={`rounded-full border px-2.5 py-0.5 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${
+                                on ? 'border-success bg-success text-white' : 'border-success/40 text-success hover:bg-success-soft'
+                              }`}
+                              onClick={() => onChange(item.menuVersionItemId, { ...line, rewardId: on ? null : reward.rewardId })}
+                            >
+                              {on ? '✓ ' : '★ '}
+                              {reward.label}
+                            </button>
+                          )
+                        })}
                       </div>
                     )}
                   </li>

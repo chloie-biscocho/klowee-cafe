@@ -6,13 +6,13 @@ import { Card } from '../../../components/ui/Card'
 import { Input } from '../../../components/ui/Input'
 import { Textarea } from '../../../components/ui/Textarea'
 import { UnsavedChangesPrompt } from '../../../components/ui/UnsavedChangesPrompt'
-import type { AddOnDto, CustomerSummaryDto, OrderDetailDto } from '../../../types/api'
+import type { AddOnDto, CustomerSummaryDto, LoyaltyClubDto, OrderDetailDto } from '../../../types/api'
 import { useToastedAction } from '../../toasts/useToastedAction'
 import { CustomerFields } from './CustomerFields'
 import { DiscountControl } from './DiscountControl'
 import { ItemPicker } from './ItemPicker'
 import { OrderSummaryPanel } from './OrderSummaryPanel'
-import { blockingProblem, preview, previewLines, toRequest, type OrderDraft, type PickerItem } from './orderDraft'
+import { blockingProblem, preview, previewLines, rewardOptions, toRequest, type OrderDraft, type PickerItem } from './orderDraft'
 
 /**
  * The order form (decision 017): a page, not a modal, left column to fill,
@@ -25,6 +25,7 @@ export function OrderForm({
   items,
   addOns,
   customers,
+  clubs = [],
 }: {
   initial: OrderDraft
   /** The order being edited, or undefined for a new one. */
@@ -32,6 +33,8 @@ export function OrderForm({
   items: PickerItem[]
   addOns: AddOnDto[]
   customers: CustomerSummaryDto[]
+  /** The loyalty cards, for what each reward takes off. */
+  clubs?: LoyaltyClubDto[]
 }) {
   const [draft, setDraft] = useState(initial)
   const [saved, setSaved] = useState(false)
@@ -42,13 +45,10 @@ export function OrderForm({
   const filterRef = useRef<HTMLInputElement>(null)
 
   const lines = previewLines(draft, items)
-  const pricing = preview(lines, draft, addOns, order)
+  const pricing = preview(lines, draft, addOns, order, clubs)
   const customer = customers.find((c) => c.id === draft.customerId)
-  const keepsOwnReward = order?.discountType === 'LoyaltyFree' && order.customer.id === draft.customerId
-  const freeAllowed = (customer?.availableRewards ?? 0) > 0 || keepsOwnReward
-  const problem =
-    blockingProblem(draft, lines, pricing.subtotal) ??
-    (draft.discountType === 'LoyaltyFree' && !freeAllowed ? 'This customer has no free drink available.' : null)
+  const rewardLabel = (rewardId: string) => clubs.flatMap((c) => c.rewards).find((r) => r.id === rewardId)?.label
+  const problem = blockingProblem(draft, lines, pricing.subtotal)
   const dirty = !saved && JSON.stringify(draft) !== JSON.stringify(initial)
 
   const update = (patch: Partial<OrderDraft>) => setDraft((current) => ({ ...current, ...patch }))
@@ -83,7 +83,12 @@ export function OrderForm({
             payerId={draft.payerId}
             autoFocus={!order}
             onCustomer={(customerId) => {
-              update({ customerId, payerId: draft.payerId === customerId ? null : draft.payerId })
+              // Rewards belong to the drinker: a different drinker starts with none on the lines.
+              const lines =
+                customerId === draft.customerId
+                  ? draft.lines
+                  : Object.fromEntries(Object.entries(draft.lines).map(([id, line]) => [id, { ...line, rewardId: null }]))
+              update({ customerId, payerId: draft.payerId === customerId ? null : draft.payerId, lines })
               if (customerId) setTimeout(() => filterRef.current?.focus())
             }}
             onPayer={(payerId) => update({ payerId })}
@@ -96,14 +101,20 @@ export function OrderForm({
           addOns={addOns}
           lines={draft.lines}
           filterRef={filterRef}
+          rewardsFor={(item) => rewardOptions(item, draft, customer, order)}
           onChange={(id, line) => update({ lines: { ...draft.lines, [id]: line } })}
         />
+
+        {order?.discountType === 'LoyaltyFree' && (
+          <p className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning">
+            This order used the old card's free drink, which can't be saved again. It will save with no discount: put a
+            reward on the drink's line instead.
+          </p>
+        )}
 
         <DiscountControl
           type={draft.discountType}
           value={draft.discountValue}
-          freeAllowed={freeAllowed}
-          freeReason={customer ? `${customer.name} has no free drink yet (${customer.loyaltyBalance} stamps).` : 'Choose a customer first.'}
           onChange={(discountType, discountValue) => update({ discountType, discountValue })}
         />
 
@@ -114,6 +125,7 @@ export function OrderForm({
         lines={lines}
         pricing={pricing}
         addOns={addOns}
+        rewardLabel={rewardLabel}
         problem={problem}
         saving={isCreating || isUpdating}
         onSave={() => void save()}

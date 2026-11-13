@@ -70,6 +70,7 @@ export const TAG_TYPES = [
   'Customer',
   'Order',
   'Loyalty',
+  'LoyaltyClub',
   'Report',
 ] as const
 

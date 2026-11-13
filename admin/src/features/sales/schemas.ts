@@ -19,6 +19,7 @@ export const paymentSchema = z.object({
 export type PaymentValues = z.infer<typeof paymentSchema>
 
 export const adjustSchema = z.object({
+  clubId: z.string().min(1, 'Choose the card.'),
   delta: z.coerce
     .number<number>()
     .int('Stamps are whole numbers.')

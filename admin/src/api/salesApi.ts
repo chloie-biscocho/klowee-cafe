@@ -5,6 +5,7 @@ import type {
   CustomerSummaryDto,
   LoyaltyAdjustRequest,
   LoyaltyEntryDto,
+  LoyaltyRedemptionRequest,
   MenuVersionDetailDto,
   MonthlyRowDto,
   OrderDetailDto,
@@ -75,9 +76,10 @@ export const salesApi = baseApi.injectEndpoints({
       query: ({ id, targetId }) => ({ url: `/customers/${id}/merge-into/${targetId}`, method: 'POST' }),
       invalidatesTags: ['Order', ...MONEY_CHANGED],
     }),
-    getLoyalty: build.query<LoyaltyEntryDto[], string>({
-      query: (id) => `/customers/${id}/loyalty`,
-      providesTags: (_r, _e, id) => [{ type: 'Loyalty', id }],
+    /** The ledger, newest first; one club's entries when clubId is set. */
+    getLoyalty: build.query<LoyaltyEntryDto[], { id: string; clubId?: string | null }>({
+      query: ({ id, clubId }) => ({ url: `/customers/${id}/loyalty`, params: clubId ? { clubId } : undefined }),
+      providesTags: (_r, _e, { id }) => [{ type: 'Loyalty', id }],
     }),
     adjustStamps: build.mutation<LoyaltyEntryDto, { id: string; body: LoyaltyAdjustRequest }>({
       query: ({ id, body }) => ({ url: `/customers/${id}/loyalty/adjust`, method: 'POST', body }),
@@ -85,6 +87,23 @@ export const salesApi = baseApi.injectEndpoints({
         { type: 'Customer', id },
         { type: 'Customer', id: LIST_ID },
         { type: 'Loyalty', id },
+        'LoyaltyClub',
+      ],
+    }),
+    /** Marks an available reward used by hand (the paper card says it was used). */
+    redeemReward: build.mutation<unknown, { id: string; body: LoyaltyRedemptionRequest }>({
+      query: ({ id, body }) => ({ url: `/customers/${id}/loyalty/redemptions`, method: 'POST', body }),
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'Customer', id },
+        { type: 'Customer', id: LIST_ID },
+      ],
+    }),
+    /** Makes a hand-marked reward available again (refused when an order used it). */
+    unredeemReward: build.mutation<void, { id: string; redemptionId: string }>({
+      query: ({ id, redemptionId }) => ({ url: `/customers/${id}/loyalty/redemptions/${redemptionId}`, method: 'DELETE' }),
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'Customer', id },
+        { type: 'Customer', id: LIST_ID },
       ],
     }),
     settleTab: build.mutation<PaymentDto[], { id: string; body: PaymentRequest }>({
@@ -166,6 +185,8 @@ export const {
   useDeleteCustomerMutation,
   useMergeCustomerMutation,
   useGetLoyaltyQuery,
+  useRedeemRewardMutation,
+  useUnredeemRewardMutation,
   useAdjustStampsMutation,
   useSettleTabMutation,
   useListOrdersQuery,

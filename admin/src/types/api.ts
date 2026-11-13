@@ -49,12 +49,16 @@ export interface MenuCategoryDto {
   sortOrder: number
   /** Optional line under the name on the public menu. */
   description: string | null
+  /** The loyalty card this category's drinks stamp; null for none. */
+  loyaltyClubId: string | null
 }
 
 export interface MenuCategoryRequest {
   name: string
   sortOrder: number
   description: string | null
+  /** A PUT replaces every field: send the club back, or null for none. */
+  loyaltyClubId: string | null
 }
 
 // ---- Menu items ----
@@ -67,6 +71,9 @@ export interface MenuItemDto {
   categoryName: string
   photoUrl: string | null
   isArchived: boolean
+  loyaltyMode: LoyaltyMode
+  /** Set only when loyaltyMode is 'Club'. */
+  loyaltyClubId: string | null
 }
 
 export interface MenuItemRequest {
@@ -74,6 +81,8 @@ export interface MenuItemRequest {
   description: string | null
   categoryId: string
   photoUrl: string | null
+  loyaltyMode: LoyaltyMode
+  loyaltyClubId: string | null
 }
 
 // ---- Add-ons ----
@@ -112,6 +121,8 @@ export interface MenuVersionItemDto {
   isAvailable: boolean
   isFeatured: boolean
   sortOrder: number
+  /** The loyalty card this drink stamps (item override, else its category's); null for none. */
+  loyaltyClubId: string | null
 }
 
 export interface MenuVersionDetailDto {
@@ -334,8 +345,107 @@ export const PAYMENT_CHANNEL_LABELS: Record<PaymentChannel, string> = {
   Other: 'Other',
 }
 
+/** LoyaltyFree is the old single card's free drink: history only, refused on new and edited orders. */
 export const DISCOUNT_TYPES = ['None', 'Percent', 'Fixed', 'LoyaltyFree'] as const
 export type DiscountType = (typeof DISCOUNT_TYPES)[number]
+
+// ---- Loyalty cards (decision 020) ----
+
+export const LOYALTY_REWARD_TYPES = ['PercentOff', 'FreeAddOn', 'FreeDrink'] as const
+export type LoyaltyRewardType = (typeof LOYALTY_REWARD_TYPES)[number]
+
+export const LOYALTY_REWARD_TYPE_LABELS: Record<LoyaltyRewardType, string> = {
+  PercentOff: 'Percent off the drink',
+  FreeAddOn: 'Free add-on',
+  FreeDrink: 'Free drink',
+}
+
+export const LOYALTY_CLUB_STYLES = ['Coffee', 'Matcha'] as const
+export type LoyaltyClubStyle = (typeof LOYALTY_CLUB_STYLES)[number]
+
+/** Which club an item stamps: its category's, none, or its own. */
+export const LOYALTY_MODES = ['Inherit', 'None', 'Club'] as const
+export type LoyaltyMode = (typeof LOYALTY_MODES)[number]
+
+export interface LoyaltyClubRewardDto {
+  id: string
+  slot: number
+  type: LoyaltyRewardType
+  percent: number | null
+  addOnId: string | null
+  addOnName: string | null
+  label: string
+}
+
+export interface LoyaltyClubDto {
+  id: string
+  name: string
+  style: LoyaltyClubStyle
+  slotCount: number
+  isActive: boolean
+  activatedOn: string | null
+  sortOrder: number
+  rewards: LoyaltyClubRewardDto[]
+  /** The categories whose drinks feed this club. */
+  categoryIds: string[]
+  /** Customers with at least one stamp entry on this club. */
+  memberCount: number
+}
+
+export interface LoyaltyClubRewardRequest {
+  slot: number
+  type: LoyaltyRewardType
+  percent: number | null
+  addOnId: string | null
+  label: string
+}
+
+/** Rewards replace the club's in full, matched by slot; categoryIds replaces which categories feed it. */
+export interface LoyaltyClubRequest {
+  name: string
+  style: LoyaltyClubStyle
+  slotCount: number
+  isActive: boolean
+  sortOrder: number
+  rewards: LoyaltyClubRewardRequest[]
+  categoryIds: string[] | null
+}
+
+export type RewardState = 'locked' | 'available' | 'used'
+
+/** One reward on a customer's card; earlier cards' rewards appear only while still available. */
+export interface CustomerRewardDto {
+  rewardId: string
+  slot: number
+  label: string
+  type: LoyaltyRewardType
+  state: RewardState
+  /** Which pass round the card, 0-based. */
+  cycle: number
+  redemptionId: string | null
+  orderId: string | null
+}
+
+/** A customer's place on one active club's card, derived from the ledger. */
+export interface CustomerClubDto {
+  clubId: string
+  name: string
+  style: LoyaltyClubStyle
+  slotCount: number
+  /** Slots filled on the current card. */
+  position: number
+  cycle: number
+  rewards: CustomerRewardDto[]
+  /** Drinks of this club on unpaid orders: they stamp once paid. */
+  pendingDrinks: number
+}
+
+export interface LoyaltyRedemptionRequest {
+  clubId: string
+  rewardId: string
+  cycle: number
+  note: string | null
+}
 
 export type LoyaltyReason = 'Earned' | 'Redeemed' | 'Adjustment'
 
@@ -352,8 +462,8 @@ export interface CustomerSummaryDto {
   isActive: boolean
   /** The tab: orders this customer pays for, minus payments. */
   outstandingBalance: number
-  loyaltyBalance: number
-  availableRewards: number
+  /** One card per active loyalty club. */
+  clubs: CustomerClubDto[]
   lastOrderOn: string | null
 }
 
@@ -370,6 +480,8 @@ export interface CustomerRequest {
 
 export interface LoyaltyEntryDto {
   id: string
+  clubId: string
+  clubName: string
   delta: number
   reason: LoyaltyReason
   orderId: string | null
@@ -378,6 +490,7 @@ export interface LoyaltyEntryDto {
 }
 
 export interface LoyaltyAdjustRequest {
+  clubId: string
   delta: number
   notes: string | null
 }
@@ -410,8 +523,18 @@ export interface OrderItemDto {
   menuVersionName: string
   quantity: number
   unitPrice: number
+  /** After the line's reward. */
   lineTotal: number
   addOns: OrderItemAddOnDto[]
+  reward: OrderLineRewardDto | null
+}
+
+export interface OrderLineRewardDto {
+  rewardId: string
+  label: string
+  type: LoyaltyRewardType
+  /** ₱0 for an add-on given free that the line didn't carry. */
+  amountOff: number
 }
 
 export interface PaymentDto {
@@ -448,6 +571,8 @@ export interface OrderLineRequest {
   menuVersionItemId: string
   quantity: number
   addOnIds: string[]
+  /** A loyalty reward on one unit; it must be available to the drinker on the drink's club. */
+  rewardId?: string | null
 }
 
 export interface OrderRequest {

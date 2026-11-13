@@ -4,6 +4,7 @@ import { PageSuspense } from '../components/layout/PageSuspense'
 import { RequireAuth } from '../features/auth/RequireAuth'
 import {
   AddOnsPage,
+  LoyaltyCardsPage,
   AnnouncementsPage,
   CategoriesPage,
   CustomerDetailPage,
@@ -66,6 +67,7 @@ export const routes: RouteObject[] = [
                 handle: { title: 'Categories' },
               },
               { path: '/menu/add-ons', element: <AddOnsPage />, handle: { title: 'Add-ons' } },
+              { path: '/menu/loyalty-cards', element: <LoyaltyCardsPage />, handle: { title: 'Loyalty cards' } },
               { path: '/site/packages', element: <PackagesPage />, handle: { title: 'Packages' } },
               { path: '/site/events', element: <EventsPage />, handle: { title: 'Events' } },
               {

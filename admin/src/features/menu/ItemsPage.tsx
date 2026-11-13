@@ -15,6 +15,8 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { SkeletonRows, Table, Td, Th } from '../../components/ui/Table'
 import { useToastedAction } from '../../features/toasts/useToastedAction'
 import type { MenuItemDto } from '../../types/api'
+import { useListClubsQuery } from '../../api/loyaltyApi'
+import { fromLoyaltyChoice } from '../../lib/loyalty'
 import { ItemForm } from './ItemForm'
 import { PhotoThumbnail } from './PhotoThumbnail'
 import type { ItemValues } from './schemas'
@@ -26,6 +28,7 @@ function toRequest(values: ItemValues) {
     description: values.description === '' ? null : values.description,
     categoryId: values.categoryId,
     photoUrl: values.photoUrl,
+    ...fromLoyaltyChoice(values.loyalty),
   }
 }
 
@@ -33,6 +36,7 @@ export function ItemsPage() {
   const [includeArchived, setIncludeArchived] = useState(false)
   const { data: items, isLoading, isFetching } = useListItemsQuery({ includeArchived })
   const { data: categories } = useListCategoriesQuery()
+  const { data: clubs = [] } = useListClubsQuery()
 
   const [createItem, { isLoading: isCreating }] = useCreateItemMutation()
   const [updateItem, { isLoading: isUpdating }] = useUpdateItemMutation()
@@ -95,7 +99,14 @@ export function ItemsPage() {
                     <p className="mt-0.5 line-clamp-1 text-xs text-muted">{item.description}</p>
                   )}
                 </Td>
-                <Td className="text-muted">{item.categoryName}</Td>
+                <Td className="text-muted">
+                  {item.categoryName}
+                  {item.loyaltyMode !== 'Inherit' && (
+                    <span className="block text-xs">
+                      Card: {item.loyaltyMode === 'None' ? 'none' : (clubs.find((c) => c.id === item.loyaltyClubId)?.name ?? '?')}
+                    </span>
+                  )}
+                </Td>
                 <Td>
                   <Badge tone={item.isArchived ? 'neutral' : 'success'}>
                     {item.isArchived ? 'Archived' : 'Active'}
@@ -151,6 +162,7 @@ export function ItemsPage() {
           open
           item={editing}
           categories={categories ?? []}
+          clubs={clubs}
           saving={isCreating || isUpdating}
           onClose={() => setFormOpen(false)}
           onSubmit={async (values) => {

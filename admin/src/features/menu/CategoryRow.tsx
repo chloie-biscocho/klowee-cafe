@@ -3,7 +3,7 @@ import { useForm, type UseFormRegisterReturn } from 'react-hook-form'
 import type { z } from 'zod'
 import { Button } from '../../components/ui/Button'
 import { Td } from '../../components/ui/Table'
-import type { MenuCategoryDto } from '../../types/api'
+import type { LoyaltyClubDto, MenuCategoryDto } from '../../types/api'
 import { categorySchema, type CategoryValues } from './schemas'
 
 type CategoryInput = z.input<typeof categorySchema>
@@ -14,18 +14,25 @@ const cellInput =
 /** The editing state of an existing row: the same three columns, as inputs. */
 export function CategoryRow({
   category,
+  clubs,
   saving,
   onSave,
   onCancel,
 }: {
   category: MenuCategoryDto
+  clubs: LoyaltyClubDto[]
   saving: boolean
   onSave: (values: CategoryValues) => void
   onCancel: () => void
 }) {
   const { register, handleSubmit, formState } = useForm<CategoryInput, unknown, CategoryValues>({
     resolver: zodResolver(categorySchema),
-    defaultValues: { name: category.name, sortOrder: category.sortOrder, description: category.description ?? '' },
+    defaultValues: {
+      name: category.name,
+      sortOrder: category.sortOrder,
+      description: category.description ?? '',
+      loyaltyClubId: category.loyaltyClubId ?? '',
+    },
   })
 
   return (
@@ -41,6 +48,9 @@ export function CategoryRow({
           <p className="mt-1 text-xs text-danger">{formState.errors.name.message}</p>
         )}
         <DescriptionInput label="Category description" register={register('description')} error={formState.errors.description?.message} />
+      </Td>
+      <Td>
+        <ClubSelect label="Loyalty card" clubs={clubs} register={register('loyaltyClubId')} />
       </Td>
       <Td>
         <input
@@ -66,22 +76,24 @@ export function CategoryRow({
 
 /** The always-present last row, so adding a category takes no modal. */
 export function NewCategoryRow({
+  clubs,
   saving,
   nextSortOrder,
   onCreate,
 }: {
+  clubs: LoyaltyClubDto[]
   saving: boolean
   nextSortOrder: number
   onCreate: (values: CategoryValues) => Promise<{ ok: boolean }>
 }) {
   const { register, handleSubmit, reset, formState } = useForm<CategoryInput, unknown, CategoryValues>({
     resolver: zodResolver(categorySchema),
-    defaultValues: { name: '', sortOrder: nextSortOrder, description: '' },
+    defaultValues: { name: '', sortOrder: nextSortOrder, description: '', loyaltyClubId: '' },
   })
 
   const submit = handleSubmit(async (values) => {
     const created = await onCreate(values)
-    if (created.ok) reset({ name: '', sortOrder: values.sortOrder + 10, description: '' })
+    if (created.ok) reset({ name: '', sortOrder: values.sortOrder + 10, description: '', loyaltyClubId: '' })
   })
 
   return (
@@ -99,6 +111,9 @@ export function NewCategoryRow({
         <DescriptionInput label="New category description" register={register('description')} error={formState.errors.description?.message} />
       </Td>
       <Td>
+        <ClubSelect label="New category loyalty card" clubs={clubs} register={register('loyaltyClubId')} />
+      </Td>
+      <Td>
         <input
           aria-label="New category sort order"
           type="number"
@@ -112,6 +127,21 @@ export function NewCategoryRow({
         </Button>
       </Td>
     </tr>
+  )
+}
+
+/** Which loyalty card the category's drinks stamp (decision 020); items can override it. */
+function ClubSelect({ label, clubs, register }: { label: string; clubs: LoyaltyClubDto[]; register: UseFormRegisterReturn }) {
+  return (
+    <select aria-label={label} className={cellInput} {...register}>
+      <option value="">No card</option>
+      {clubs.map((club) => (
+        <option key={club.id} value={club.id}>
+          {club.name}
+          {club.isActive ? '' : ' (not active)'}
+        </option>
+      ))}
+    </select>
   )
 }
 

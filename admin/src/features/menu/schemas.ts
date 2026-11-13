@@ -20,6 +20,8 @@ export const categorySchema = z.object({
     .trim()
     .max(200, 'Keep the description under 200 characters.')
     .transform((value) => (value === '' ? null : value)),
+  /** The loyalty card this category's drinks stamp; '' (none) is sent as null. */
+  loyaltyClubId: z.string().transform((value) => (value === '' ? null : value)),
 })
 export type CategoryValues = z.infer<typeof categorySchema>
 
@@ -29,6 +31,8 @@ export const itemSchema = z.object({
   categoryId: z.uuid('Pick a category.'),
   /** Set by `ImageUpload` to the URL the API returned; `null` means no photo. */
   photoUrl: z.url().nullable(),
+  /** 'inherit' (the category's card), 'none', or a club id: see lib/loyalty.ts. */
+  loyalty: z.string(),
 })
 export type ItemValues = z.infer<typeof itemSchema>
 

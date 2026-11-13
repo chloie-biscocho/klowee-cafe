@@ -26,6 +26,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/menu/items', label: 'Items' },
       { to: '/menu/categories', label: 'Categories' },
       { to: '/menu/add-ons', label: 'Add-ons' },
+      { to: '/menu/loyalty-cards', label: 'Loyalty cards' },
     ],
   },
   {

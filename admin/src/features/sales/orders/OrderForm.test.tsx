@@ -37,22 +37,65 @@ describe('Order form', () => {
     expect(total()).toBe('₱470')
   })
 
-  it('offers a free drink only to a customer with a reward, and frees the cheapest one', async () => {
+  it('offers a reward only where the customer has one for the drink’s card, and it changes the total', async () => {
     const { user } = renderApp('/sales/orders/new', signedIn)
     await chooseCustomer(user, 'Kee')
-    expect(screen.getByRole('radio', { name: 'Free drink' })).toBeDisabled()
-
-    const box = screen.getByRole('combobox', { name: 'Customer' })
-    await user.clear(box)
-    await user.type(box, 'Prince{Enter}')
-    const free = screen.getByRole('radio', { name: 'Free drink' })
-    expect(free).toBeEnabled()
+    expect(screen.queryByRole('radio', { name: 'Free drink' })).not.toBeInTheDocument()   // no order-level free drink any more
+    expect(screen.getByText(/Coffee 4\/12 · 1 reward/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'One more Spanish Latte' }))
+    await user.click(screen.getByRole('button', { name: 'One more Strawberry Milk' }))
+    expect(total()).toBe('₱290')
+
+    // Kee has the 50% off ready; a Coffee Club drink can carry it, Strawberry Milk (no card) can't.
+    const latte = within(screen.getByRole('listitem', { name: 'Spanish Latte' }))
+    expect(latte.getAllByRole('switch').map((s) => s.textContent)).toEqual(['★ 50% off, Coffee Club'])
+    expect(within(screen.getByRole('listitem', { name: 'Strawberry Milk' })).queryByRole('switch')).not.toBeInTheDocument()
+
+    await user.click(latte.getByRole('switch', { name: /50% off/ }))
+    expect(total()).toBe('₱215')                       // half of the 150 latte off
+    expect(screen.getByText('★ 50% OFF −₱75')).toBeInTheDocument()
+
+    // Off again: back to full price.
+    await user.click(latte.getByRole('switch', { name: /50% off/ }))
+    expect(total()).toBe('₱290')
+  })
+
+  it('lets one copy of a reward go on one line only, and frees only the drink of a free drink', async () => {
+    const { user } = renderApp('/sales/orders/new', signedIn)
+    await chooseCustomer(user, 'Prince')
+    await user.click(screen.getByRole('button', { name: 'One more Spanish Latte' }))
     await user.click(screen.getByRole('button', { name: 'One more Americano' }))
-    await user.click(free)
-    expect(screen.getByText('Free drink: Americano')).toBeInTheDocument()
-    expect(total()).toBe('₱150')
+    const latte = within(screen.getByRole('listitem', { name: 'Spanish Latte' }))
+    const americano = within(screen.getByRole('listitem', { name: 'Americano' }))
+    await user.click(latte.getByLabelText(/Oat milk/))
+    expect(total()).toBe('₱290')
+
+    // Prince's 50% off is used; the extra shot and the free drink are ready.
+    expect(latte.getAllByRole('switch').map((s) => s.textContent)).toEqual(['★ extra shot, Coffee Club', '★ free drink, Coffee Club'])
+
+    await user.click(latte.getByRole('switch', { name: /free drink/ }))
+    expect(total()).toBe('₱140')                        // the latte free, its oat milk (30) still charged
+    expect(americano.getByRole('switch', { name: /free drink/ })).toBeDisabled()
+    expect(americano.getByRole('switch', { name: /extra shot/ })).toBeEnabled()
+  })
+
+  it('sends the reward on its line', async () => {
+    let sent: OrderRequest | null = null
+    server.use(
+      http.post(`${API}/orders`, async ({ request }) => {
+        sent = (await request.json()) as OrderRequest
+        return HttpResponse.json({ ...unpaidOrder, id: 'o-new' }, { status: 201 })
+      }),
+    )
+    const { user, router } = renderApp('/sales/orders/new', signedIn)
+    await chooseCustomer(user, 'Kee')
+    await user.click(screen.getByRole('button', { name: 'One more Americano' }))
+    await user.click(within(screen.getByRole('listitem', { name: 'Americano' })).getByRole('switch', { name: /50% off/ }))
+    await user.click(screen.getByRole('button', { name: 'Save order' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/sales/orders/o-new'))
+    expect(sent!.items).toEqual([{ menuVersionItemId: officeMenu.items[0]!.id, quantity: 1, addOnIds: [], rewardId: 'r-half' }])
   })
 
   it('sends the order the screen shows', async () => {
@@ -79,7 +122,7 @@ describe('Order form', () => {
       payerId: null,
       discountType: 'Percent',
       discountValue: 10,
-      items: [{ menuVersionItemId: officeMenu.items[1]!.id, quantity: 2, addOnIds: [oatMilk.id] }],
+      items: [{ menuVersionItemId: officeMenu.items[1]!.id, quantity: 2, addOnIds: [oatMilk.id], rewardId: null }],
     })
     expect(sent!.orderedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })

@@ -23,6 +23,9 @@ export const ItemsPage = lazy(() =>
 export const CategoriesPage = lazy(() =>
   import('../features/menu/CategoriesPage').then((m) => ({ default: m.CategoriesPage })),
 )
+export const LoyaltyCardsPage = lazy(() =>
+  import('../features/loyalty/LoyaltyCardsPage').then((m) => ({ default: m.LoyaltyCardsPage })),
+)
 export const AddOnsPage = lazy(() =>
   import('../features/menu/AddOnsPage').then((m) => ({ default: m.AddOnsPage })),
 )

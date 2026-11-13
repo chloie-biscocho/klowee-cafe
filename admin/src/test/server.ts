@@ -12,7 +12,20 @@ import {
   siteSettings,
   upcomingEvent,
 } from './fixtures'
-import { keeDetail, kee, monthly, oatMilk, officeMenu, outstanding, prince, summary, unpaidOrder } from './salesFixtures'
+import {
+  coffeeClub,
+  extraShot,
+  keeDetail,
+  kee,
+  matchaClub,
+  monthly,
+  oatMilk,
+  officeMenu,
+  outstanding,
+  prince,
+  summary,
+  unpaidOrder,
+} from './salesFixtures'
 
 /**
  * The happy path for every endpoint a screen touches on load. A test that cares
@@ -21,7 +34,8 @@ import { keeDetail, kee, monthly, oatMilk, officeMenu, outstanding, prince, summ
 export const handlers = [
   http.get(`${API}/auth/me`, () => HttpResponse.json(owner)),
   http.get(`${API}/menu/categories`, () => HttpResponse.json([])),
-  http.get(`${API}/menu/add-ons`, () => HttpResponse.json([oatMilk])),
+  http.get(`${API}/menu/add-ons`, () => HttpResponse.json([oatMilk, extraShot])),
+  http.get(`${API}/loyalty/clubs`, () => HttpResponse.json([coffeeClub, matchaClub])),
   http.get(`${API}/menu/items`, () => HttpResponse.json(menuItems)),
   http.get(`${API}/menu/versions`, () => HttpResponse.json([draftVersion, publishedVersion])),
   http.get(`${API}/menu/versions/current`, () => HttpResponse.json(officeMenu)),

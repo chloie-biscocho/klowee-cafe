@@ -1,13 +1,68 @@
 import type {
   AddOnDto,
+  CustomerClubDto,
   CustomerDetailDto,
+  CustomerRewardDto,
   CustomerSummaryDto,
+  LoyaltyClubDto,
   MenuVersionDetailDto,
   MonthlyRowDto,
   OrderDetailDto,
   OutstandingRowDto,
   SummaryReportDto,
 } from '../types/api'
+
+export const extraShot: AddOnDto = { id: 'a0000000-0000-0000-0000-000000000002', name: 'Extra shot', price: 25, isActive: true }
+
+/** The Coffee Club as the migration creates it: 12 slots, 50% off on 5, extra shot on 8, free drink on 12. */
+export const coffeeClub: LoyaltyClubDto = {
+  id: 'c0ffee00-0000-4000-8000-000000000001',
+  name: 'The Coffee Club',
+  style: 'Coffee',
+  slotCount: 12,
+  isActive: true,
+  activatedOn: null,
+  sortOrder: 1,
+  rewards: [
+    { id: 'r-half', slot: 5, type: 'PercentOff', percent: 50, addOnId: null, addOnName: null, label: '50% OFF' },
+    { id: 'r-shot', slot: 8, type: 'FreeAddOn', percent: null, addOnId: 'a0000000-0000-0000-0000-000000000002', addOnName: 'Extra shot', label: 'EXTRA SHOT' },
+    { id: 'r-free', slot: 12, type: 'FreeDrink', percent: null, addOnId: null, addOnName: null, label: 'FREE DRINK' },
+  ],
+  categoryIds: ['cat-coffee'],
+  memberCount: 2,
+}
+
+export const matchaClub: LoyaltyClubDto = {
+  ...coffeeClub,
+  id: '3a7c4a00-0000-4000-8000-000000000002',
+  name: 'The Matcha Club',
+  style: 'Matcha',
+  isActive: false,
+  sortOrder: 2,
+  categoryIds: [],
+  memberCount: 0,
+}
+
+/** A customer's Coffee Club card with `position` stamps on card 1, and each reward's state. */
+export const coffeeCard = (position: number, states: CustomerRewardDto['state'][], pendingDrinks = 0): CustomerClubDto => ({
+  clubId: coffeeClub.id,
+  name: coffeeClub.name,
+  style: 'Coffee',
+  slotCount: 12,
+  position,
+  cycle: 0,
+  rewards: coffeeClub.rewards.map((r, i) => ({
+    rewardId: r.id,
+    slot: r.slot,
+    label: r.label,
+    type: r.type,
+    state: states[i]!,
+    cycle: 0,
+    redemptionId: states[i] === 'used' ? `red-${r.id}` : null,
+    orderId: null,
+  })),
+  pendingDrinks,
+})
 
 export const kee: CustomerSummaryDto = {
   id: 'c0000000-0000-0000-0000-000000000001',
@@ -16,8 +71,8 @@ export const kee: CustomerSummaryDto = {
   notes: null,
   isActive: true,
   outstandingBalance: 320,
-  loyaltyBalance: 4,
-  availableRewards: 0,
+  // Four stamps: the 50% off on slot 5 is ready.
+  clubs: [coffeeCard(4, ['available', 'locked', 'locked'], 2)],
   lastOrderOn: '2026-11-02',
 }
 
@@ -28,8 +83,8 @@ export const prince: CustomerSummaryDto = {
   notes: null,
   isActive: true,
   outstandingBalance: 0,
-  loyaltyBalance: 12,
-  availableRewards: 1,
+  // Eleven stamps, 50% off used: the extra shot and the free drink are ready.
+  clubs: [coffeeCard(11, ['used', 'available', 'available'])],
   lastOrderOn: '2026-11-07',
 }
 
@@ -45,9 +100,9 @@ export const officeMenu: MenuVersionDetailDto = {
   isPublished: true,
   notes: null,
   items: [
-    { id: 'vi000000-0000-0000-0000-000000000001', menuItemId: 'm1', name: 'Americano', categoryName: 'Coffee', price: 110, isAvailable: true, isFeatured: false, sortOrder: 0 },
-    { id: 'vi000000-0000-0000-0000-000000000002', menuItemId: 'm2', name: 'Spanish Latte', categoryName: 'Coffee', price: 150, isAvailable: true, isFeatured: true, sortOrder: 1 },
-    { id: 'vi000000-0000-0000-0000-000000000003', menuItemId: 'm3', name: 'Strawberry Milk', categoryName: 'Non-Coffee', price: 140, isAvailable: true, isFeatured: false, sortOrder: 2 },
+    { id: 'vi000000-0000-0000-0000-000000000001', menuItemId: 'm1', name: 'Americano', categoryName: 'Coffee', price: 110, isAvailable: true, isFeatured: false, sortOrder: 0, loyaltyClubId: coffeeClub.id },
+    { id: 'vi000000-0000-0000-0000-000000000002', menuItemId: 'm2', name: 'Spanish Latte', categoryName: 'Coffee', price: 150, isAvailable: true, isFeatured: true, sortOrder: 1, loyaltyClubId: coffeeClub.id },
+    { id: 'vi000000-0000-0000-0000-000000000003', menuItemId: 'm3', name: 'Strawberry Milk', categoryName: 'Non-Coffee', price: 140, isAvailable: true, isFeatured: false, sortOrder: 2, loyaltyClubId: null },
   ],
 } as MenuVersionDetailDto
 
@@ -77,6 +132,7 @@ export const unpaidOrder: OrderDetailDto = {
       unitPrice: 160,
       lineTotal: 190,
       addOns: [{ id: 'oa1', addOnId: oatMilk.id, name: 'Oat milk', unitPrice: 30 }],
+      reward: null,
     },
   ],
   payments: [],

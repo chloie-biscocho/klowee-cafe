@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router'
+import { useListClubsQuery } from '../../../api/loyaltyApi'
 import { useListAddOnsQuery } from '../../../api/menuApi'
 import { useGetCurrentOfficeMenuQuery, useGetOrderQuery, useListCustomersQuery } from '../../../api/salesApi'
 import { Card } from '../../../components/ui/Card'
@@ -19,8 +20,9 @@ export function OrderFormPage() {
   const order = useGetOrderQuery(id ?? '', { skip: !id })
   const { data: addOns } = useListAddOnsQuery()
   const { data: customers } = useListCustomersQuery({ includeInactive: true })
+  const { data: clubs } = useListClubsQuery()
 
-  if (menu.isLoading || order.isLoading || !addOns || !customers) {
+  if (menu.isLoading || order.isLoading || !addOns || !customers || !clubs) {
     return <Spinner className="size-6 text-muted" />
   }
 
@@ -61,9 +63,10 @@ export function OrderFormPage() {
       key={order.data?.id ?? 'new'}
       initial={order.data ? draftFromOrder(order.data) : emptyDraft(todayInManila())}
       order={order.data}
-      items={pickerItems(menu.data, order.data)}
+      items={pickerItems(menu.data, order.data, clubs)}
       addOns={addOns}
       customers={customers}
+      clubs={clubs}
     />
   )
 }

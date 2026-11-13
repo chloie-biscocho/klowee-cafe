@@ -4,22 +4,19 @@ const OPTIONS: { value: DiscountType; label: string }[] = [
   { value: 'None', label: 'None' },
   { value: 'Percent', label: 'Percent' },
   { value: 'Fixed', label: 'Fixed' },
-  { value: 'LoyaltyFree', label: 'Free drink' },
 ]
 
-/** None / Percent / Fixed / Free drink. Free drink needs an available reward. */
+/**
+ * None / Percent / Fixed, on the whole order. Loyalty rewards are not here:
+ * they sit on a drink's line (decision 020) and are priced before this.
+ */
 export function DiscountControl({
   type,
   value,
-  freeAllowed,
-  freeReason,
   onChange,
 }: {
   type: DiscountType
   value: string
-  freeAllowed: boolean
-  /** Why Free drink is off, shown as its tooltip. */
-  freeReason: string
   onChange: (type: DiscountType, value: string) => void
 }) {
   return (
@@ -30,15 +27,12 @@ export function DiscountControl({
       <div className="flex flex-wrap items-center gap-3">
         <div role="radiogroup" aria-labelledby="discount-label" className="inline-flex rounded-md border border-line p-0.5">
           {OPTIONS.map((option) => {
-            const disabled = option.value === 'LoyaltyFree' && !freeAllowed
             return (
               <button
                 key={option.value}
                 type="button"
                 role="radio"
                 aria-checked={type === option.value}
-                disabled={disabled}
-                title={disabled ? freeReason : undefined}
                 className={`rounded px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${
                   type === option.value ? 'bg-accent text-white' : 'text-ink hover:bg-canvas'
                 }`}

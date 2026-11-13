@@ -65,6 +65,7 @@ export const draftVersionDetail: MenuVersionDetailDto = {
       isAvailable: true,
       isFeatured: false,
       sortOrder: 0,
+      loyaltyClubId: null,
     },
     {
       id: 'bbbbbbbb-0000-0000-0000-000000000002',
@@ -75,6 +76,7 @@ export const draftVersionDetail: MenuVersionDetailDto = {
       isAvailable: true,
       isFeatured: true,
       sortOrder: 1,
+      loyaltyClubId: null,
     },
   ],
 }
@@ -88,6 +90,8 @@ export const menuItems: MenuItemDto[] = [
     categoryName: 'Coffee',
     photoUrl: null,
     isArchived: false,
+    loyaltyMode: 'Inherit',
+    loyaltyClubId: null,
   },
 ]
 

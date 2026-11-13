@@ -7,9 +7,9 @@ import { server } from '../../test/server'
 import type { MenuCategoryDto, MenuItemDto } from '../../types/api'
 import { archivedOnly } from './categoryGroups'
 
-const coffee: MenuCategoryDto = { id: 'cat-coffee', name: 'Coffee', sortOrder: 1, description: null }
-const fizz: MenuCategoryDto = { id: 'cat-fizz', name: 'Fruit soda', sortOrder: 4, description: null }
-const empty: MenuCategoryDto = { id: 'cat-empty', name: 'Seasonal', sortOrder: 5, description: null }
+const coffee: MenuCategoryDto = { id: 'cat-coffee', name: 'Coffee', sortOrder: 1, description: null, loyaltyClubId: null }
+const fizz: MenuCategoryDto = { id: 'cat-fizz', name: 'Fruit soda', sortOrder: 4, description: null, loyaltyClubId: null }
+const empty: MenuCategoryDto = { id: 'cat-empty', name: 'Seasonal', sortOrder: 5, description: null, loyaltyClubId: null }
 const item = (name: string, categoryId: string, isArchived: boolean): MenuItemDto => ({
   ...menuItems[0]!, id: name, name, categoryId, isArchived,
 })
@@ -35,7 +35,7 @@ describe('Categories', () => {
   })
 
   it('sends a new category’s description, and shows a saved one under the name', async () => {
-    const matcha: MenuCategoryDto = { id: 'cat-matcha', name: 'Houseblend Matcha', sortOrder: 6, description: 'oat milk + ceremonial matcha' }
+    const matcha: MenuCategoryDto = { id: 'cat-matcha', name: 'Houseblend Matcha', sortOrder: 6, description: 'oat milk + ceremonial matcha', loyaltyClubId: null }
     let sent: unknown = null
     server.use(
       http.get(`${API}/menu/categories`, () => HttpResponse.json([coffee, matcha])),
@@ -53,7 +53,9 @@ describe('Categories', () => {
     await user.type(screen.getByLabelText('New category description'), '  premium okumidori ')
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
-    await waitFor(() => expect(sent).toEqual({ name: 'Okumidori Matcha', sortOrder: 16, description: 'premium okumidori' }))
+    await waitFor(() =>
+      expect(sent).toEqual({ name: 'Okumidori Matcha', sortOrder: 16, description: 'premium okumidori', loyaltyClubId: null }),
+    )
   })
 
   it('sends a blank description as null', async () => {
@@ -62,7 +64,7 @@ describe('Categories', () => {
       http.get(`${API}/menu/categories`, () => HttpResponse.json([coffee])),
       http.post(`${API}/menu/categories`, async ({ request }) => {
         sent = await request.json()
-        return HttpResponse.json({ id: 'cat-new', name: 'Refreshers', sortOrder: 11, description: null })
+        return HttpResponse.json({ id: 'cat-new', name: 'Refreshers', sortOrder: 11, description: null, loyaltyClubId: null })
       }),
     )
     const { user } = renderApp('/menu/categories', signedIn)
@@ -70,6 +72,6 @@ describe('Categories', () => {
     await user.type(await screen.findByLabelText('New category name'), 'Refreshers')
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
-    await waitFor(() => expect(sent).toEqual({ name: 'Refreshers', sortOrder: 11, description: null }))
+    await waitFor(() => expect(sent).toEqual({ name: 'Refreshers', sortOrder: 11, description: null, loyaltyClubId: null }))
   })
 })

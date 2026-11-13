@@ -6,6 +6,7 @@ import {
   useListItemsQuery,
   useUpdateCategoryMutation,
 } from '../../api/menuApi'
+import { useListClubsQuery } from '../../api/loyaltyApi'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -19,6 +20,8 @@ import { CategoryRow, NewCategoryRow } from './CategoryRow'
 export function CategoriesPage() {
   const { data: categories, isLoading } = useListCategoriesQuery()
   const { data: items } = useListItemsQuery({ includeArchived: true })
+  const { data: clubs = [] } = useListClubsQuery()
+  const clubName = (id: string | null) => clubs.find((club) => club.id === id)?.name
   const retired = archivedOnly(items ?? [])
   const [createCategory, { isLoading: isCreating }] = useCreateCategoryMutation()
   const [updateCategory, { isLoading: isUpdating }] = useUpdateCategoryMutation()
@@ -33,26 +36,29 @@ export function CategoriesPage() {
   return (
     <>
       <p className="mb-4 max-w-prose text-sm text-muted">
-        Categories group menu items and set the order they appear in on a menu.
+        Categories group menu items and set the order they appear in on a menu. A category's loyalty card is
+        the one its paid drinks stamp; a single drink can differ under Menu → Items.
       </p>
 
       <Card>
         <Table>
           <thead>
             <tr>
-              <Th className="w-[55%]">Name</Th>
-              <Th className="w-[20%]">Sort order</Th>
+              <Th className="w-[45%]">Name</Th>
+              <Th className="w-[20%]">Loyalty card</Th>
+              <Th className="w-[12%]">Sort order</Th>
               <Th className="text-right">Actions</Th>
             </tr>
           </thead>
           <tbody>
-            {isLoading && <SkeletonRows columns={3} />}
+            {isLoading && <SkeletonRows columns={4} />}
 
             {categories?.map((category) =>
               editingId === category.id ? (
                 <CategoryRow
                   key={category.id}
                   category={category}
+                  clubs={clubs}
                   saving={isUpdating}
                   onCancel={() => setEditingId(null)}
                   onSave={async (values) => {
@@ -72,6 +78,7 @@ export function CategoriesPage() {
                     )}
                     {category.description && <p className="mt-0.5 text-xs font-normal text-muted">{category.description}</p>}
                   </Td>
+                  <Td className="text-muted">{clubName(category.loyaltyClubId) ?? '—'}</Td>
                   <Td className="text-muted">{category.sortOrder}</Td>
                   <Td className="text-right">
                     <div className="flex justify-end gap-1.5">
@@ -93,6 +100,7 @@ export function CategoriesPage() {
 
             {!isLoading && (
               <NewCategoryRow
+                clubs={clubs}
                 saving={isCreating}
                 nextSortOrder={(categories?.at(-1)?.sortOrder ?? -10) + 10}
                 onCreate={(values) => run(createCategory(values), 'Category added.')}

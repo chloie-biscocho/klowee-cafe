@@ -13,6 +13,7 @@ export function OrderSummaryPanel({
   lines,
   pricing,
   addOns,
+  rewardLabel = () => undefined,
   problem,
   saving,
   onSave,
@@ -21,6 +22,8 @@ export function OrderSummaryPanel({
   lines: PreviewLine[]
   pricing: PricingResult
   addOns: AddOnDto[]
+  /** The label printed on a reward's slot ("50% OFF"). */
+  rewardLabel?: (rewardId: string) => string | undefined
   problem: string | null
   saving: boolean
   onSave: () => void
@@ -43,6 +46,12 @@ export function OrderSummaryPanel({
                 {line.quantity > 1 && <span className="text-muted"> ×{line.quantity}</span>}
                 {line.addOnIds.length > 0 && (
                   <span className="block text-xs text-muted">+ {line.addOnIds.map(addOnName).join(', ')}</span>
+                )}
+                {line.rewardId && (
+                  <span className="block text-xs text-success">
+                    ★ {rewardLabel(line.rewardId) ?? 'Reward'}
+                    {(pricing.rewardAmounts[index] ?? 0) > 0 ? ` −${formatPeso(pricing.rewardAmounts[index]!)}` : ' (free)'}
+                  </span>
                 )}
               </span>
               <span className="tabular-nums">{formatPeso(pricing.lineTotals[index] ?? 0)}</span>

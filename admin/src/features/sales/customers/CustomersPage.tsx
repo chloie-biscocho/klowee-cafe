@@ -13,6 +13,7 @@ import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { SkeletonRows, Table, Td, Th } from '../../../components/ui/Table'
 import { formatDate, formatPeso } from '../../../lib/format'
+import { availableRewards, clubLabel } from '../../../lib/loyalty'
 import type { CustomerSummaryDto } from '../../../types/api'
 import { useToastedAction } from '../../toasts/useToastedAction'
 import { blankToNull, type CustomerValues } from '../schemas'
@@ -34,6 +35,8 @@ export function CustomersPage() {
   const [pendingDelete, setPendingDelete] = useState<CustomerSummaryDto | null>(null)
 
   const term = search.trim().toLowerCase()
+  // Every customer carries the same active clubs; one column each.
+  const clubColumns = customers?.find((c) => c.clubs.length > 0)?.clubs ?? []
   const rows = (customers ?? []).filter(
     (c) => term === '' || `${c.name} ${c.nickname ?? ''}`.toLowerCase().includes(term),
   )
@@ -79,14 +82,15 @@ export function CustomersPage() {
             <tr>
               <Th>Name</Th>
               <Th className="text-right">Tab</Th>
-              <Th className="text-right">Stamps</Th>
-              <Th className="text-right">Rewards</Th>
+              {clubColumns.map((club) => (
+                <Th key={club.clubId}>{clubLabel(club.name)}</Th>
+              ))}
               <Th>Last order</Th>
               <Th className="text-right">Actions</Th>
             </tr>
           </thead>
           <tbody>
-            {isLoading && <SkeletonRows columns={6} />}
+            {isLoading && <SkeletonRows columns={4 + Math.max(1, clubColumns.length)} />}
             {rows.map((customer) => (
               <tr
                 key={customer.id}
@@ -101,8 +105,29 @@ export function CustomersPage() {
                 <Td className={`text-right ${customer.outstandingBalance > 0 ? 'font-semibold' : 'text-muted'}`}>
                   {formatPeso(customer.outstandingBalance)}
                 </Td>
-                <Td className="text-right">{customer.loyaltyBalance}</Td>
-                <Td className="text-right">{customer.availableRewards || '—'}</Td>
+                {clubColumns.map((column) => {
+                  const club = customer.clubs.find((c) => c.clubId === column.clubId)
+                  const ready = club ? availableRewards(club).length : 0
+                  return (
+                    <Td key={column.clubId} className="whitespace-nowrap">
+                      {club ? (
+                        <>
+                          <span className="tabular-nums">
+                            {club.position}/{club.slotCount}
+                          </span>
+                          {ready > 0 && (
+                            <span className="text-success">
+                              {' '}
+                              · {ready} reward{ready === 1 ? '' : 's'}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        '—'
+                      )}
+                    </Td>
+                  )
+                })}
                 <Td className="text-muted">{customer.lastOrderOn ? formatDate(customer.lastOrderOn) : '—'}</Td>
                 <Td className="text-right" onClick={(event) => event.stopPropagation()}>
                   <div className="flex justify-end gap-1.5">

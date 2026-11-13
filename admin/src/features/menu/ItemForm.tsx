@@ -6,13 +6,15 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Select } from '../../components/ui/Select'
 import { Textarea } from '../../components/ui/Textarea'
-import type { MenuCategoryDto, MenuItemDto } from '../../types/api'
+import { loyaltyChoice } from '../../lib/loyalty'
+import type { LoyaltyClubDto, MenuCategoryDto, MenuItemDto } from '../../types/api'
 import { itemSchema, type ItemValues } from './schemas'
 
 export function ItemForm({
   open,
   item,
   categories,
+  clubs,
   saving,
   onClose,
   onSubmit,
@@ -21,6 +23,7 @@ export function ItemForm({
   /** `null` means "new item". */
   item: MenuItemDto | null
   categories: MenuCategoryDto[]
+  clubs: LoyaltyClubDto[]
   saving: boolean
   onClose: () => void
   onSubmit: (values: ItemValues) => void
@@ -32,6 +35,7 @@ export function ItemForm({
       description: item?.description ?? '',
       categoryId: item?.categoryId ?? (categories[0]?.id ?? ''),
       photoUrl: item?.photoUrl ?? null,
+      loyalty: loyaltyChoice(item?.loyaltyMode ?? 'Inherit', item?.loyaltyClubId ?? null),
     },
   })
 
@@ -67,6 +71,20 @@ export function ItemForm({
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label="Loyalty card"
+          hint="Which card this drink's paid cups stamp. Usually its category's; Dirty Matcha, say, sits in Coffee but stamps The Matcha Club."
+          {...register('loyalty')}
+        >
+          <option value="inherit">Same as its category</option>
+          <option value="none">None (earns no stamps)</option>
+          {clubs.map((club) => (
+            <option key={club.id} value={club.id}>
+              {club.name}
+              {club.isActive ? '' : ' (not active)'}
             </option>
           ))}
         </Select>
