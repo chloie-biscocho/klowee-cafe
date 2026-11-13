@@ -13,7 +13,9 @@ public record VersionItem(Guid Id, Guid MenuItemId, string Name, decimal Price);
 public record VersionDetail(Guid Id, string Name, string Context, DateOnly EffectiveFrom, bool IsPublished, List<VersionItem> Items);
 public record PricedLine(Guid MenuItemId, decimal Price, bool IsAvailable, bool IsFeatured, int SortOrder);
 public record AddOn(Guid Id, string Name, decimal Price, bool IsActive);
-public record Customer(Guid Id, string Name, string? Nickname, bool IsActive, decimal OutstandingBalance, int LoyaltyBalance, int AvailableRewards);
+public record Customer(Guid Id, string Name, string? Nickname, bool IsActive, decimal OutstandingBalance, List<ClubCard> Clubs);
+public record ClubCard(Guid ClubId, string Name, string Style, int SlotCount, int Position, int Cycle, List<ClubReward> Rewards);
+public record ClubReward(Guid RewardId, int Slot, string Label, string Type, string State, int Cycle);
 public record PersonRef(Guid Id, string Name);
 public record OrderSummary(Guid Id, DateOnly OrderedOn, PersonRef Customer, decimal Total, decimal Paid, string Status);
 public record OrderDetail(Guid Id, DateOnly OrderedOn, string? Notes, string DiscountType, decimal Subtotal, decimal DiscountAmount, decimal Total, decimal Paid, string Status);
@@ -21,7 +23,7 @@ public record Paged<T>(List<T> Items, int Page, int PageSize, int TotalCount);
 public record SummaryReport(decimal Revenue, decimal Collected, int OrderCount);
 public record Setting(string Key, string Value);
 
-public record OrderLine(Guid MenuVersionItemId, int Quantity, List<Guid> AddOnIds);
+public record OrderLine(Guid MenuVersionItemId, int Quantity, List<Guid> AddOnIds, Guid? RewardId = null);
 public record NewOrder(Guid CustomerId, Guid? PayerId, DateOnly OrderedOn, string Notes, string DiscountType, decimal DiscountValue, List<OrderLine> Items);
 public record NewPayment(decimal Amount, string Channel, DateOnly PaidOn, string? Notes);
 
@@ -90,6 +92,19 @@ public sealed class Api : IDisposable
         SendAsync<Customer>(HttpMethod.Post, "customers", new { name });
 
     public Task<OrderDetail> CreateOrderAsync(NewOrder order) => SendAsync<OrderDetail>(HttpMethod.Post, "orders", order);
+
+    /// <summary>Like <see cref="CreateOrderAsync"/>, but a 409 (a reward the API won't give) returns null instead of throwing.</summary>
+    public async Task<OrderDetail?> TryCreateOrderAsync(NewOrder order)
+    {
+        using var response = await _http.PostAsJsonAsync("orders", order, Json);
+        if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            return null;
+        }
+
+        await EnsureAsync(response, "POST", "orders");
+        return (await response.Content.ReadFromJsonAsync<OrderDetail>(Json))!;
+    }
 
     public Task<OrderDetail> AddPaymentAsync(Guid orderId, NewPayment payment) =>
         SendAsync<OrderDetail>(HttpMethod.Post, $"orders/{orderId}/payments", payment);

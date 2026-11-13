@@ -57,19 +57,17 @@ try
         return 0;
     }
 
-    var settings = await api.SettingsAsync();
-    var perReward = int.TryParse(settings.FirstOrDefault(s => s.Key == "loyalty_stamps_per_reward")?.Value, out var n) ? n : 10;
     var addOns = await api.AddOnsAsync();
     decimal Price(string name) => addOns.FirstOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.Price
         ?? throw new ImportException($"Add-on \"{name}\" not found.");
 
     var plan = Planner.Build(rows, MappingFiles.Customers($"{Dir}/customers.csv"), MappingFiles.Drinks($"{Dir}/drinks.csv"),
-        Price("Extra shot"), Price("Oat milk"), perReward);
+        Price("Extra shot"), Price("Oat milk"));
 
     var items = await api.ItemsAsync();
     var versions = await api.VersionsAsync();
     var people = await importer.CustomerIdsAsync();
-    var report = PlanText(plan, items, versions, people, imported, perReward, Price("Extra shot"), Price("Oat milk"));
+    var report = PlanText(plan, items, versions, people, imported, Price("Extra shot"), Price("Oat milk"));
     File.WriteAllText($"{Dir}/plan.txt", report, new UTF8Encoding(false));
     Console.Write(report.Split("\nORDERS (")[0]);
     Console.WriteLine($"(the full plan, every order and every skipped row, is in {Dir}/plan.txt)");
@@ -122,14 +120,14 @@ static async Task<int> ParseAsync(Api api, List<ParsedRow> rows, List<TabResult>
 }
 
 static string PlanText(ImportPlan plan, List<Item> items, List<VersionSummary> versions, Dictionary<string, Guid> people,
-    List<ExistingOrder> imported, int perReward, decimal shot, decimal oat)
+    List<ExistingOrder> imported, decimal shot, decimal oat)
 {
     var s = new StringBuilder();
     static string M(decimal d) => d.ToString("#,0.##", CultureInfo.InvariantCulture);
     var done = imported.Select(i => i.Marker!).ToHashSet();
     var toCreate = plan.Orders.Where(o => !done.Contains(o.Marker)).ToList();
 
-    s.AppendLine($"Replay settings: {perReward} stamps per reward; add-ons at today's prices (extra shot ₱{M(shot)}, oat milk ₱{M(oat)}).");
+    s.AppendLine($"Add-ons at today's prices (extra shot ₱{M(shot)}, oat milk ₱{M(oat)}). Free drinks use a Coffee Club free-drink reward when the customer has one at import, else a Fixed discount.");
     s.AppendLine();
     var newItems = plan.Items.Where(i => !items.Any(x => x.Name.Equals(i, StringComparison.OrdinalIgnoreCase))).ToList();
     s.AppendLine($"RETIRED DRINKS TO CREATE ({newItems.Count}, in category \"{Importer.RetiredCategory}\", archived after the versions are built)");
@@ -179,7 +177,7 @@ static string PlanText(ImportPlan plan, List<Item> items, List<VersionSummary> v
     foreach (var o in plan.Orders)
     {
         var line = $"{(done.Contains(o.Marker) ? "*" : " ")} {o.Row.Date:yyyy-MM-dd} {o.Marker,-26} {o.Customer}{(o.Payer is null ? "" : " c/o " + o.Payer)} | {o.Quantity} × {o.Item}"
-                   + $"{(o.Shot ? " +shot" : "")}{(o.Oat ? " +oat" : "")} @ {o.Version.Name[Planner.VersionPrefix.Length..^1]} | {o.DiscountType}{(o.DiscountValue > 0 ? " " + M(o.DiscountValue) : "")}"
+                   + $"{(o.Shot ? " +shot" : "")}{(o.Oat ? " +oat" : "")} @ {o.Version.Name[Planner.VersionPrefix.Length..^1]} | {(o.FreeDrinkReward ? "free-drink reward or Fixed " + M(o.FallbackDiscount) + "; " : "")}{o.DiscountType}{(o.DiscountValue > 0 ? " " + M(o.DiscountValue) : "")}"
                    + $" | ₱{M(o.Total)}{(o.Shortfall > 0 ? $" (sheet ₱{M(o.Row.Total)})" : "")} | {(o.Pay ? $"pay {o.Channel} {o.PaidOn:yyyy-MM-dd}" : o.Total == 0 ? "nothing to pay" : "open")}";
         s.AppendLine(line);
     }

@@ -192,6 +192,28 @@ dotnet run --project tools/ContentSync -- --tables packages,site_settings
 - **Refresh dev from prod**: the same commands with the sides swapped. Put the
   prod values in `SYNC_SOURCE_*` and the dev values in `SYNC_DEST_*`. The tool
   refuses to run if both sides are the same project.
+- **Loyalty cards** (decision 020): categories and items say which club they
+  stamp, but the clubs themselves are not copied (customers' stamps hang off
+  them). The Coffee Club and The Matcha Club have the same ids in every
+  environment, so copying the menu keeps their mappings. A club created by hand
+  exists in one environment only: before copying categories or items that use
+  it, create the same club on the other side, or the copy fails on its foreign key.
+
+## Importing the office sales spreadsheet
+
+`tools/SheetImport` loaded the owners' sales workbook through the API
+(handover 13, decision 018): `parse`, a dry run (no argument), `--apply`, and
+`--rollback`. It needs `KLOWEE_API_URL`, `KLOWEE_OWNER_EMAIL` and
+`KLOWEE_OWNER_PASSWORD`. Already-imported rows are recognised by their
+`[import:…]` marker and skipped.
+
+**Free drinks since the loyalty clubs (handover 16).** The history it imported
+keeps the old `LoyaltyFree` order discount, which still reads correctly. New
+imports can't use it (the API refuses it). A free-drink row is now imported
+with the customer's **Coffee Club free-drink reward** on the line when the API
+says one is available and the drink stamps The Coffee Club. The add-ons stay
+charged, so a Fixed discount covers any gap to the sheet's total. Otherwise it
+falls back to a **Fixed** discount for the whole amount, and the log says so.
 
 ## Repository conventions
 

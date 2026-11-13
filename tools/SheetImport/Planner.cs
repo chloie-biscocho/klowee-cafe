@@ -17,6 +17,14 @@ public sealed record PlannedOrder
     public required bool Oat { get; init; }
     public required string DiscountType { get; init; }
     public required decimal DiscountValue { get; init; }
+    /// <summary>
+    /// A free drink: use a Coffee Club free-drink reward on the line if the
+    /// customer has one when the order is imported; otherwise a Fixed
+    /// discount of <see cref="FallbackDiscount"/>. The old LoyaltyFree order
+    /// discount is history only and refused for new orders (decision 020).
+    /// </summary>
+    public bool FreeDrinkReward { get; init; }
+    public decimal FallbackDiscount { get; init; }
     /// <summary>What the API will compute: the sheet's Total unless a shortfall is listed.</summary>
     public required decimal Total { get; init; }
     /// <summary>Sheet Total minus <see cref="Total"/>: money the sheet shows that the order can't carry.</summary>
@@ -40,8 +48,7 @@ public sealed record ImportPlan(
     List<PlannedOrder> Orders,
     List<SkippedRow> Skipped,
     List<string> Items,
-    List<string> Customers,
-    int StampsPerReward);
+    List<string> Customers);
 
 /// <summary>
 /// Turns parsed rows and the owner's two mapping files into a plan: historical
@@ -61,7 +68,7 @@ public static class Planner
         IReadOnlyList<ParsedRow> rows,
         IReadOnlyDictionary<string, string> customerMap,
         IReadOnlyDictionary<string, string> drinkMap,
-        decimal shotPrice, decimal oatPrice, int stampsPerReward)
+        decimal shotPrice, decimal oatPrice)
     {
         var skipped = new List<SkippedRow>();
         var resolved = new List<(ParsedRow Row, string Customer, string? Payer, string Item)>();
@@ -80,7 +87,6 @@ public static class Planner
 
         var versions = BuildVersions(resolved.Select(r => (r.Row, r.Item)).ToList());
         var orders = new List<PlannedOrder>();
-        var stamps = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var (row, customer, payer, item) in resolved)
         {
@@ -122,20 +128,21 @@ public static class Planner
             var sheet = row.Total;
 
             string type = "None";
-            decimal value = 0, total = subtotal;
+            decimal value = 0, total = subtotal, fallback = 0;
+            var freeDrink = false;
             if (sheet < subtotal)
             {
                 var off = subtotal - sheet;
                 switch (row.Discount)
                 {
-                    case "Free" when stamps.GetValueOrDefault(customer) >= stampsPerReward:
-                        type = "LoyaltyFree";
-                        total = subtotal - unit;
-                        decisions.Add($"free drink: {customer} has a reward in the replay");
-                        break;
                     case "Free":
-                        (type, value, total) = ("Fixed", off, sheet);
-                        decisions.Add($"free drink, but {customer} has {stamps.GetValueOrDefault(customer)} stamp(s) in the replay: ₱{Money(off)} off instead (flag)");
+                        // A Coffee Club free drink frees one drink's price; add-ons stay
+                        // charged, so any gap to the sheet (it freed the add-ons too) is a Fixed discount.
+                        freeDrink = true;
+                        fallback = off;
+                        var afterReward = subtotal - price;
+                        (type, value, total) = afterReward > sheet ? ("Fixed", afterReward - sheet, sheet) : ("None", 0m, afterReward);
+                        decisions.Add($"free drink: a Coffee Club free-drink reward if {customer} has one at import, else ₱{Money(off)} off (flag)");
                         break;
                     case "Percent" when Math.Round(subtotal * row.DiscountValue / 100, 2, MidpointRounding.AwayFromZero) == off:
                         (type, value, total) = ("Percent", row.DiscountValue, sheet);
@@ -157,24 +164,20 @@ public static class Planner
             }
 
             var shortfall = sheet - total;
-            if (shortfall > 0 && type != "LoyaltyFree")
+            if (shortfall > 0)
                 decisions.Add($"sheet charged ₱{Money(sheet)}, more than ₱{Money(subtotal)} at that menu's prices: ₱{Money(shortfall)} not carried");
-            else if (shortfall > 0)
-                decisions.Add($"the reward frees the add-ons too: ₱{Money(shortfall)} the sheet charged is not carried");
 
             var paid = row.Status is "Paid" or "";
             var pay = paid && total > 0;
             var channel = ApiChannels.Contains(row.Channel) ? row.Channel : "Other";
             if (row.Status == "") decisions.Add("no status (May 2025): imported as paid");
 
-            if (type == "LoyaltyFree") stamps[customer] = stamps.GetValueOrDefault(customer) - stampsPerReward;
-            if (paid || total == 0) stamps[customer] = stamps.GetValueOrDefault(customer) + quantity - (type == "LoyaltyFree" ? 1 : 0);
-
             var notes = (Marker(row) + " " + row.Notes).Trim();
             orders.Add(new PlannedOrder
             {
                 Row = row, Customer = customer, Payer = payer == customer ? null : payer, Item = item, Version = version,
                 Quantity = quantity, Shot = shot, Oat = oat, DiscountType = type, DiscountValue = value,
+                FreeDrinkReward = freeDrink, FallbackDiscount = fallback,
                 Total = total, Shortfall = shortfall, Pay = pay, Channel = channel,
                 PaidOn = row.PaidOn ?? row.Date,
                 Notes = notes.Length > 1000 ? notes[..1000] : notes,
@@ -186,7 +189,7 @@ public static class Planner
         var items = resolved.Select(r => r.Item).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(i => i).ToList();
         var customers = resolved.SelectMany(r => r.Payer is null ? [r.Customer] : new[] { r.Customer, r.Payer })
             .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(c => c).ToList();
-        return new ImportPlan(versions, orders, skipped, items, customers, stampsPerReward);
+        return new ImportPlan(versions, orders, skipped, items, customers);
     }
 
     /// <summary>

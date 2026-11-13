@@ -126,28 +126,44 @@ public sealed partial class Importer(Api api, TextWriter log)
                 continue;
             }
 
-            var type = order.DiscountType;
-            var value = order.DiscountValue;
-            if (order.Row.Discount == "Free")
-            {
-                // The replay predicted the reward; the API's count is the truth.
-                var rewards = (await api.CustomerAsync(people[order.Customer])).AvailableRewards;
-                if (type == "LoyaltyFree" && rewards < 1)
-                {
-                    var unit = order.Version.Prices[order.Item] + (order.Shot ? addOns.First(a => a.Id == shot).Price : 0) + (order.Oat ? addOns.First(a => a.Id == oat).Price : 0);
-                    (type, value) = ("Fixed", unit * order.Quantity - order.Row.Total);
-                    log.WriteLine($"  note     {order.Marker}: no reward on the API after all; ₱{Planner.Money(value)} off instead");
-                }
-            }
-
             var addOnIds = new List<Guid>();
             if (order.Shot) addOnIds.Add(shot);
             if (order.Oat) addOnIds.Add(oat);
-            var detail = await api.CreateOrderAsync(new NewOrder(
-                people[order.Customer], order.Payer is null ? null : people[order.Payer], order.Row.Date, order.Notes, type, value,
-                [new OrderLine(VersionItem(versionItems, order), order.Quantity, addOnIds)]));
+            var customerId = people[order.Customer];
+            var payerId = order.Payer is null ? null : (Guid?)people[order.Payer];
+            var versionItem = VersionItem(versionItems, order);
+
+            // A free drink uses the customer's Coffee Club free-drink reward when
+            // the API says one is available (and the drink stamps that card);
+            // otherwise a Fixed discount. Never the old LoyaltyFree (decision 020).
+            OrderDetail? detail = null;
+            if (order.FreeDrinkReward)
+            {
+                var reward = (await api.CustomerAsync(customerId)).Clubs
+                    .Where(c => c.Style == "Coffee")
+                    .SelectMany(c => c.Rewards)
+                    .FirstOrDefault(r => r.Type == "FreeDrink" && r.State == "available");
+                if (reward is not null)
+                {
+                    detail = await api.TryCreateOrderAsync(new NewOrder(customerId, payerId, order.Row.Date, order.Notes,
+                        order.DiscountType, order.DiscountValue,
+                        [new OrderLine(versionItem, order.Quantity, addOnIds, reward.RewardId)]));
+                }
+
+                if (detail is null)
+                {
+                    log.WriteLine($"  note     {order.Marker}: no Coffee Club free drink to use; ₱{Planner.Money(order.FallbackDiscount)} off instead");
+                    detail = await api.CreateOrderAsync(new NewOrder(customerId, payerId, order.Row.Date, order.Notes,
+                        "Fixed", order.FallbackDiscount, [new OrderLine(versionItem, order.Quantity, addOnIds)]));
+                }
+            }
+            else
+            {
+                detail = await api.CreateOrderAsync(new NewOrder(customerId, payerId, order.Row.Date, order.Notes,
+                    order.DiscountType, order.DiscountValue, [new OrderLine(versionItem, order.Quantity, addOnIds)]));
+            }
             created++;
-            if (detail.Total != order.Total)
+            if (detail.Total != order.Total && !(order.FreeDrinkReward && detail.Total == order.Row.Total))
             {
                 mismatched++;
                 log.WriteLine($"  note     {order.Marker}: API total ₱{Planner.Money(detail.Total)}, planned ₱{Planner.Money(order.Total)}");

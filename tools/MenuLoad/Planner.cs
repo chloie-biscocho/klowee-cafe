@@ -38,7 +38,7 @@ public static class Planner
             if (existing.Name != category.Name || existing.SortOrder != index)
             {
                 steps.Add(new Step("update", $"category \"{existing.Name}\" → \"{category.Name}\", sort {existing.SortOrder} → {index}",
-                    () => api.UpdateCategoryAsync(existing.Id, category.Name, index, existing.Description)));
+                    () => api.UpdateCategoryAsync(existing, category.Name, index)));
             }
         }
 
@@ -69,7 +69,7 @@ public static class Planner
             if (changes.Count > 0)
             {
                 steps.Add(new Step(changes[0].StartsWith("rename") ? "rename" : "update", $"item \"{existing.Name}\": {string.Join(", ", changes)}",
-                    () => api.UpdateItemAsync(existing.Id, line.Name, description, categoryIds[category.Name], existing.PhotoUrl)));
+                    () => api.UpdateItemAsync(existing, line.Name, description, categoryIds[category.Name])));
             }
 
             if (existing.IsArchived)

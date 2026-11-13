@@ -6,8 +6,9 @@ using System.Text.Json.Serialization;
 namespace Klowee.MenuLoad;
 
 // The admin API's shapes, as much of them as the loader reads.
-public record Category(Guid Id, string Name, int SortOrder, string? Description);
-public record Item(Guid Id, string Name, string? Description, Guid CategoryId, string CategoryName, string? PhotoUrl, bool IsArchived);
+public record Category(Guid Id, string Name, int SortOrder, string? Description, Guid? LoyaltyClubId);
+public record Item(Guid Id, string Name, string? Description, Guid CategoryId, string CategoryName, string? PhotoUrl, bool IsArchived,
+    string LoyaltyMode = "Inherit", Guid? LoyaltyClubId = null);
 public record VersionSummary(Guid Id, string Name, string Context, DateOnly EffectiveFrom, bool IsPublished, int ItemCount);
 public record VersionItem(Guid Id, Guid MenuItemId, string Name, decimal Price, bool IsAvailable, bool IsFeatured, int SortOrder);
 public record VersionDetail(Guid Id, string Name, string Context, DateOnly EffectiveFrom, bool IsPublished, List<VersionItem> Items);
@@ -50,16 +51,21 @@ public sealed class Api : IDisposable
     public Task<VersionDetail> CurrentAsync(string context) => GetAsync<VersionDetail>($"menu/versions/current?context={context}");
 
     public Task<Category> CreateCategoryAsync(string name, int sortOrder) => SendAsync<Category>(HttpMethod.Post, "menu/categories", new { name, sortOrder });
-    /// <summary>The PUT replaces every field, so the description is sent back as it was.</summary>
-    public Task<Category> UpdateCategoryAsync(Guid id, string name, int sortOrder, string? description) =>
-        SendAsync<Category>(HttpMethod.Put, $"menu/categories/{id}", new { name, sortOrder, description });
+    /// <summary>The PUT replaces every field, so the description and loyalty card are sent back as they were.</summary>
+    public Task<Category> UpdateCategoryAsync(Category existing, string name, int sortOrder) =>
+        SendAsync<Category>(HttpMethod.Put, $"menu/categories/{existing.Id}",
+            new { name, sortOrder, description = existing.Description, loyaltyClubId = existing.LoyaltyClubId });
 
     public Task<Item> CreateItemAsync(string name, string description, Guid categoryId) =>
         SendAsync<Item>(HttpMethod.Post, "menu/items", new { name, description, categoryId });
 
-    /// <summary>The PUT replaces every field, so the photo is sent back as it was.</summary>
-    public Task<Item> UpdateItemAsync(Guid id, string name, string description, Guid categoryId, string? photoUrl) =>
-        SendAsync<Item>(HttpMethod.Put, $"menu/items/{id}", new { name, description, categoryId, photoUrl });
+    /// <summary>The PUT replaces every field, so the photo and loyalty card setting are sent back as they were.</summary>
+    public Task<Item> UpdateItemAsync(Item existing, string name, string description, Guid categoryId) =>
+        SendAsync<Item>(HttpMethod.Put, $"menu/items/{existing.Id}", new
+        {
+            name, description, categoryId, photoUrl = existing.PhotoUrl,
+            loyaltyMode = existing.LoyaltyMode, loyaltyClubId = existing.LoyaltyClubId
+        });
 
     public Task<Item> SetArchivedAsync(Guid id, bool archived) =>
         SendAsync<Item>(HttpMethod.Patch, $"menu/items/{id}/{(archived ? "archive" : "unarchive")}", null);
