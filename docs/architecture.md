@@ -253,7 +253,7 @@ client (browser)  ──►  GET /api/public/home  ──►  PublicController  
      IPackageService         ListAsync(false)  — active only                  │
                                                                               │
    queries the DbContext directly, where the public shape differs:            ▼
-     menu    grouped by category, with each item's description and photo
+     menu    grouped by category (each with its optional description), with each item's description and photo
      events  published, with their photos inline, upcoming before past
 ```
 
@@ -267,30 +267,40 @@ cannot disagree.
 ## The client site
 
 `client/` is the public page: React 19, TypeScript strict, Vite, Tailwind v4,
-nothing else at runtime. The visual spec is `docs/design-brief.md`.
+nothing else at runtime. The visual spec is `docs/design-brief.md` ("sky and
+layers", decision 019).
 
 ```
-main.tsx ─► App ─► useHomeData()  ──►  fetch GET /api/public/home   (one request, anonymous)
+index.html ── static loading shell (header, hero + logo) ── paints before any JS
+           └─ <link rel=preload> of GET /api/public/home ── the request starts early
+main.tsx ─► App ─► useHomeData()  ──►  fetch GET /api/public/home   (picks up the preload)
                      { status: loading | error | ready, data, retry }
                 │
-                ├─ loading ─► LoadingState   (paper hero skeleton, three blocks)
-                ├─ error   ─► ErrorState     (retry → the effect runs again)
-                └─ ready   ─► StickerBar · Nav · Hero · Story · Menu ·
-                              Packages · Popups · Book · Footer
-                              (each a file in src/sections/, each given the payload)
+                ├─ loading ─► Header · Hero (shell) · LoadingState   (= the HTML shell)
+                ├─ error   ─► Header · ErrorState · Footer           (retry → the effect runs again)
+                └─ ready   ─► AnnouncementBar · Header · Hero · CupShelf · Story ·
+                              Menu · Popups · Packages · Book · Footer
+                              (src/sections/, each given the payload or a slice of it)
 ```
 
 - **No router, no store.** Navigation is `#anchor` links to sections; the payload
   is fetched once in `App` and passed down as a prop. Decision 011 covers why
   this differs from the admin app.
+- **The static shell.** `index.html`'s `#root` holds `App`'s loading render, so
+  the first screen (and the logo, the mobile LCP) paints from HTML. React
+  replaces it with identical markup. `src/shell.test.tsx` fails if the two
+  drift, and regenerates the HTML with `UPDATE_SHELL=1`.
 - **Every section renders from missing data.** A null setting, a null menu or an
-  empty list produces a placeholder or an empty state (`Placeholder`,
-  `TentSketch`), never an error; Packages disappears entirely, with its nav link.
-- **Design tokens live in `src/index.css`'s `@theme`**, with Tailwind's default
-  palette switched off, so a class like `bg-red-500` simply does not exist and
-  no hex appears in a component.
-- **The wordmark probes for `public/logo.svg`** once per page load and falls back
-  to the Fuzzy Bubbles lettering, so the real logo is a file drop, not a change.
+  empty list gives a placeholder or an empty state, never an error. The shelf,
+  story and packages disappear entirely; packages takes its nav link with it.
+- **Content rules are pure functions** in `src/lib/`. `content.ts` holds the
+  announcement line, shelf dedupe, balanced menu columns, the polaroid sticker
+  and blend names. `cupLayers.ts` holds the drink illustrations and `ovalPath.ts`
+  the marker ovals. Each is unit-tested without rendering.
+- **Design tokens live in `src/index.css`'s `@theme`**, light values there and
+  dark values under `prefers-color-scheme`. Tailwind's default palette is off,
+  so no hex appears in a component. The three animations and their
+  reduced-motion stops are plain CSS in the same file.
 - **The browser caches the payload** for up to 60 seconds (the API's
   `Cache-Control`); there is no client-side cache beyond that.
 

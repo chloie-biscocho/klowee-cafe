@@ -1,62 +1,134 @@
 # Klowee Cafe: client site design brief
 
+The public homepage as built in handover 15, "sky and layers". The approved
+spec is the static mockup `docs/mockups/klowee-home-v7.html`; where this brief
+and the mockup differ, this brief describes what shipped and why.
+
 ## Direction
-"The Instagram grid turned into a website." Cobalt lettering on cream paper, floating on a sky-blue world with soft clouds. Pink and yellow appear only as stickers, tape, and small badges. Event photos are polaroids with handwritten captions. Playful, small-business, recognisable to anyone who has seen the tent or the cups.
+A clear blue sky with slow clouds, the owners' round logo sticker, and the
+drinks themselves as layered cups. Below it, white panels for the words and a
+cream paper sheet for the menu, printed like the paper menu at the cart. Calm,
+blue, small-business; pink and yellow only as marker ovals and stickers.
 
-## Palette
-| Token | Hex | Use |
-|---|---|---|
-| `navy` | `#1C2B6B` | Body text, dark lettering |
-| `cobalt` | `#2446C7` | Headings accent, primary buttons, links, tent blue |
-| `sky` | `#8FCBF2` | Page background bands, cloud sections |
-| `sky-light` | `#C9E6F7` | Photo placeholders, subtle fills |
-| `paper` | `#F7F3E8` | Cards, hero panel, menu surfaces |
-| `pink` | `#F4B8C8` | Secondary button, tape, one sticker per section max |
-| `yellow` | `#FFD84D` | Sticker badges (next pop-up, new, best seller) |
-| `ink-muted` | `#6B75A3` | Caveat captions 24px and up only; body-size secondary text is navy at 80% opacity |
-| `divider` | `#C9D2F1` | Dashed dividers between menu rows |
-| `white` | `#FFFFFF` | Polaroid frames, clouds |
+## Colour tokens
+Defined once in `client/src/index.css` (`@theme`), switched for dark under
+`prefers-color-scheme`. The page follows the device; there is no theme switch.
+Components use tokens only; no hex appears in a component.
 
-Rule: navy, cobalt, paper, and sky carry 90% of every screen. Pink and yellow are accents, never large surfaces. Matcha green and ube purple come only from photos and the drinks themselves.
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `sky` | `#A9D6F5` | `#1A2452` | Page background, button text on `deep` |
+| `deep` | `#1B2F7A` | `#C9D8FF` | Headings, links, primary buttons, announcement strip |
+| `ink` | `#16204A` | `#EAF0FF` | Body text |
+| `cloud` | `#FFFFFF` | `#2A3672` | Clouds, cup lids |
+| `panel` | `#FFFFFF` | `#222D63` | Story, book, package and polaroid surfaces |
+| `soft` | `#3F4C80` | `#B4C0EC` | Secondary text, dates, guest notes |
+| `line` | deep at 18% | `#C9D8FF` at 22% | Package inclusion dividers |
+| `ph` / `ph-ink` | `#D6ECFB` / `#4E6AA8` | `#2B3875` / `#AFC0F2` | Empty photo slots and their text |
+| `paper` | `#FBF9E8` | `#12172B` | The menu sheet (the logo's cream in light) |
+| `menu-ink` / `menu-soft` | `#1F3FA6` / `#5C6386` | `#9DB6FF` / `#A9B0CF` | Menu lettering and its notes |
+| `menu-rule` | menu-ink at 28% | `#9DB6FF` at 30% | Dotted price leaders |
+| `pink` | `#EE7C9B` | `#F08AA8` | Marker ovals, the plus/minus on drinks |
+| `yellow` / `sticker-ink` | `#FFD84D` / `#1C2B6B` | same | Stickers ("best seller", "next", "latest") |
 
-## Typography
+Cup layer colours are illustrations of the drinks, not brand colours; they
+live in `client/src/lib/cupLayers.ts` and stay the same in both schemes.
+
+## Type
 | Role | Font | Notes |
 |---|---|---|
-| Wordmark | Real logo lettering as SVG | Fallback: Fuzzy Bubbles 700 with alternating cobalt letters (k**l**o**w**ee **c**a**f**e) |
-| Headings | Fuzzy Bubbles 700 | Sentence case, lowercase feel, tight leading (1.0 to 1.05) |
-| Handwritten notes | Caveat 500/600 | Polaroid captions, sticker text, small asides |
-| Body and UI | Manrope 400/500/700 | 16px base, line-height 1.55, max 65 characters per line |
+| Headings, wordmark | Young Serif 400 | Hero h1 `clamp(2rem, 5.6vw, 3.6rem)`, line height 1.06; section titles `clamp(1.7rem, 4vw, 2.3rem)` |
+| Body and UI | Karla 400/500/700 | 1.06rem, line height 1.55 |
+| Hand-printed | Shantell Sans 400/500/700 | The menu sheet, polaroid names, stickers |
 
-No all-caps labels. No eyebrow labels above headings. Prices in Manrope 700 cobalt.
+Self-hosted WOFF2 (latin and latin-ext) with `public/fonts/OFL.txt`. Young
+Serif and Karla 400 are preloaded. Young Serif has metric-matched fallbacks
+(Georgia, then Times New Roman: `size-adjust`, ascent and descent overrides
+measured from the font files) so the hero heading keeps its lines when the
+font swaps in. Sentence case for headings; the menu prints in lowercase.
 
 ## Motifs
-- Paper cards: `paper` background, 18px radius, a 2px solid cobalt bottom edge instead of a shadow
-- Washi tape: a small pink rectangle, slightly rotated, on the top edge of a paper card
-- Stickers: yellow pill, 2px navy border, rotated 5 to 8 degrees, Caveat text
-- Clouds: white rounded shapes at low opacity on sky sections, static, three per section max
-- Polaroids: white frame, photo area, Caveat caption, alternating minus 2 and plus 2 degree rotation
-- Dashed dividers (`sky-light` or `divider`) between menu rows instead of solid lines
-- Doodles: the Klowe and Kee illustration in the Story section, the tent sketch as an empty-state illustration
+- **Clouds:** a pill with two round puffs, six in the hero, sizes and drift
+  distances from the mockup (`.cloud-1` to `.cloud-6`).
+- **Logo sticker:** the owners' logo in a 184px circle in the hero only. The
+  header is a text wordmark; there is no logo up there or on the cups.
+- **Cups:** a tapered glass of three layers under a lid, no labels.
+- **Marker ovals:** a hand-drawn pink loop sized to each category label,
+  generated in code (`lib/ovalPath.ts`), slightly rotated, alternating.
+- **Dotted leaders** between a drink and its price.
+- **Polaroids:** white frame, 4:3 photo, handwritten name, date line, tilted
+  ±1.5° and straightened on hover, focus or open.
+- **Stickers:** yellow pill, navy border and ink, rotated −4°.
+- **Tent sketch:** the line doodle for empty and error states.
 
-## Page structure
-1. Sticker bar (top): yellow sticker text on paper strip when a next event exists. Fallback: paper strip with "no pop-up scheduled yet, book the cart for your event". Hidden if no fallback text set.
-2. Nav: paper background, wordmark left, links center (story, menu, packages, pop-ups, book), cobalt pill "Book the cart" right. Mobile: wordmark plus CTA only.
-3. Hero: sky band with clouds. Paper card with tape, wordmark, heading "smol pop-up cafe, big on matcha." (admin-editable), one paragraph, cobalt pill primary, pink pill secondary. Wide photo placeholder below in `sky-light`.
-4. Story: paper section. Klowe and Kee illustration left, two short paragraphs right (admin-editable).
-5. Menu: paper cards per category, dashed-divider rows, best-seller and new items get a yellow sticker. Reads the current pop-up menu version.
-6. Packages: sky band. Three paper cards (Starter, Regular, Premium) with price, inclusions, cobalt CTA.
-7. Pop-ups: "where we've been" polaroid grid of published events, upcoming events first with a "next" sticker. Expand shows gallery. Empty state uses the tent sketch and a book-the-cart prompt.
-8. Book the cart (phase 2): paper form card on sky band.
-9. Contact and footer: navy band, paper text, Instagram and Facebook links.
+## Section order
+1. **Announcement bar:** deep strip above the header. The current announcement
+   (linked when it has a link), else "next pop-up: {name}, {dates}" linking to
+   `#popups`, else nothing. The old ticker fallback is no longer shown.
+2. **Header:** "klowee cafe" wordmark and links: our story, menu, pop-ups,
+   packages, book. Not sticky. The packages link goes when there are no packages.
+3. **Hero:** clouds, logo sticker, `hero_heading` (h1), `hero_body`, "Book the
+   cart" and "See the menu".
+4. **Cup shelf:** one cup per drink on the current pop-up menu, available only,
+   menu order, each drink once (a trailing "(Houseblend)" style note is
+   stripped, so each matcha appears once). A single row sized to whole cups,
+   between two round arrow buttons, no visible scrollbar, swipe on touch,
+   arrows disabled at the ends. Hidden when there is no menu.
+5. **Our story:** white panel, round photo (`story_image_url`) or an empty
+   round slot, `story_heading`, `story_body` in paragraphs. Hidden when both
+   heading and body are empty.
+6. **Menu:** the cream sheet titled "klowee cafe pop-up menu". Two columns
+   balanced by item count (one on phones). Category name in an oval, its
+   description under it. A drink with a description is a disclosure (plus,
+   minus); one without is a plain row. "best seller" on featured drinks. A
+   blend note the category already names is dropped from the drink's name.
+   No menu: "menu coming soon" on the same paper.
+7. **Pop-ups:** "Where we've been" ("Where we're headed" when one is upcoming).
+   Polaroids in 1, 2 or 3 columns (480px, 900px); photo count badge; "next" on
+   the upcoming event, else "latest" on the newest. A click opens a panel under
+   that row (dense grid flow) with dates, venue, description and a photo strip;
+   one at a time; Close and Escape close it and return focus. No events: the
+   tent sketch, "no pop-ups logged yet" and "Book the cart".
+8. **Packages:** "Event packages", a white card per active package: name, guest
+   note, price, inclusions as divided lines, "Book this". Hidden when none.
+9. **Book:** centred white panel, "Bring the cart to your event", `book_body`,
+   Email us, Message on Instagram, Facebook (each only when set).
+10. **Footer:** "© {year} Klowee Cafe, Cagayan de Oro" and the two social links.
 
 ## Motion
-One page-load moment only: the hero paper card settles in (fade plus 8px rise, 400ms). No per-section fade-ups. Hover states change colour, not position. Respect `prefers-reduced-motion`.
+Three animations, all stopped under `prefers-reduced-motion`:
+- **Clouds** drift sideways and back over 24 to 40 s (transform only).
+- **Cups fill** once on load: a sky-coloured cover of the glass's shape shrinks
+  away, staggered 70ms per cup (capped at ten). The cover is the glass's
+  sibling so the animation stays on the compositor.
+- **Ovals draw in** once, when the menu sheet first enters the viewport
+  (`stroke-dashoffset` from 1 to 0 on a `pathLength="1"` path).
 
-## Placeholders
-Until real photos exist, every image slot is a `sky-light` block with a Caveat caption naming what goes there ("photo of the cart at Scout Market"). Placeholders must look intentional, not broken.
+Polaroids straighten with a 200ms transition. Nothing else moves.
+
+## Loading, errors, layout shift
+- `index.html` ships the loading render (header, hero shell with the logo,
+  quiet placeholder blocks) so the first screen paints from HTML; a test keeps
+  it identical to `App`'s own loading render. React replaces it in place.
+- The hero holds its height while loading, so the page doesn't jump when the
+  text arrives. The announcement bar can only appear after the data does.
+- Error: a white panel with the tent sketch, "the cart's offline for a sec, try
+  again?" and a retry button; header and footer stay.
 
 ## Responsive
-Mobile first. Container max 1120px. Menu rows stack price under name on narrow screens. Polaroid grid: 1 column under 480px, 2 under 900px, 3 above.
+Container 1000px with 22px gutters. At 760px and below: header links wrap,
+smaller cups (72 × 106) and arrows, one menu column, one package column,
+stacked story, and the clouds reposition (the fifth hides).
+
+## Copy rules
+Text comes from the payload or is a fixed label from the mockup. The mockup's
+marketing sentences (the pop-ups' Instagram note, the packages lead, the story
+slot's placeholder note) are not shipped; the pop-ups keep only "Tap a photo to
+see more from that pop-up."
 
 ## Accessibility floor
-Colour contrast AA for text on paper and sky (navy on sky passes; cobalt on sky does not, so cobalt text only on paper). Visible focus rings in cobalt. All images have alt text sourced from the admin caption field.
+Skip link, header/main/footer landmarks, every section labelled by its heading.
+Visible 3px `deep` focus rings. Cups are images with the drink's name as label
+and title. Arrow buttons are real buttons that disable at the ends. Polaroids
+are buttons with `aria-expanded`. Decorative clouds, ovals and dotted leaders
+are hidden from assistive tech.
