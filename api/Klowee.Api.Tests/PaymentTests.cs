@@ -54,7 +54,7 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte, 2, m.OatMilk), Line(m.Americano)]));
 
         await EnsureAsync(await PayAsync(client, order.Id, 100m));
-        Assert.Equal(0, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);   // partial earns nothing
+        Assert.Equal(0, await StampsAsync(client, kee.Id));   // partial earns nothing
 
         await EnsureAsync(await PayAsync(client, order.Id, order.Total - 100m));
         var earned = Assert.Single(await LedgerAsync(client, kee.Id));
@@ -70,12 +70,12 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
         var kee = await CreateCustomerAsync(client, "Kee reverse");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte, 2)]));
         var paid = await (await PayAsync(client, order.Id, 320m)).Content.ReadFromJsonAsync<OrderDetailDto>(KloweeApiFactory.Json);
-        Assert.Equal(2, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);
+        Assert.Equal(2, await StampsAsync(client, kee.Id));
 
         var response = await client.DeleteAsync($"/api/orders/{order.Id}/payments/{paid!.Payments.Single().Id}");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.Equal(0, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);
+        Assert.Equal(0, await StampsAsync(client, kee.Id));
         Assert.Empty(await LedgerAsync(client, kee.Id));
         Assert.Equal(PaymentStatus.Unpaid, (await GetOrderAsync(client, order.Id)).Status);
 
@@ -85,33 +85,20 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
     }
 
     [Fact]
-    public async Task ALoyaltyFreeOrder_EarnsForEveryDrinkButTheFreeOne()
-    {
-        var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee free earns");
-        await GiveStampsAsync(client, kee.Id, 10);
-
-        var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte, 2), Line(m.Americano)], DiscountType.LoyaltyFree));
-        await EnsureAsync(await PayAsync(client, order.Id, order.Total));
-
-        var ledger = await LedgerAsync(client, kee.Id);
-        Assert.Equal(2, Assert.Single(ledger, e => e.Reason == LoyaltyReason.Earned).Delta);     // 3 drinks, 1 free
-        Assert.Equal(-10, Assert.Single(ledger, e => e.Reason == LoyaltyReason.Redeemed).Delta);
-        Assert.Equal(2, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);               // 10 - 10 + 2
-    }
-
-    [Fact]
-    public async Task AFullyFreeOrder_IsPaidWithoutPayments()
+    public async Task AFullyFreeOrder_IsPaidWithoutPayments_AndItsDrinkStillStamps()
     {
         var (client, m) = await SetupAsync();
         var kee = await CreateCustomerAsync(client, "Kee all free");
-        await GiveStampsAsync(client, kee.Id, 10);
+        await GiveStampsAsync(client, kee.Id, 11);
+        var freeDrink = await CoffeeRewardAsync(_factory, 12);
 
-        var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Americano)], DiscountType.LoyaltyFree));
+        var order = await CreateOrderAsync(client, OrderBody(kee.Id, [RewardLine(m.Americano, freeDrink)]));
 
         Assert.Equal(0m, order.Total);
         Assert.Equal(PaymentStatus.Paid, order.Status);
-        Assert.Equal(0, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);  // redeemed; the free drink earns nothing
+        Assert.Equal(12, await StampsAsync(client, kee.Id));                 // slot 12 filled: the card restarts
+        var card = await CardAsync(client, kee.Id);
+        Assert.Equal((1, 0), (card.Cycle, card.Position));
     }
 
     [Fact]
@@ -138,7 +125,7 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
         Assert.Equal(PaymentStatus.Paid, (await GetOrderAsync(client, middle.Id)).Status);
         Assert.Equal(PaymentStatus.Partial, (await GetOrderAsync(client, newest.Id)).Status);
         Assert.Equal(70m, (await GetCustomerAsync(client, prince.Id)).OutstandingBalance);
-        Assert.Equal(2, (await GetCustomerAsync(client, prince.Id)).LoyaltyBalance);   // two orders became Paid
+        Assert.Equal(2, await StampsAsync(client, prince.Id));   // two orders became Paid
     }
 
     [Fact]
@@ -173,8 +160,8 @@ public class PaymentTests : IClassFixture<KloweeApiFactory>
         await EnsureAsync(await client.PostAsJsonAsync($"/api/customers/{kee.Id}/settle", PaymentBody(160m)));
 
         // The stamp goes to the drinker, not the payer.
-        Assert.Equal(1, (await GetCustomerAsync(client, prince.Id)).LoyaltyBalance);
-        Assert.Equal(0, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);
+        Assert.Equal(1, await StampsAsync(client, prince.Id));
+        Assert.Equal(0, await StampsAsync(client, kee.Id));
     }
 
     [Fact]

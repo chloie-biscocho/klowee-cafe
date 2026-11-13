@@ -15,13 +15,13 @@ public class CustomerService : ICustomerService
 {
     private readonly KloweeDbContext _db;
     private readonly IOrderService _orders;
-    private readonly ISiteSettingService _settings;
+    private readonly ILoyaltyService _loyalty;
 
-    public CustomerService(KloweeDbContext db, IOrderService orders, ISiteSettingService settings)
+    public CustomerService(KloweeDbContext db, IOrderService orders, ILoyaltyService loyalty)
     {
         _db = db;
         _orders = orders;
-        _settings = settings;
+        _loyalty = loyalty;
     }
 
     public async Task<IReadOnlyList<CustomerSummaryDto>> ListAsync(
@@ -56,7 +56,7 @@ public class CustomerService : ICustomerService
 
         return new CustomerDetailDto(
             summary.Id, summary.Name, summary.Nickname, summary.Notes, summary.IsActive,
-            summary.OutstandingBalance, summary.LoyaltyBalance, summary.AvailableRewards, summary.LastOrderOn,
+            summary.OutstandingBalance, summary.Clubs, summary.LastOrderOn,
             recent.Take(20).ToList());
     }
 
@@ -155,11 +155,15 @@ public class CustomerService : ICustomerService
             }
         }
 
+        // Stamps move club by club: each entry keeps its club, so the target's
+        // card on every club is the two cards' stamps added up.
         var entries = await _db.LoyaltyEntries.Where(e => e.CustomerId == id).ToListAsync(cancellationToken);
         foreach (var entry in entries)
         {
             entry.CustomerId = targetId;
         }
+
+        await MoveRedemptionsAsync(id, targetId, cancellationToken);
 
         source.DeletedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
@@ -168,13 +172,53 @@ public class CustomerService : ICustomerService
         return await GetAsync(targetId, cancellationToken);
     }
 
+    /// <summary>
+    /// Moves the source's used rewards to the target. Both may have used the
+    /// same reward on their first card, and a reward is used once per card, so
+    /// each reward's uses are renumbered onto the target's cards in order
+    /// (first use, card 1; second, card 2): every use survives the merge.
+    /// </summary>
+    private async Task MoveRedemptionsAsync(Guid sourceId, Guid targetId, CancellationToken cancellationToken)
+    {
+        var redemptions = await _db.LoyaltyRedemptions
+            .Where(r => r.CustomerId == sourceId || r.CustomerId == targetId)
+            .ToListAsync(cancellationToken);
+        if (!redemptions.Any(r => r.CustomerId == sourceId))
+        {
+            return;
+        }
+
+        var renumbered = redemptions
+            .GroupBy(r => (r.ClubId, r.RewardId))
+            .SelectMany(g => g
+                .OrderBy(r => r.Cycle).ThenBy(r => r.CustomerId == targetId ? 0 : 1).ThenBy(r => r.Id)
+                .Select((r, i) => (Redemption: r, Cycle: i)))
+            .ToList();
+
+        // Two steps, so the unique (customer, club, cycle, reward) index never
+        // sees two rows on one card mid-update: first out of the way, then into place.
+        foreach (var (redemption, cycle) in renumbered)
+        {
+            redemption.CustomerId = targetId;
+            redemption.Cycle = -100_001 - cycle;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        foreach (var (redemption, cycle) in renumbered)
+        {
+            redemption.Cycle = cycle;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
     private sealed record Figures(
         Dictionary<Guid, decimal> Outstanding,
-        Dictionary<Guid, int> Stamps,
-        Dictionary<Guid, DateOnly> LastOrder,
-        int PerReward);
+        Dictionary<Guid, IReadOnlyList<CustomerClubDto>> Clubs,
+        Dictionary<Guid, DateOnly> LastOrder);
 
-    /// <summary>Tab balances, loyalty balances and last order dates for the given customers.</summary>
+    /// <summary>Tab balances, loyalty cards and last order dates for the given customers.</summary>
     private async Task<Figures> FiguresAsync(List<Guid> ids, CancellationToken cancellationToken)
     {
         var orders = await _db.Orders
@@ -193,26 +237,17 @@ public class CustomerService : ICustomerService
             .GroupBy(o => o.CustomerId)
             .ToDictionary(g => g.Key, g => g.Max(o => o.OrderedOn));
 
-        var stamps = await _db.LoyaltyEntries
-            .AsNoTracking()
-            .Where(e => ids.Contains(e.CustomerId))
-            .GroupBy(e => e.CustomerId)
-            .Select(g => new { g.Key, Balance = g.Sum(e => e.Delta) })
-            .ToDictionaryAsync(x => x.Key, x => x.Balance, cancellationToken);
+        var clubs = await _loyalty.CardsAsync(ids, cancellationToken);
 
-        return new Figures(outstanding, stamps, lastOrder, await _settings.GetLoyaltyStampsPerRewardAsync(cancellationToken));
+        return new Figures(outstanding, clubs, lastOrder);
     }
 
-    private static CustomerSummaryDto Summary(Customer c, Figures f)
-    {
-        var stamps = f.Stamps.GetValueOrDefault(c.Id);
-        return new CustomerSummaryDto(
+    private static CustomerSummaryDto Summary(Customer c, Figures f) =>
+        new(
             c.Id, c.Name, c.Nickname, c.Notes, c.IsActive,
             f.Outstanding.GetValueOrDefault(c.Id),
-            stamps,
-            Math.Max(0, stamps) / f.PerReward,
+            f.Clubs.GetValueOrDefault(c.Id) ?? [],
             f.LastOrder.TryGetValue(c.Id, out var last) ? last : null);
-    }
 
     private async Task EnsureNameIsFreeAsync(string name, Guid? excludingId, CancellationToken cancellationToken)
     {

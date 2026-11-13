@@ -18,6 +18,11 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
             .HasForeignKey(i => i.MenuVersionItemId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(i => i.LoyaltyRedemption)
+            .WithMany()
+            .HasForeignKey(i => i.LoyaltyRedemptionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(i => i.AddOns)
             .WithOne(a => a.OrderItem!)
             .HasForeignKey(a => a.OrderItemId)

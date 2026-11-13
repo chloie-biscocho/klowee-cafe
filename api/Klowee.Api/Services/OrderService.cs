@@ -12,30 +12,35 @@ namespace Klowee.Api.Services;
 ///     created and never recomputed; a PUT carries an existing line's snapshot over;
 ///   - subtotal, discount and total are stored and recomputed on every change;
 ///   - an order with payments cannot be changed;
-///   - a LoyaltyFree discount needs an available reward, and its redemption is a
-///     ledger entry that lives and dies with the discount.
+///   - a line may carry one loyalty reward (decision 020) for one unit: it must
+///     be available to the drinker on the drink's club when the order is saved,
+///     and its redemption lives and dies with the line;
+///   - LoyaltyFree, the old single card's order discount, is history only.
 /// </summary>
 public class OrderService : IOrderService
 {
     private readonly KloweeDbContext _db;
     private readonly IPricingService _pricing;
     private readonly ILoyaltyService _loyalty;
-    private readonly ISiteSettingService _settings;
     private readonly IMenuVersionService _menuVersions;
 
     public OrderService(
         KloweeDbContext db,
         IPricingService pricing,
         ILoyaltyService loyalty,
-        ISiteSettingService settings,
         IMenuVersionService menuVersions)
     {
         _db = db;
         _pricing = pricing;
         _loyalty = loyalty;
-        _settings = settings;
         _menuVersions = menuVersions;
     }
+
+    /// <summary>A reward a saved line will carry: a redemption kept from before, or a new one for this cycle.</summary>
+    private sealed record PlannedReward(OrderItem Line, LoyaltyClubReward Reward, LoyaltyRedemption? Kept, int Cycle);
+
+    /// <summary>What saving the order does to its redemptions.</summary>
+    private sealed record RewardPlan(List<PlannedReward> Rewards, List<LoyaltyRedemption> Released);
 
     public async Task<PagedResult<OrderSummaryDto>> ListAsync(OrderListQuery query, CancellationToken cancellationToken)
     {
@@ -151,6 +156,15 @@ public class OrderService : IOrderService
             .Where(a => addOnIds.Contains(a.Id))
             .ToDictionaryAsync(a => a.Id, a => a.Name, cancellationToken);
 
+        // A line's reward reads past soft-deletes: the club's rewards may have been edited since.
+        var redemptionIds = order.Items.Where(i => i.LoyaltyRedemptionId != null).Select(i => i.LoyaltyRedemptionId!.Value).ToList();
+        var lineRewards = await _db.LoyaltyRedemptions
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(r => redemptionIds.Contains(r.Id))
+            .Select(r => new { r.Id, r.RewardId, r.Reward!.Label, r.Reward.Type })
+            .ToDictionaryAsync(r => r.Id, cancellationToken);
+
         var currentOffice = await _menuVersions.FindCurrentIdAsync(MenuContext.Office, cancellationToken);
         var warnings = new List<string>();
 
@@ -166,12 +180,18 @@ public class OrderService : IOrderService
                         : $"{source.ItemName} is from \"{source.VersionName}\", not the current office menu.");
                 }
 
+                var reward = i.LoyaltyRedemptionId is { } rid && lineRewards.TryGetValue(rid, out var r)
+                    ? new OrderLineRewardDto(r.RewardId, r.Label, r.Type,
+                        (i.UnitPrice + i.AddOns.Sum(a => a.UnitPrice)) * i.Quantity - i.LineTotal)
+                    : null;
+
                 return new OrderItemDto(
                     i.Id, i.MenuVersionItemId, source.MenuItemId, source.ItemName, source.VersionName,
                     i.Quantity, i.UnitPrice, i.LineTotal,
                     i.AddOns.OrderBy(a => a.CreatedAt).ThenBy(a => a.Id)
                         .Select(a => new OrderItemAddOnDto(a.Id, a.AddOnId, addOnNames[a.AddOnId], a.UnitPrice))
-                        .ToList());
+                        .ToList(),
+                    reward);
             })
             .ToList();
 
@@ -195,11 +215,12 @@ public class OrderService : IOrderService
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
 
         var order = new Order();
-        await ApplyAsync(order, request, previousLines: [], cancellationToken);
+        var rewards = await ApplyAsync(order, request, previousLines: [], cancellationToken);
         _db.Orders.Add(order);
         await _db.SaveChangesAsync(cancellationToken);
 
-        await _loyalty.ReconcileAsync(order, paid: 0m, cancellationToken);
+        await SaveRewardsAsync(order, rewards, cancellationToken);
+        await _loyalty.ReconcileAsync(order, paid: 0m, linesChanged: true, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
         return await GetAsync(order.Id, cancellationToken);
@@ -231,10 +252,11 @@ public class OrderService : IOrderService
 
         // The new lines join the same collection. Swapping in a new list would
         // orphan the old lines, and EF hard-deletes orphans of a required key.
-        await ApplyAsync(order, request, previous, cancellationToken);
+        var rewards = await ApplyAsync(order, request, previous, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
 
-        await _loyalty.ReconcileAsync(order, paid: 0m, cancellationToken);
+        await SaveRewardsAsync(order, rewards, cancellationToken);
+        await _loyalty.ReconcileAsync(order, paid: 0m, linesChanged: true, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
         return await GetAsync(order.Id, cancellationToken);
@@ -263,16 +285,23 @@ public class OrderService : IOrderService
             payment.DeletedAt = now;
         }
 
+        // Its rewards become available again.
+        foreach (var redemption in await _db.LoyaltyRedemptions.Where(r => r.OrderId == id).ToListAsync(cancellationToken))
+        {
+            redemption.DeletedAt = now;
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
-        await _loyalty.ReconcileAsync(order, paid: 0m, cancellationToken);
+        await _loyalty.ReconcileAsync(order, paid: 0m, linesChanged: true, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
 
     /// <summary>
     /// Validates the request and writes it onto <paramref name="order"/>: people,
-    /// lines with their price snapshots, and the stored totals.
+    /// lines with their price snapshots and rewards, and the stored totals.
+    /// Returns what has to happen to the order's redemptions once the lines are saved.
     /// </summary>
-    private async Task ApplyAsync(
+    private async Task<RewardPlan> ApplyAsync(
         Order order,
         OrderRequest request,
         List<OrderItem> previousLines,
@@ -300,10 +329,18 @@ public class OrderService : IOrderService
             throw new ValidationFailedException($"Payer '{payer}' was not found.");
         }
 
+        if (request.DiscountType == DiscountType.LoyaltyFree)
+        {
+            throw new ValidationFailedException(
+                "The old free-drink discount is no longer used. Put the loyalty reward on the drink's line instead.");
+        }
+
         var versionItemIds = request.Items.Select(i => i.MenuVersionItemId).Distinct().ToList();
-        var prices = await _db.MenuVersionItems
+        var priced = await _db.MenuVersionItems
             .Where(vi => versionItemIds.Contains(vi.Id))
-            .ToDictionaryAsync(vi => vi.Id, vi => vi.Price, cancellationToken);
+            .Select(vi => new { vi.Id, vi.Price, vi.MenuItem!.Name })
+            .ToDictionaryAsync(vi => vi.Id, cancellationToken);
+        var prices = priced.ToDictionary(p => p.Key, p => p.Value.Price);
         var missing = versionItemIds.Where(id => !prices.ContainsKey(id)).ToList();
         if (missing.Count > 0)
         {
@@ -353,8 +390,14 @@ public class OrderService : IOrderService
             lines.Add(item);
         }
 
+        var plan = await PlanRewardsAsync(order, request, customer, lines, previousLines,
+            id => priced[id].Name, cancellationToken);
+        var rewardOf = plan.Rewards.ToDictionary(r => r.Line, r => r.Reward);
+
         var pricingLines = lines
-            .Select(l => new PricingLine(l.UnitPrice, l.Quantity, l.AddOns.Select(a => a.UnitPrice).ToList()))
+            .Select(l => new PricingLine(
+                l.UnitPrice, l.Quantity, l.AddOns.Select(a => a.UnitPrice).ToList(),
+                rewardOf.TryGetValue(l, out var reward) ? PricingRewardFor(reward, l) : null))
             .ToList();
 
         var discountValue = request.DiscountType is DiscountType.Percent or DiscountType.Fixed ? request.DiscountValue : 0m;
@@ -372,24 +415,10 @@ public class OrderService : IOrderService
             }
         }
 
-        if (request.DiscountType == DiscountType.LoyaltyFree)
-        {
-            // This order's own redemption doesn't count against it, so re-saving
-            // an order that already uses a reward still works.
-            var excluding = order.Id == Guid.Empty || order.CustomerId != request.CustomerId ? (Guid?)null : order.Id;
-            var balance = await _loyalty.BalanceAsync(request.CustomerId, excluding, cancellationToken);
-            var perReward = await _settings.GetLoyaltyStampsPerRewardAsync(cancellationToken);
-            if (balance / perReward < 1)
-            {
-                throw new ConflictException(
-                    $"{customer.Name} has {balance} stamp(s); a free drink needs {perReward}.");
-            }
-        }
-
-        var priced = _pricing.Price(pricingLines, request.DiscountType, discountValue);
+        var money = _pricing.Price(pricingLines, request.DiscountType, discountValue);
         for (var i = 0; i < lines.Count; i++)
         {
-            lines[i].LineTotal = priced.LineTotals[i];
+            lines[i].LineTotal = money.LineTotals[i];
             order.Items.Add(lines[i]);
         }
 
@@ -400,9 +429,178 @@ public class OrderService : IOrderService
         order.Notes = request.Notes?.Trim();
         order.DiscountType = request.DiscountType;
         order.DiscountValue = discountValue;
-        order.Subtotal = priced.Subtotal;
-        order.DiscountAmount = priced.DiscountAmount;
-        order.Total = priced.Total;
+        order.Subtotal = money.Subtotal;
+        order.DiscountAmount = money.DiscountAmount;
+        order.Total = money.Total;
+
+        return plan;
+    }
+
+    /// <summary>
+    /// Rule 3: which reward each line carries, checked against the drinker's
+    /// cards. A line that keeps its drink, drinker and reward keeps its
+    /// redemption; every other redemption of the order is released, and the
+    /// rest are allocated from what is available, oldest card first, as if the
+    /// released ones were already gone.
+    /// </summary>
+    private async Task<RewardPlan> PlanRewardsAsync(
+        Order order,
+        OrderRequest request,
+        Customer customer,
+        List<OrderItem> lines,
+        List<OrderItem> previousLines,
+        Func<Guid, string> drinkName,
+        CancellationToken cancellationToken)
+    {
+        var existing = order.Id == Guid.Empty
+            ? []
+            : await _db.LoyaltyRedemptions.Where(r => r.OrderId == order.Id).ToListAsync(cancellationToken);
+
+        var wanted = request.Items.Select((item, i) => (Line: lines[i], item.RewardId, Before: BeforeOf(i)))
+            .Where(w => w.RewardId is not null)
+            .ToList();
+        if (wanted.Count == 0)
+        {
+            return new RewardPlan([], existing);
+        }
+
+        var rewardIds = wanted.Select(w => w.RewardId!.Value).Distinct().ToList();
+        var rewards = await _db.LoyaltyClubRewards
+            .Include(r => r.Club)
+            .Where(r => rewardIds.Contains(r.Id))
+            .ToDictionaryAsync(r => r.Id, cancellationToken);
+        var unknown = rewardIds.Where(id => !rewards.ContainsKey(id)).ToList();
+        if (unknown.Count > 0)
+        {
+            throw new ValidationFailedException($"Reward(s) not found: {string.Join(", ", unknown)}.");
+        }
+
+        var clubs = await LoyaltyClubMap.LoadAsync(_db, lines.Select(l => l.MenuVersionItemId).Distinct().ToList(), cancellationToken);
+        var planned = new List<PlannedReward>();
+        var kept = new HashSet<Guid>();
+        var toAllocate = new List<(OrderItem Line, LoyaltyClubReward Reward)>();
+
+        foreach (var (line, rewardId, before) in wanted)
+        {
+            var reward = rewards[rewardId!.Value];
+            var club = reward.Club!;
+            var name = drinkName(line.MenuVersionItemId);
+
+            if (clubs.ForVersionItem(line.MenuVersionItemId) != club.Id)
+            {
+                throw new ConflictException($"{reward.Label} is a {club.Name} reward, and {name} doesn't stamp that card.");
+            }
+
+            if (!club.IsActive)
+            {
+                throw new ConflictException($"{club.Name} isn't active, so its rewards can't be used.");
+            }
+
+            if (reward.Type == LoyaltyRewardType.FreeAddOn && reward.AddOnId is null)
+            {
+                throw new ConflictException($"{reward.Label} has no add-on set. Choose it under Menu → Loyalty cards.");
+            }
+
+            var same = before?.LoyaltyRedemptionId is { } previous
+                ? existing.FirstOrDefault(r => r.Id == previous && r.RewardId == reward.Id && r.CustomerId == request.CustomerId)
+                : null;
+            if (same is not null && kept.Add(same.Id))
+            {
+                planned.Add(new PlannedReward(line, reward, same, same.Cycle));
+            }
+            else
+            {
+                toAllocate.Add((line, reward));
+            }
+        }
+
+        var released = existing.Where(r => !kept.Contains(r.Id)).ToList();
+        foreach (var group in toAllocate.GroupBy(a => a.Reward.ClubId))
+        {
+            var club = group.First().Reward.Club!;
+            var card = await _loyalty.CardAsync(request.CustomerId, club, released.Select(r => r.Id).ToList(), cancellationToken);
+            var vouchers = card.Available.ToList();
+
+            foreach (var (line, reward) in group)
+            {
+                var voucher = vouchers.FirstOrDefault(v => v.RewardId == reward.Id)
+                    ?? throw new ConflictException(
+                        $"{customer.Name} has no {reward.Label} reward available on {club.Name} " +
+                        $"({card.Position} of {club.SlotCount} slots filled).");
+                vouchers.Remove(voucher);
+                planned.Add(new PlannedReward(line, reward, null, voucher.Cycle));
+            }
+        }
+
+        return new RewardPlan(planned, released);
+
+        // The previous line this one takes its snapshot from (same matching as the prices above).
+        OrderItem? BeforeOf(int index)
+        {
+            var unused = previousLines.ToList();
+            for (var i = 0; i <= index; i++)
+            {
+                var match = unused.FirstOrDefault(p => p.MenuVersionItemId == request.Items[i].MenuVersionItemId);
+                if (match is not null)
+                {
+                    unused.Remove(match);
+                }
+
+                if (i == index)
+                {
+                    return match;
+                }
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>The pricing input for a line's reward.</summary>
+    private static PricingReward PricingRewardFor(LoyaltyClubReward reward, OrderItem line) => new(
+        reward.Type,
+        reward.Percent ?? 0m,
+        reward.Type == LoyaltyRewardType.FreeAddOn
+            ? line.AddOns.FirstOrDefault(a => a.AddOnId == reward.AddOnId)?.UnitPrice
+            : null);
+
+    /// <summary>
+    /// After the lines are saved: releases the redemptions no line keeps, then
+    /// ties each line to its redemption, kept or new. Two saves, because the
+    /// unique (customer, club, cycle, reward) index must see the old row gone
+    /// before a new one for the same cycle arrives.
+    /// </summary>
+    private async Task SaveRewardsAsync(Order order, RewardPlan plan, CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        foreach (var released in plan.Released)
+        {
+            released.DeletedAt = now;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        foreach (var (line, reward, kept, cycle) in plan.Rewards)
+        {
+            var redemption = kept ?? new LoyaltyRedemption
+            {
+                CustomerId = order.CustomerId,
+                ClubId = reward.ClubId,
+                RewardId = reward.Id,
+                Cycle = cycle,
+                OrderId = order.Id
+            };
+
+            redemption.OrderItemId = line.Id;
+            if (kept is null)
+            {
+                _db.LoyaltyRedemptions.Add(redemption);
+            }
+
+            line.LoyaltyRedemption = redemption;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<Order> LoadAsync(Guid id, CancellationToken cancellationToken) =>

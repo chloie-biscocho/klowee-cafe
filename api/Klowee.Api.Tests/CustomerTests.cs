@@ -41,8 +41,12 @@ public class CustomerTests : IClassFixture<KloweeApiFactory>
 
         var row = Assert.Single(found!);
         Assert.Equal(160m, row.OutstandingBalance);          // the unpaid latte
-        Assert.Equal(11, row.LoyaltyBalance);
-        Assert.Equal(1, row.AvailableRewards);               // floor(11 / 10)
+        var coffee = Assert.Single(row.Clubs);                // only active clubs are listed
+        Assert.Equal(LoyaltyClub.CoffeeClubId, coffee.ClubId);
+        Assert.Equal(11, coffee.Position);
+        Assert.Equal(1, coffee.PendingDrinks);              // the unpaid latte will stamp once paid
+        Assert.Equal(["available", "available", "available"], // slots 5, 8 and 12: all earned, none used
+            coffee.Rewards.Select(r => r.State));
         Assert.Equal(new DateOnly(2026, 11, 5), row.LastOrderOn);
     }
 
@@ -94,7 +98,7 @@ public class CustomerTests : IClassFixture<KloweeApiFactory>
         var merged = (await response.Content.ReadFromJsonAsync<CustomerDetailDto>(KloweeApiFactory.Json))!;
 
         Assert.Equal(kee.Id, merged.Id);
-        Assert.Equal(5, merged.LoyaltyBalance);                                                  // 1 earned + 4 adjusted
+        Assert.Equal(5, await StampsAsync(client, kee.Id));                                      // 1 earned + 4 adjusted
         Assert.Equal(110m + 150m, merged.OutstandingBalance);                                    // Prince's drink + the matcha
 
         var ownAfter = await GetOrderAsync(client, own.Id);
@@ -115,40 +119,30 @@ public class CustomerTests : IClassFixture<KloweeApiFactory>
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte, 2)]));
         await EnsureAsync(await PayAsync(client, order.Id, order.Total));
 
-        var response = await client.PostAsJsonAsync($"/api/customers/{kee.Id}/loyalty/adjust", new { delta = -1, notes = "spilled, re-made" });
+        var response = await client.PostAsJsonAsync($"/api/customers/{kee.Id}/loyalty/adjust",
+            new { clubId = LoyaltyClub.CoffeeClubId, delta = -1, notes = "spilled, re-made" });
         await EnsureAsync(response);
 
         var ledger = await LedgerAsync(client, kee.Id);
         Assert.Equal([LoyaltyReason.Adjustment, LoyaltyReason.Earned], ledger.Select(e => e.Reason));
         Assert.Equal("spilled, re-made", ledger[0].Notes);
-        Assert.Equal(1, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);
+        Assert.Equal(1, await StampsAsync(client, kee.Id));
 
         Assert.Equal(HttpStatusCode.BadRequest,
-            (await client.PostAsJsonAsync($"/api/customers/{kee.Id}/loyalty/adjust", new { delta = 0 })).StatusCode);
+            (await client.PostAsJsonAsync($"/api/customers/{kee.Id}/loyalty/adjust", new { clubId = LoyaltyClub.CoffeeClubId, delta = 0 })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest,                                                   // which club? it must say
+            (await client.PostAsJsonAsync($"/api/customers/{kee.Id}/loyalty/adjust", new { delta = 1 })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict,                                                     // not launched yet
+            (await client.PostAsJsonAsync($"/api/customers/{kee.Id}/loyalty/adjust", new { clubId = LoyaltyClub.MatchaClubId, delta = 1 })).StatusCode);
     }
 
     [Fact]
-    public async Task StampsPerReward_IsASetting_ValidatedAndKeptOffThePublicSite()
+    public async Task StampsPerReward_IsRetired_AndUnknownToTheSettings()
     {
-        var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee Setting");
-        await GiveStampsAsync(client, kee.Id, 6);
-        Assert.Equal(0, (await GetCustomerAsync(client, kee.Id)).AvailableRewards);   // default 10
+        var (client, _) = await SetupAsync();
 
-        Assert.Equal(HttpStatusCode.BadRequest,
-            (await client.PutAsJsonAsync("/api/settings", new[] { new { key = "loyalty_stamps_per_reward", value = "0" } })).StatusCode);
-        await EnsureAsync(await client.PutAsJsonAsync("/api/settings", new[] { new { key = "loyalty_stamps_per_reward", value = "5" } }));
+        var response = await client.PutAsJsonAsync("/api/settings", new[] { new { key = "loyalty_stamps_per_reward", value = "10" } });
 
-        Assert.Equal(1, (await GetCustomerAsync(client, kee.Id)).AvailableRewards);
-
-        // A redemption now costs 5.
-        await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte)], DiscountType.LoyaltyFree));
-        Assert.Equal(1, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);
-
-        var home = await (await _factory.CreateAnonymousClientAsync())
-            .GetFromJsonAsync<PublicHomeDto>("/api/public/home", KloweeApiFactory.Json);
-        Assert.False(home!.Settings.ContainsKey("loyalty_stamps_per_reward"));
-
-        await EnsureAsync(await client.PutAsJsonAsync("/api/settings", new[] { new { key = "loyalty_stamps_per_reward", value = "10" } }));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

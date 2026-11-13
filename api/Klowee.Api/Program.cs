@@ -178,6 +178,7 @@ builder.Services.AddScoped<IPublicHomeService, PublicHomeService>();
 // Phase 2: office sales (docs/decisions/016-orders-and-payments-model.md).
 builder.Services.AddSingleton<IPricingService, PricingService>();
 builder.Services.AddScoped<ILoyaltyService, LoyaltyService>();
+builder.Services.AddScoped<ILoyaltyClubService, LoyaltyClubService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
@@ -296,7 +297,7 @@ var app = builder.Build();
 // Development migrates and seeds everything; Production only makes sure the
 // two owners exist. Production schema changes are the deploy workflow's job.
 var plan = StartupPlan.For(app.Environment);
-if (plan.Migrate || plan.SeedOwners || plan.SeedSampleData)
+if (plan.Migrate || plan.SeedOwners || plan.SeedSampleData || plan.RunDataSteps)
 {
     using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
@@ -320,12 +321,22 @@ if (plan.Migrate || plan.SeedOwners || plan.SeedSampleData)
         {
             await DbSeeder.SeedSampleDataAsync(db);
         }
+
+        if (plan.RunDataSteps)
+        {
+            // Before the first request: no order may stamp under the new rules
+            // until the old card is carried over. Behind a marker row; one
+            // transaction, so a failure leaves nothing half-done and the next
+            // start tries again.
+            var carryOver = await new LoyaltyCarryOver(db).RunAsync();
+            logger.LogInformation("{Summary}", carryOver.Summary());
+        }
     }
     catch (Exception ex) when (!app.Environment.IsDevelopment())
     {
         // A paused or unreachable database must not stop the API from starting;
-        // /api/health reports it, and the next start seeds.
-        logger.LogError(ex, "Owner seeding failed at startup.");
+        // /api/health reports it, and the next start seeds and carries over.
+        logger.LogError(ex, "Startup database work (owner seeding or the loyalty carry-over) failed.");
     }
 }
 

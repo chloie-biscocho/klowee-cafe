@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using Klowee.Api.Contracts.Customers;
 using Klowee.Api.Contracts.Orders;
 using Klowee.Api.Entities;
+using Klowee.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Klowee.Api.Tests;
@@ -49,7 +50,10 @@ public static class SalesFixture
                     Row("Office menu", "Latte"));
             }
 
-            var category = new MenuCategory { Name = $"Coffee {suffix}", SortOrder = 1 };
+            // Both clubs, as the LoyaltyClubs migration creates them; this class's
+            // drinks all stamp The Coffee Club through their category.
+            await LoyaltyClubDefaults.EnsureAsync(db, CancellationToken.None);
+            var category = new MenuCategory { Name = $"Coffee {suffix}", SortOrder = 1, LoyaltyClubId = LoyaltyClub.CoffeeClubId };
             var latte = new MenuItem { Name = $"Latte {suffix}", Category = category };
             var americano = new MenuItem { Name = $"Americano {suffix}", Category = category };
             var matcha = new MenuItem { Name = $"Matcha {suffix}", Category = category };
@@ -76,6 +80,14 @@ public static class SalesFixture
             db.AddRange(category, latte, americano, matcha, office, popUp, latteRow, americanoRow, matchaRow, oldLatteRow, oat, shot);
             await db.SaveChangesAsync();
 
+            // The migration finds the add-on named "Extra shot"; here it carries the class suffix.
+            foreach (var reward in await db.LoyaltyClubRewards.Where(r => r.Type == LoyaltyRewardType.FreeAddOn && r.AddOnId == null).ToListAsync())
+            {
+                reward.AddOnId = shot.Id;
+            }
+
+            await db.SaveChangesAsync();
+
             return new SalesMenu(latteRow.Id, americanoRow.Id, matchaRow.Id, oldLatteRow.Id, oat.Id, shot.Id, latteRow.Id);
         });
     }
@@ -89,6 +101,28 @@ public static class SalesFixture
 
     public static object Line(Guid menuVersionItemId, int quantity = 1, params Guid[] addOnIds) =>
         new { menuVersionItemId, quantity, addOnIds };
+
+    /// <summary>
+    /// Adds a drink to this class's office menu in its own category, with the
+    /// given category club and item setting. Returns the priced row's id.
+    /// </summary>
+    public static Task<Guid> AddDrinkAsync(
+        KloweeApiFactory factory, string suffix, string name, decimal price,
+        Guid? categoryClub = null, LoyaltyMode mode = LoyaltyMode.Inherit, Guid? itemClub = null) =>
+        factory.WithDbAsync(async db =>
+        {
+            var office = await db.MenuVersions.SingleAsync(v => v.Name == $"Office menu {suffix}");
+            var category = new MenuCategory { Name = $"{name} category {suffix}", SortOrder = 9, LoyaltyClubId = categoryClub };
+            var item = new MenuItem { Name = $"{name} {suffix}", Category = category, LoyaltyMode = mode, LoyaltyClubId = itemClub };
+            var row = new MenuVersionItem { MenuVersion = office, MenuItem = item, Price = price };
+            db.AddRange(category, item, row);
+            await db.SaveChangesAsync();
+            return row.Id;
+        });
+
+    /// <summary>A line carrying a loyalty reward on one unit.</summary>
+    public static object RewardLine(Guid menuVersionItemId, Guid rewardId, int quantity = 1, params Guid[] addOnIds) =>
+        new { menuVersionItemId, quantity, addOnIds, rewardId };
 
     public static object OrderBody(
         Guid customerId,
@@ -132,15 +166,35 @@ public static class SalesFixture
     public static async Task<CustomerDetailDto> GetCustomerAsync(HttpClient client, Guid id) =>
         (await client.GetFromJsonAsync<CustomerDetailDto>($"/api/customers/{id}", KloweeApiFactory.Json))!;
 
-    public static async Task<List<LoyaltyEntryDto>> LedgerAsync(HttpClient client, Guid customerId) =>
-        (await client.GetFromJsonAsync<List<LoyaltyEntryDto>>($"/api/customers/{customerId}/loyalty", KloweeApiFactory.Json))!;
+    public static async Task<List<LoyaltyEntryDto>> LedgerAsync(HttpClient client, Guid customerId, Guid? clubId = null) =>
+        (await client.GetFromJsonAsync<List<LoyaltyEntryDto>>(
+            $"/api/customers/{customerId}/loyalty{(clubId is null ? "" : $"?clubId={clubId}")}", KloweeApiFactory.Json))!;
 
-    /// <summary>Gives a customer stamps directly, as the owners would with an adjustment.</summary>
-    public static async Task GiveStampsAsync(HttpClient client, Guid customerId, int stamps)
+    /// <summary>Gives a customer stamps directly on a club (The Coffee Club by default), as the owners would.</summary>
+    public static async Task GiveStampsAsync(HttpClient client, Guid customerId, int stamps, Guid? clubId = null)
     {
-        var response = await client.PostAsJsonAsync($"/api/customers/{customerId}/loyalty/adjust", new { delta = stamps, notes = "test" });
-        response.EnsureSuccessStatusCode();
+        var response = await client.PostAsJsonAsync($"/api/customers/{customerId}/loyalty/adjust",
+            new { clubId = clubId ?? LoyaltyClub.CoffeeClubId, delta = stamps, notes = "test" });
+        await EnsureAsync(response);
     }
+
+    /// <summary>A customer's card on an active club (The Coffee Club by default).</summary>
+    public static async Task<CustomerClubDto> CardAsync(HttpClient client, Guid customerId, Guid? clubId = null) =>
+        (await GetCustomerAsync(client, customerId)).Clubs.Single(c => c.ClubId == (clubId ?? LoyaltyClub.CoffeeClubId));
+
+    /// <summary>Stamps on a club's card, all cards counted: cycle × slots + position.</summary>
+    public static async Task<int> StampsAsync(HttpClient client, Guid customerId, Guid? clubId = null)
+    {
+        var card = await CardAsync(client, customerId, clubId);
+        return card.Cycle * card.SlotCount + card.Position;
+    }
+
+    /// <summary>The Coffee Club's reward id on a slot (5 = 50% off, 8 = extra shot, 12 = free drink).</summary>
+    public static Task<Guid> CoffeeRewardAsync(KloweeApiFactory factory, int slot) =>
+        factory.WithDbAsync(db => db.LoyaltyClubRewards
+            .Where(r => r.ClubId == LoyaltyClub.CoffeeClubId && r.Slot == slot)
+            .Select(r => r.Id)
+            .SingleAsync());
 
     /// <summary>EnsureSuccessStatusCode, but with the ProblemDetails body in the failure message.</summary>
     public static async Task EnsureAsync(HttpResponseMessage response)

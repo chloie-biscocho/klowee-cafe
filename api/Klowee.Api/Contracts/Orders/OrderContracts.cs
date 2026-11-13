@@ -20,6 +20,9 @@ public record OrderLineRequest
     public int Quantity { get; init; } = 1;
 
     public List<Guid> AddOnIds { get; init; } = [];
+
+    /// <summary>A loyalty reward for one unit of this line; it must be available to the drinker for the drink's club.</summary>
+    public Guid? RewardId { get; init; }
 }
 
 /// <summary>A whole order. A PUT replaces the items in full, and is refused once the order has payments.</summary>
@@ -37,9 +40,10 @@ public record OrderRequest
     [MaxLength(1000)]
     public string? Notes { get; init; }
 
+    /// <summary>None, Percent or Fixed. LoyaltyFree is history only and refused (rewards now sit on lines).</summary>
     public DiscountType DiscountType { get; init; } = DiscountType.None;
 
-    /// <summary>Percent 0–100, or pesos off (0 to the subtotal). Ignored for None and LoyaltyFree.</summary>
+    /// <summary>Percent 0–100, or pesos off (0 to the subtotal). Ignored for None.</summary>
     [Range(0, 1000000)]
     public decimal DiscountValue { get; init; }
 
@@ -51,6 +55,9 @@ public record PersonRef(Guid Id, string Name);
 
 public record OrderItemAddOnDto(Guid Id, Guid AddOnId, string Name, decimal UnitPrice);
 
+/// <param name="AmountOff">What the reward took off this line (₱0 for an add-on given free that the line didn't carry).</param>
+public record OrderLineRewardDto(Guid RewardId, string Label, LoyaltyRewardType Type, decimal AmountOff);
+
 public record OrderItemDto(
     Guid Id,
     Guid MenuVersionItemId,
@@ -60,7 +67,8 @@ public record OrderItemDto(
     int Quantity,
     decimal UnitPrice,
     decimal LineTotal,
-    IReadOnlyList<OrderItemAddOnDto> AddOns);
+    IReadOnlyList<OrderItemAddOnDto> AddOns,
+    OrderLineRewardDto? Reward);
 
 public record PaymentDto(
     Guid Id,

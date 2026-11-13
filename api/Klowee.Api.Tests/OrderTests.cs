@@ -138,47 +138,18 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     }
 
     [Fact]
-    public async Task LoyaltyFree_WithoutAReward_Is409()
+    public async Task LoyaltyFree_IsHistoryOnly_NewAndEditedOrdersAre400()
     {
         var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee no reward");
-        await GiveStampsAsync(client, kee.Id, 9);
+        var kee = await CreateCustomerAsync(client, "Kee old discount");
+        await GiveStampsAsync(client, kee.Id, 11);
 
-        var response = await PostOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte)], DiscountType.LoyaltyFree));
+        var create = await PostOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte)], DiscountType.LoyaltyFree));
+        Assert.Equal(HttpStatusCode.BadRequest, create.StatusCode);
 
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task LoyaltyFree_FreesTheCheapestDrink_RedeemsStamps_AndRemovingItReversesThat()
-    {
-        var (client, m) = await SetupAsync();
-        var kee = await CreateCustomerAsync(client, "Kee free");
-        await GiveStampsAsync(client, kee.Id, 12);
-
-        var order = await CreateOrderAsync(client, OrderBody(kee.Id,
-            [Line(m.Latte), Line(m.Americano, 1, m.OatMilk)], DiscountType.LoyaltyFree, discountValue: 50m));
-
-        // Per unit: Latte 160, Americano + oat 140. The 140 one is free.
-        Assert.Equal(140m, order.DiscountAmount);
-        Assert.Equal(160m, order.Total);
-        Assert.Equal(0m, order.DiscountValue);
-        var redeemed = Assert.Single(await LedgerAsync(client, kee.Id), e => e.Reason == LoyaltyReason.Redeemed);
-        Assert.Equal(-10, redeemed.Delta);
-        Assert.Equal(2, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);
-
-        // Re-saving with the discount still on doesn't need a second reward.
-        var again = await client.PutAsJsonAsync($"/api/orders/{order.Id}",
-            OrderBody(kee.Id, [Line(m.Latte), Line(m.Americano, 1, m.OatMilk)], DiscountType.LoyaltyFree));
-        await EnsureAsync(again);
-        Assert.Equal(2, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);
-
-        var removed = await client.PutAsJsonAsync($"/api/orders/{order.Id}",
-            OrderBody(kee.Id, [Line(m.Latte), Line(m.Americano, 1, m.OatMilk)]));
-        await EnsureAsync(removed);
-
-        Assert.DoesNotContain(await LedgerAsync(client, kee.Id), e => e.Reason == LoyaltyReason.Redeemed);
-        Assert.Equal(12, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);
+        var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte)]));
+        var edit = await client.PutAsJsonAsync($"/api/orders/{order.Id}", OrderBody(kee.Id, [Line(m.Latte)], DiscountType.LoyaltyFree));
+        Assert.Equal(HttpStatusCode.BadRequest, edit.StatusCode);
     }
 
     [Fact]
@@ -203,13 +174,13 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
         var kee = await CreateCustomerAsync(client, "Kee delete");
         var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte, 2, m.OatMilk)]));
         await EnsureAsync(await PayAsync(client, order.Id, order.Total));
-        Assert.Equal(2, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);
+        Assert.Equal(2, await StampsAsync(client, kee.Id));
 
         var response = await client.DeleteAsync($"/api/orders/{order.Id}");
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/orders/{order.Id}")).StatusCode);
-        Assert.Equal(0, (await GetCustomerAsync(client, kee.Id)).LoyaltyBalance);
+        Assert.Equal(0, await StampsAsync(client, kee.Id));
 
         var stillThere = await _factory.WithDbAsync(async db => new
         {

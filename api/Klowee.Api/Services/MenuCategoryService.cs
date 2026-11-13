@@ -17,7 +17,7 @@ public class MenuCategoryService : IMenuCategoryService
             .AsNoTracking()
             .OrderBy(c => c.SortOrder)
             .ThenBy(c => c.Name)
-            .Select(c => new MenuCategoryDto(c.Id, c.Name, c.SortOrder, c.Description))
+            .Select(c => new MenuCategoryDto(c.Id, c.Name, c.SortOrder, c.Description, c.LoyaltyClubId))
             .ToListAsync(cancellationToken);
 
     public async Task<MenuCategoryDto> CreateAsync(MenuCategoryRequest request, CancellationToken cancellationToken)
@@ -25,12 +25,20 @@ public class MenuCategoryService : IMenuCategoryService
         var name = request.Name.Trim();
         await EnsureNameIsFreeAsync(name, excludingId: null, cancellationToken);
 
-        var category = new MenuCategory { Name = name, SortOrder = request.SortOrder, Description = Clean(request.Description) };
+        await EnsureClubExistsAsync(request.LoyaltyClubId, cancellationToken);
+
+        var category = new MenuCategory
+        {
+            Name = name,
+            SortOrder = request.SortOrder,
+            Description = Clean(request.Description),
+            LoyaltyClubId = request.LoyaltyClubId
+        };
 
         _db.MenuCategories.Add(category);
         await _db.SaveChangesAsync(cancellationToken);
 
-        return new MenuCategoryDto(category.Id, category.Name, category.SortOrder, category.Description);
+        return new MenuCategoryDto(category.Id, category.Name, category.SortOrder, category.Description, category.LoyaltyClubId);
     }
 
     public async Task<MenuCategoryDto> UpdateAsync(Guid id, MenuCategoryRequest request, CancellationToken cancellationToken)
@@ -40,13 +48,15 @@ public class MenuCategoryService : IMenuCategoryService
 
         var name = request.Name.Trim();
         await EnsureNameIsFreeAsync(name, excludingId: id, cancellationToken);
+        await EnsureClubExistsAsync(request.LoyaltyClubId, cancellationToken);
 
         category.Name = name;
+        category.LoyaltyClubId = request.LoyaltyClubId;
         category.SortOrder = request.SortOrder;
         category.Description = Clean(request.Description);
         await _db.SaveChangesAsync(cancellationToken);
 
-        return new MenuCategoryDto(category.Id, category.Name, category.SortOrder, category.Description);
+        return new MenuCategoryDto(category.Id, category.Name, category.SortOrder, category.Description, category.LoyaltyClubId);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken)
@@ -65,6 +75,14 @@ public class MenuCategoryService : IMenuCategoryService
 
         category.DeletedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task EnsureClubExistsAsync(Guid? clubId, CancellationToken cancellationToken)
+    {
+        if (clubId is { } id && !await _db.LoyaltyClubs.AnyAsync(c => c.Id == id, cancellationToken))
+        {
+            throw new ValidationFailedException($"Loyalty club '{id}' does not exist.");
+        }
     }
 
     private static string? Clean(string? description) =>

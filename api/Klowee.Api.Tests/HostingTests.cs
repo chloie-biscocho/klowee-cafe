@@ -102,13 +102,14 @@ public class HostingTests : IClassFixture<KloweeApiFactory>
         Assert.False(plan.Migrate);
         Assert.True(plan.SeedOwners);
         Assert.False(plan.SeedSampleData);
+        Assert.True(plan.RunDataSteps);                  // the loyalty carry-over runs before the first request
     }
 
     [Fact]
     public void StartupPlan_DevelopmentMigratesAndSeedsEverything_TestingNothing()
     {
-        Assert.Equal(new StartupPlan(true, true, true), StartupPlan.For(Environment("Development")));
-        Assert.Equal(new StartupPlan(false, false, false), StartupPlan.For(Environment("Testing")));
+        Assert.Equal(new StartupPlan(true, true, true, true), StartupPlan.For(Environment("Development")));
+        Assert.Equal(new StartupPlan(false, false, false, false), StartupPlan.For(Environment("Testing")));
     }
 
     [Fact]

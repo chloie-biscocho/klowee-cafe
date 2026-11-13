@@ -2,7 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Klowee.Api.Contracts.Menu;
 
-public record MenuCategoryDto(Guid Id, string Name, int SortOrder, string? Description);
+/// <param name="LoyaltyClubId">The club this category's drinks stamp; null for none.</param>
+public record MenuCategoryDto(Guid Id, string Name, int SortOrder, string? Description, Guid? LoyaltyClubId);
 
 public record MenuCategoryRequest
 {
@@ -16,4 +17,7 @@ public record MenuCategoryRequest
     /// <summary>Optional; blank is stored as null.</summary>
     [MaxLength(200)]
     public string? Description { get; init; }
+
+    /// <summary>The club this category's drinks stamp. Like every field here, a PUT replaces it: null means no club.</summary>
+    public Guid? LoyaltyClubId { get; init; }
 }

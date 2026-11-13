@@ -14,6 +14,7 @@ public record MenuVersionSummaryDto(
     int ItemCount);
 
 /// <summary>One priced line on a version, flattened for the client.</summary>
+/// <param name="LoyaltyClubId">The club this drink stamps (item override, else its category's); null for none.</param>
 public record MenuVersionItemDto(
     Guid Id,
     Guid MenuItemId,
@@ -23,7 +24,8 @@ public record MenuVersionItemDto(
     decimal Price,
     bool IsAvailable,
     bool IsFeatured,
-    int SortOrder);
+    int SortOrder,
+    Guid? LoyaltyClubId);
 
 /// <summary>A version plus its items, ordered by category sort then item sort.</summary>
 public record MenuVersionDetailDto(

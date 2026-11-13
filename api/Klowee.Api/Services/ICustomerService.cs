@@ -18,6 +18,6 @@ public interface ICustomerService
     /// <summary>409 while the customer has orders (as drinker or payer): deactivate instead.</summary>
     Task DeleteAsync(Guid id, CancellationToken cancellationToken);
 
-    /// <summary>Moves orders, payer references and loyalty entries to the target, then deletes the source.</summary>
+    /// <summary>Moves orders, payer references, stamps and used rewards (club by club) to the target, then deletes the source.</summary>
     Task<CustomerDetailDto> MergeAsync(Guid id, Guid targetId, CancellationToken cancellationToken);
 }

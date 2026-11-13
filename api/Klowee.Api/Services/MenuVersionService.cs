@@ -46,6 +46,7 @@ public class MenuVersionService : IMenuVersionService
             })
             .ToListAsync(cancellationToken);
         var categories = await MenuItemService.CategoriesAsync(_db, cancellationToken);
+        var clubs = await LoyaltyClubMap.LoadAsync(_db, [], cancellationToken);
 
         // Category names come from every category, deleted ones included, so a
         // retired drink in a deleted category still shows in the version it was priced in.
@@ -55,7 +56,7 @@ public class MenuVersionService : IMenuVersionService
             .ThenBy(l => l.ItemName)
             .Select(l => new MenuVersionItemDto(
                 l.Id, l.MenuItemId, l.ItemName, l.CategoryId, categories[l.CategoryId].Name,
-                l.Price, l.IsAvailable, l.IsFeatured, l.SortOrder))
+                l.Price, l.IsAvailable, l.IsFeatured, l.SortOrder, clubs.ForItem(l.MenuItemId)))
             .ToList();
 
         return new MenuVersionDetailDto(

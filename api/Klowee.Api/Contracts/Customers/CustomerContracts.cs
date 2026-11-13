@@ -12,8 +12,7 @@ public record CustomerSummaryDto(
     string? Notes,
     bool IsActive,
     decimal OutstandingBalance,
-    int LoyaltyBalance,
-    int AvailableRewards,
+    IReadOnlyList<CustomerClubDto> Clubs,
     DateOnly? LastOrderOn);
 
 public record CustomerDetailDto(
@@ -23,10 +22,42 @@ public record CustomerDetailDto(
     string? Notes,
     bool IsActive,
     decimal OutstandingBalance,
-    int LoyaltyBalance,
-    int AvailableRewards,
+    IReadOnlyList<CustomerClubDto> Clubs,
     DateOnly? LastOrderOn,
     IReadOnlyList<OrderSummaryDto> RecentOrders);
+
+/// <summary>
+/// One reward on the customer's card. The current card lists every reward
+/// (locked, available or used); rewards from earlier cards appear only while
+/// still available, since they never expire.
+/// </summary>
+/// <param name="State">"locked", "available" or "used".</param>
+/// <param name="Cycle">Which pass round the card the reward belongs to (0-based).</param>
+/// <param name="RedemptionId">Set when used; DELETE it to make the reward available again.</param>
+/// <param name="OrderId">Set when an order used it.</param>
+public record CustomerRewardDto(
+    Guid RewardId,
+    int Slot,
+    string Label,
+    LoyaltyRewardType Type,
+    string State,
+    int Cycle,
+    Guid? RedemptionId,
+    Guid? OrderId);
+
+/// <summary>A customer's place on one active club's card, derived from the ledger (decision 020).</summary>
+/// <param name="Position">Slots filled on the current card.</param>
+/// <param name="Cycle">Completed cards (0-based index of the current one).</param>
+/// <param name="PendingDrinks">Drinks of this club on the customer's not-yet-paid orders.</param>
+public record CustomerClubDto(
+    Guid ClubId,
+    string Name,
+    LoyaltyClubStyle Style,
+    int SlotCount,
+    int Position,
+    int Cycle,
+    IReadOnlyList<CustomerRewardDto> Rewards,
+    int PendingDrinks);
 
 public record CustomerRequest
 {
@@ -45,6 +76,8 @@ public record CustomerRequest
 
 public record LoyaltyEntryDto(
     Guid Id,
+    Guid ClubId,
+    string ClubName,
     int Delta,
     LoyaltyReason Reason,
     Guid? OrderId,
@@ -53,9 +86,37 @@ public record LoyaltyEntryDto(
 
 public record LoyaltyAdjustRequest
 {
+    [Required]
+    public Guid ClubId { get; init; }
+
     [Range(-1000, 1000)]
     public int Delta { get; init; }
 
     [MaxLength(500)]
     public string? Notes { get; init; }
 }
+
+/// <summary>Marks a reward used by hand (no order): the owners' paper card says so.</summary>
+public record LoyaltyRedemptionRequest
+{
+    [Required]
+    public Guid ClubId { get; init; }
+
+    [Required]
+    public Guid RewardId { get; init; }
+
+    [Range(0, 10000)]
+    public int Cycle { get; init; }
+
+    [MaxLength(500)]
+    public string? Note { get; init; }
+}
+
+public record LoyaltyRedemptionDto(
+    Guid Id,
+    Guid ClubId,
+    Guid RewardId,
+    int Cycle,
+    Guid? OrderId,
+    string? Note,
+    DateTimeOffset CreatedAt);

@@ -23,8 +23,12 @@ public class OrderItem : BaseEntity
     /// <summary>Snapshot of MenuVersionItem.Price when the order was taken.</summary>
     public decimal UnitPrice { get; set; }
 
-    /// <summary>(UnitPrice + the add-ons' prices) × Quantity.</summary>
+    /// <summary>(UnitPrice + the add-ons' prices) × Quantity, less the line's reward.</summary>
     public decimal LineTotal { get; set; }
+
+    /// <summary>The loyalty reward applied to one unit of this line, if any.</summary>
+    public Guid? LoyaltyRedemptionId { get; set; }
+    public LoyaltyRedemption? LoyaltyRedemption { get; set; }
 
     public ICollection<OrderItemAddOn> AddOns { get; set; } = new List<OrderItemAddOn>();
 }

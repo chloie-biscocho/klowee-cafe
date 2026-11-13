@@ -18,5 +18,12 @@ public class MenuItem : BaseEntity
     public string? PhotoUrl { get; set; }
     public bool IsArchived { get; set; }
 
+    /// <summary>Inherit (the category's club), None, or Club (LoyaltyClubId).</summary>
+    public LoyaltyMode LoyaltyMode { get; set; } = LoyaltyMode.Inherit;
+
+    /// <summary>Used only when LoyaltyMode is Club.</summary>
+    public Guid? LoyaltyClubId { get; set; }
+    public LoyaltyClub? LoyaltyClub { get; set; }
+
     public ICollection<MenuVersionItem> VersionItems { get; set; } = new List<MenuVersionItem>();
 }

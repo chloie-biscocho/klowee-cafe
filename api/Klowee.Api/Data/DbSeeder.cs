@@ -162,7 +162,6 @@ public static class DbSeeder
             ("instagram_url", "https://instagram.com/kloweecafe"),
             ("facebook_url", "https://facebook.com/kloweecafe"),
             ("contact_email", "hello@kloweecafe.com"),
-            (SiteSettingService.LoyaltyStampsPerRewardKey, "10"),
         };
 
         var existing = await db.SiteSettings.Select(s => s.Key).ToListAsync();
@@ -440,7 +439,10 @@ public static class DbSeeder
             db.Payments.Add(new Payment { Order = order, Amount = amount, Channel = channel, PaidOn = today.AddDays(-daysAgo) });
 
         void Earn(Order order, int stamps) =>
-            db.LoyaltyEntries.Add(new LoyaltyEntry { Customer = order.Customer!, Order = order, Delta = stamps, Reason = LoyaltyReason.Earned });
+            db.LoyaltyEntries.Add(new LoyaltyEntry
+            {
+                Customer = order.Customer!, ClubId = LoyaltyClub.CoffeeClubId, Order = order, Delta = stamps, Reason = LoyaltyReason.Earned
+            });
 
         // 1. Paid in full.
         var paid = NewOrder(kee, null, 20, DiscountType.None, 0m, (rows[0], 1, false));
@@ -462,10 +464,11 @@ public static class DbSeeder
         Pay(percent, percent.Total, PaymentChannel.BPI, 2);
         Earn(percent, 3);
 
-        // 6. A free drink: Prince was given ten stamps, and redeems them.
-        var free = NewOrder(prince, null, 1, DiscountType.LoyaltyFree, 0m, (rows[0], 1, false), (rows[1], 1, true));
-        db.LoyaltyEntries.Add(new LoyaltyEntry { Customer = prince, Delta = 10, Reason = LoyaltyReason.Adjustment, Notes = "Sample stamps" });
-        db.LoyaltyEntries.Add(new LoyaltyEntry { Customer = prince, Order = free, Delta = -10, Reason = LoyaltyReason.Redeemed });
+        // 6. Prince has eleven Coffee Club stamps, so his free drink is waiting.
+        db.LoyaltyEntries.Add(new LoyaltyEntry
+        {
+            Customer = prince, ClubId = LoyaltyClub.CoffeeClubId, Delta = 11, Reason = LoyaltyReason.Adjustment, Notes = "Sample stamps"
+        });
 
         await db.SaveChangesAsync();
     }

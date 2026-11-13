@@ -44,6 +44,10 @@ public class KloweeDbContext : DbContext
     public DbSet<OrderItemAddOn> OrderItemAddOns => Set<OrderItemAddOn>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<LoyaltyEntry> LoyaltyEntries => Set<LoyaltyEntry>();
+    public DbSet<LoyaltyClub> LoyaltyClubs => Set<LoyaltyClub>();
+    public DbSet<LoyaltyClubReward> LoyaltyClubRewards => Set<LoyaltyClubReward>();
+    public DbSet<LoyaltyRedemption> LoyaltyRedemptions => Set<LoyaltyRedemption>();
+    public DbSet<DataMigration> DataMigrations => Set<DataMigration>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

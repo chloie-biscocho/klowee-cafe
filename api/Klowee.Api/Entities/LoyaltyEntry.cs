@@ -19,10 +19,21 @@ public class LoyaltyEntry : BaseEntity
     public Guid CustomerId { get; set; }
     public Customer? Customer { get; set; }
 
+    /// <summary>The club whose card this entry stamps. Resolved when the order became Paid.</summary>
+    public Guid ClubId { get; set; }
+    public LoyaltyClub? Club { get; set; }
+
     public Guid? OrderId { get; set; }
     public Order? Order { get; set; }
 
-    /// <summary>Positive for stamps earned, negative for a redemption.</summary>
+    /// <summary>
+    /// Set on the old single-card entries the carry-over voided (decision 020).
+    /// An order with such an entry was already counted in the carried-over
+    /// balance, so it never earns stamps again.
+    /// </summary>
+    public DateTimeOffset? CarriedOverAt { get; set; }
+
+    /// <summary>Positive for stamps earned; negative only on old single-card redemptions and corrections.</summary>
     public int Delta { get; set; }
 
     public LoyaltyReason Reason { get; set; }

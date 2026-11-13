@@ -12,6 +12,11 @@ public class MenuCategoryConfiguration : IEntityTypeConfiguration<MenuCategory>
         builder.Property(c => c.Description).HasMaxLength(200);
         builder.HasIndex(c => c.Name).IsUnique().HasFilter(SoftDelete.Filter);
 
+        builder.HasOne(c => c.LoyaltyClub)
+            .WithMany()
+            .HasForeignKey(c => c.LoyaltyClubId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(c => c.Items)
             .WithOne(i => i.Category!)
             .HasForeignKey(i => i.CategoryId)

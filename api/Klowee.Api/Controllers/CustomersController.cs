@@ -20,7 +20,7 @@ public class CustomersController : ControllerBase
         _payments = payments;
     }
 
-    /// <summary>Customers by name, each with their tab balance, stamps and last order date.</summary>
+    /// <summary>Customers by name, each with their tab balance, card on every active club, and last order date.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<CustomerSummaryDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<CustomerSummaryDto>>> List(
@@ -74,7 +74,7 @@ public class CustomersController : ControllerBase
 
     /// <summary>
     /// For duplicate names from the spreadsheet: moves this customer's orders
-    /// (with their payments), payer references and loyalty entries to the
+    /// (with their payments), payer references, stamps and used rewards to the
     /// target, then deletes this customer. Returns the target.
     /// </summary>
     [HttpPost("{id:guid}/merge-into/{targetId:guid}")]
@@ -84,19 +84,43 @@ public class CustomersController : ControllerBase
     public async Task<ActionResult<CustomerDetailDto>> Merge(Guid id, Guid targetId, CancellationToken cancellationToken) =>
         Ok(await _customers.MergeAsync(id, targetId, cancellationToken));
 
-    /// <summary>The stamp ledger, newest first.</summary>
+    /// <summary>The stamp ledger, newest first; one club's entries with <c>clubId</c>.</summary>
     [HttpGet("{id:guid}/loyalty")]
     [ProducesResponseType<IReadOnlyList<LoyaltyEntryDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<IReadOnlyList<LoyaltyEntryDto>>> Loyalty(Guid id, CancellationToken cancellationToken) =>
-        Ok(await _loyalty.LedgerAsync(id, cancellationToken));
+    public async Task<ActionResult<IReadOnlyList<LoyaltyEntryDto>>> Loyalty(
+        Guid id,
+        [FromQuery] Guid? clubId,
+        CancellationToken cancellationToken) =>
+        Ok(await _loyalty.LedgerAsync(id, clubId, cancellationToken));
 
+    /// <summary>Adds or removes stamps on one club by hand (an Adjustment entry).</summary>
     [HttpPost("{id:guid}/loyalty/adjust")]
     [ProducesResponseType<LoyaltyEntryDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<LoyaltyEntryDto>> Adjust(Guid id, LoyaltyAdjustRequest request, CancellationToken cancellationToken) =>
         Ok(await _loyalty.AdjustAsync(id, request, cancellationToken));
+
+    /// <summary>Marks an available reward used without an order (the paper card says it was used).</summary>
+    [HttpPost("{id:guid}/loyalty/redemptions")]
+    [ProducesResponseType<LoyaltyRedemptionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<LoyaltyRedemptionDto>> Redeem(Guid id, LoyaltyRedemptionRequest request, CancellationToken cancellationToken) =>
+        Ok(await _loyalty.RedeemAsync(id, request, cancellationToken));
+
+    /// <summary>Makes a used reward available again. Refused (409) when an order used it.</summary>
+    [HttpDelete("{id:guid}/loyalty/redemptions/{redemptionId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Unredeem(Guid id, Guid redemptionId, CancellationToken cancellationToken)
+    {
+        await _loyalty.UnredeemAsync(id, redemptionId, cancellationToken);
+        return NoContent();
+    }
 
     /// <summary>
     /// "Paid 500 for last month": spreads the amount over the customer's tab,

@@ -13,6 +13,11 @@ public enum DiscountType
     None,
     Percent,
     Fixed,
+
+    /// <summary>
+    /// The old single card's free drink. Kept so history reads; new and edited
+    /// orders can't use it (rewards now sit on lines, decision 020).
+    /// </summary>
     LoyaltyFree
 }
 

@@ -42,7 +42,7 @@ public class PaymentService : IPaymentService
 
         _db.Payments.Add(NewPayment(orderId, request.Amount, request));
         await _db.SaveChangesAsync(cancellationToken);
-        await _loyalty.ReconcileAsync(order, paid + request.Amount, cancellationToken);
+        await _loyalty.ReconcileAsync(order, paid + request.Amount, linesChanged: false, cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
         return await _orders.GetAsync(orderId, cancellationToken);
@@ -60,7 +60,7 @@ public class PaymentService : IPaymentService
         await _db.SaveChangesAsync(cancellationToken);
 
         var paid = (await _db.PaidByOrderAsync([orderId], cancellationToken)).GetValueOrDefault(orderId);
-        await _loyalty.ReconcileAsync(order, paid, cancellationToken);
+        await _loyalty.ReconcileAsync(order, paid, linesChanged: false, cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
     }
@@ -125,7 +125,7 @@ public class PaymentService : IPaymentService
         await _db.SaveChangesAsync(cancellationToken);
         foreach (var (_, order, paidAfter) in created)
         {
-            await _loyalty.ReconcileAsync(order, paidAfter, cancellationToken);
+            await _loyalty.ReconcileAsync(order, paidAfter, linesChanged: false, cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken);

@@ -16,6 +16,11 @@ public class LoyaltyEntryConfiguration : IEntityTypeConfiguration<LoyaltyEntry>
             .HasForeignKey(e => e.CustomerId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(e => e.Club)
+            .WithMany()
+            .HasForeignKey(e => e.ClubId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(e => e.Order)
             .WithMany()
             .HasForeignKey(e => e.OrderId)

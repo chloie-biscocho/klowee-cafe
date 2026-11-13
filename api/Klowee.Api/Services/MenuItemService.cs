@@ -46,20 +46,24 @@ public class MenuItemService : IMenuItemService
             .ToDictionaryAsync(c => c.Id, c => (c.Name, c.SortOrder), cancellationToken);
 
     private static MenuItemDto ToDto(MenuItem i, Dictionary<Guid, (string Name, int SortOrder)> categories) =>
-        new(i.Id, i.Name, i.Description, i.CategoryId, categories[i.CategoryId].Name, i.PhotoUrl, i.IsArchived);
+        new(i.Id, i.Name, i.Description, i.CategoryId, categories[i.CategoryId].Name, i.PhotoUrl, i.IsArchived,
+            i.LoyaltyMode, i.LoyaltyMode == LoyaltyMode.Club ? i.LoyaltyClubId : null);
 
     public async Task<MenuItemDto> CreateAsync(MenuItemRequest request, CancellationToken cancellationToken)
     {
         var name = request.Name.Trim();
         await EnsureCategoryExistsAsync(request.CategoryId, cancellationToken);
         await EnsureNameIsFreeAsync(name, excludingId: null, cancellationToken);
+        var club = await LoyaltyClubForAsync(request, cancellationToken);
 
         var item = new MenuItem
         {
             Name = name,
             Description = request.Description?.Trim() ?? string.Empty,
             CategoryId = request.CategoryId,
-            PhotoUrl = request.PhotoUrl
+            PhotoUrl = request.PhotoUrl,
+            LoyaltyMode = request.LoyaltyMode,
+            LoyaltyClubId = club
         };
 
         _db.MenuItems.Add(item);
@@ -76,8 +80,11 @@ public class MenuItemService : IMenuItemService
         var name = request.Name.Trim();
         await EnsureCategoryExistsAsync(request.CategoryId, cancellationToken);
         await EnsureNameIsFreeAsync(name, excludingId: id, cancellationToken);
+        var club = await LoyaltyClubForAsync(request, cancellationToken);
 
         item.Name = name;
+        item.LoyaltyMode = request.LoyaltyMode;
+        item.LoyaltyClubId = club;
         item.Description = request.Description?.Trim() ?? string.Empty;
         item.CategoryId = request.CategoryId;
         item.PhotoUrl = request.PhotoUrl;
@@ -119,6 +126,27 @@ public class MenuItemService : IMenuItemService
 
         item.DeletedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>The item's own club: required (and must exist) for mode Club, dropped otherwise.</summary>
+    private async Task<Guid?> LoyaltyClubForAsync(MenuItemRequest request, CancellationToken cancellationToken)
+    {
+        if (request.LoyaltyMode != LoyaltyMode.Club)
+        {
+            return null;
+        }
+
+        if (request.LoyaltyClubId is not { } clubId)
+        {
+            throw new ValidationFailedException("Choose the loyalty card this item stamps.");
+        }
+
+        if (!await _db.LoyaltyClubs.AnyAsync(c => c.Id == clubId, cancellationToken))
+        {
+            throw new ValidationFailedException($"Loyalty club '{clubId}' does not exist.");
+        }
+
+        return clubId;
     }
 
     private async Task EnsureCategoryExistsAsync(Guid categoryId, CancellationToken cancellationToken)
