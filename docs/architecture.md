@@ -126,7 +126,8 @@ Dashboard (`/`). Decision 017 covers the order-entry design.
 | `/sales/orders/new`, `/sales/orders/:id/edit` | Order form: a page, not a modal; gated on a published office menu |
 | `/sales/orders/:id` | Order detail: drinks with snapshot prices and warnings, payments, inline Add payment |
 | `/sales/customers` | Customers list, new/edit, activate/deactivate, delete |
-| `/sales/customers/:id` | Customer detail: Settle tab, Merge into…, Adjust stamps; Orders and Loyalty ledger tabs |
+| `/sales/customers/:id` | Customer detail: Settle tab, Merge into…; one loyalty card per active club (slot row, reward states, mark used / make available, Adjust stamps); Orders and Loyalty ledger (filter by card) tabs |
+| `/menu/loyalty-cards` | Loyalty cards (decision 020): clubs with active badge, rewards and members; edit modal with reward rows and the categories that feed the card |
 
 - **`api/salesApi.ts`** adds four tag types (`Customer`, `Order`, `Loyalty`,
   `Report`). Every mutation that moves money (order create, edit or delete;
@@ -138,7 +139,12 @@ Dashboard (`/`). Decision 017 covers the order-entry design.
 - **The order form** keeps a local `OrderDraft` (`features/sales/orders/orderDraft.ts`)
   and previews totals with `lib/pricing.ts`, which mirrors the API's
   `PricingService` with the same test cases. The API's saved totals replace the
-  preview.
+  preview. A line whose drink's card (`loyaltyClubId` on the menu version item)
+  has a reward available to the customer shows it as a toggle; the request
+  carries `rewardId` on the line.
+- **`api/loyaltyApi.ts`** adds the `LoyaltyClub` tag. Saving a club refreshes
+  customers, categories and version details, because its rewards, active state
+  and category checklist show in all three.
 - **`components/ui/Combobox.tsx`** is the searchable select (ARIA combobox: type
   to filter, ↑/↓, Enter, Escape), used for customers, payers and the merge target.
 
@@ -307,35 +313,49 @@ main.tsx ─► App ─► useHomeData()  ──►  fetch GET /api/public/home 
 
 ## Phase 2: office sales
 
-API only so far (admin screens follow). Decision 016 has the reasoning.
+Decision 016 has the reasoning; decision 020 the loyalty clubs.
 
 ```
 Customers ─┬─ drinks ─> Order ─< OrderItem ─< OrderItemAddOn
            └─ pays ───> Order       │ unit_price: snapshot of the MenuVersionItem price
-                         │          └─> MenuVersionItem (exact priced row, decision 002)
+                         │          ├─> MenuVersionItem (exact priced row, decision 002)
+                         │          └─> LoyaltyRedemption (the reward on one unit, if any)
                          ├─< Payment (one order each; settle splits a transfer)
-                         └─< LoyaltyEntry (Earned / Redeemed / Adjustment) >─ Customer
+                         └─< LoyaltyEntry (Earned per club / Adjustment) >─ Customer
+
+LoyaltyClub ─< LoyaltyClubReward (one per slot)
+     ^  ^                 ^
+     │  └─ MenuItem.loyalty_club_id (mode Club) ─ overrides ─ MenuCategory.loyalty_club_id
+     │                    │
+LoyaltyEntry.club_id   LoyaltyRedemption (customer, club, cycle, reward; order line or by hand)
 ```
+
+A customer's card is derived, never stored: `S` = the club's ledger sum,
+`cycle = ⌊S ÷ 12⌋`, `position = S mod 12`, and the reward on slot `s` of cycle
+`c` is earned once `S ≥ 12c + s − 1` and used once a redemption exists
+(`Services/LoyaltyCard.cs`).
 
 | Endpoint group | What it does |
 |---|---|
-| `/api/customers` | list with tab balance, stamps, rewards, last order; CRUD; activate/deactivate; delete refused while orders exist; `merge-into/{targetId}`; `loyalty` ledger and `loyalty/adjust`; `settle` |
-| `/api/orders` | paged list (dates, customer, derived status); detail with items, add-ons, payments, warnings; create, replace (409 once paid against), delete |
+| `/api/customers` | list with tab balance, `clubs[]` (position, cycle, rewards locked/available/used, pending drinks per active club), last order; CRUD; activate/deactivate; delete refused while orders exist; `merge-into/{targetId}`; `loyalty?clubId=` ledger, `loyalty/adjust` (per club), `loyalty/redemptions` (mark used by hand, DELETE to undo); `settle` |
+| `/api/loyalty/clubs` | the clubs with rewards, categories and member count; CRUD (rewards replaced by slot; delete refused once it has stamps); `activate` / `deactivate` |
+| `/api/orders` | paged list (dates, customer, derived status); detail with items, add-ons, line rewards, payments, warnings; create, replace (409 once paid against), delete; lines may carry `rewardId`, and `LoyaltyFree` is refused |
 | `/api/orders/{id}/payments` | add (409 on overpayment), delete |
 | `/api/reports` | `summary` (revenue by order date, collected by payment date, outstanding, channels, top items, new customers), `outstanding`, `monthly` (`?year=` for a calendar year, or `?from=YYYY-MM&to=YYYY-MM` for any range up to 240 months, zero rows for empty months; no `from` starts at the first month with an order) |
 
 - **Services:**
-  - `PricingService`: arithmetic only, no database.
-  - `OrderService`: snapshots, validation, totals.
+  - `PricingService`: arithmetic only, no database; line rewards, then the order discount.
+  - `OrderService`: snapshots, validation, totals, and the rewards on lines (checked against the drinker's card on save).
   - `PaymentService`: add, delete, settle.
-  - `LoyaltyService`: ledger, plus `ReconcileAsync` after every change.
-  - `CustomerService`, `ReportService`.
+  - `LoyaltyService`: cards per club, ledger, adjust, manual redemptions, plus `ReconcileAsync` (one Earned entry per order and club) after every change.
+  - `LoyaltyClubService`: the clubs. `LoyaltyClubMap`: which club a drink stamps.
+  - `LoyaltyCarryOver`: the one-time move of the old card onto The Coffee Club, at startup behind a `data_migrations` marker row.
+  - `CustomerService` (merge moves stamps and used rewards club by club), `ReportService`.
 - **Status is derived** (`Unpaid` / `Partial` / `Paid` from payments). Totals
   are stored and recomputed on every edit, and `unit_price` is never recomputed.
 - **The tab** is the orders a customer pays for (`payer_id ?? customer_id`).
   Stamps go to the drinker.
-- `loyalty_stamps_per_reward` is a site setting (default 10) that the public
-  endpoint leaves out.
+- `loyalty_stamps_per_reward` is retired (decision 020); the clubs carry their own rules.
 - **Development seed:** three sample customers and six orders in mixed states,
   only into a database with no customers yet.
 
@@ -393,4 +413,7 @@ production for main), with VITE_API_URL baked in at build time.
   before the new image exists.
 - **Render's auto-deploy is off**, so the deploy hook is the only trigger, and
   `ref=` makes Render build exactly the commit that was migrated.
-- Production startup only ensures the two owner accounts exist.
+- Production startup ensures the two owner accounts exist, then runs one-time
+  data steps behind a marker row in `data_migrations` (today: the loyalty
+  carry-over, decision 020). Schema stays the bundle's job; a data step is C#
+  logic the bundle can't run, and it finishes before the first request.
