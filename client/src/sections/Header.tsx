@@ -1,3 +1,5 @@
+import { ThemeSwitch } from '../components/ThemeSwitch'
+
 const LINKS = [
   { href: '#story', label: 'our story' },
   { href: '#menu', label: 'menu' },
@@ -6,7 +8,7 @@ const LINKS = [
   { href: '#book', label: 'book' },
 ]
 
-/** Text wordmark and the section links. Not sticky; no logo up here (the logo lives in the hero). */
+/** Text wordmark, the section links and the theme switch. Not sticky; no logo up here (the logo lives in the hero). */
 export function Header({ hasPackages = true }: { hasPackages?: boolean }) {
   // No packages, no packages section, and so no link to it.
   const links = hasPackages ? LINKS : LINKS.filter((link) => link.href !== '#packages')
@@ -16,7 +18,7 @@ export function Header({ hasPackages = true }: { hasPackages?: boolean }) {
       <a href="#top" aria-label="Klowee Cafe home" className="font-serif text-[1.2rem] text-deep no-underline">
         klowee cafe
       </a>
-      <nav aria-label="Main">
+      <nav aria-label="Main" className="flex flex-wrap items-center gap-y-2">
         <ul className="flex flex-wrap">
           {links.map((link) => (
             <li key={link.href}>
@@ -29,6 +31,7 @@ export function Header({ hasPackages = true }: { hasPackages?: boolean }) {
             </li>
           ))}
         </ul>
+        <ThemeSwitch className="md:ml-5" />
       </nav>
     </header>
   )

@@ -46,10 +46,18 @@ request, no router, no store).
 If the owners later want to choose colours themselves, the map becomes three
 nullable columns on `menu_items` and the same lookup falls back to it.
 
-**No theme switch.** The mockup's header switch was a preview aid for the
-owners. Visitors get the scheme their device asks for, as with any other app
-on their phone. A switch would mean storing a preference, flashing the wrong
-scheme before the script runs, and a header button that serves almost nobody.
+**Light by default, dark on request** (handover 15b). Handover 15 had no
+switch and followed the device's colour-scheme setting. On 2026-11-13 the owner
+asked for light as everyone's default, with a switch for visitors who want
+dark. So:
+- **The device setting is ignored.** No `prefers-color-scheme` rule remains;
+  dark tokens apply only under `:root[data-theme="dark"]`.
+- **The switch** sits at the right end of the header nav, as in the mockup, and
+  is remembered in `localStorage` (`klowee.theme`: `light` or `dark`; nothing
+  stored means light; blocked storage just means it isn't remembered).
+- **No flash.** A small inline script in `index.html`'s head applies a
+  stored `dark` before first paint. Its key and colour duplicate
+  `client/src/lib/theme.ts`; a test runs the script so they can't drift.
 
 **Category descriptions are real data** (`menu_categories.description`,
 handover 15 Part 1). The two matcha blends need a line explaining the

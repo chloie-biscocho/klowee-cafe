@@ -2,8 +2,10 @@
 
 /*
  * "Sky and layers" (docs/design-brief.md). The colour tokens are the mockup's
- * own (docs/mockups/klowee-home-v7.html), light here and dark below; the page
- * follows the device's scheme and has no switch. Components use them through
+ * own (docs/mockups/klowee-home-v7.html), light here and dark below. Light is
+ * the default for everyone, whatever the device prefers; dark applies only
+ * when the header's switch sets <html data-theme="dark"> (src/lib/theme.ts,
+ * decision 019). Components use them through
  * utilities (`bg-sky`, `text-deep`, `font-serif`); no hex value appears in a
  * component. Tailwind's default palette is off, so a stray colour fails the build.
  */
@@ -38,24 +40,26 @@
   --container-page: 1000px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --color-sky: #1a2452;
-    --color-deep: #c9d8ff;
-    --color-ink: #eaf0ff;
-    --color-cloud: #2a3672;
-    --color-panel: #222d63;
-    --color-soft: #b4c0ec;
-    --color-line: rgb(201 216 255 / 0.22);
-    --color-ph: #2b3875;
-    --color-ph-ink: #afc0f2;
-    --color-paper: #12172b;
-    --color-menu-ink: #9db6ff;
-    --color-menu-soft: #a9b0cf;
-    --color-menu-rule: rgb(157 182 255 / 0.3);
-    --color-pink: #f08aa8;
-  }
+:root {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-sky: #1a2452;
+  --color-deep: #c9d8ff;
+  --color-ink: #eaf0ff;
+  --color-cloud: #2a3672;
+  --color-panel: #222d63;
+  --color-soft: #b4c0ec;
+  --color-line: rgb(201 216 255 / 0.22);
+  --color-ph: #2b3875;
+  --color-ph-ink: #afc0f2;
+  --color-paper: #12172b;
+  --color-menu-ink: #9db6ff;
+  --color-menu-soft: #a9b0cf;
+  --color-menu-rule: rgb(157 182 255 / 0.3);
+  --color-pink: #f08aa8;
 }
 
 /*

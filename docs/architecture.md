@@ -298,7 +298,8 @@ main.tsx ─► App ─► useHomeData()  ──►  fetch GET /api/public/home 
   and blend names. `cupLayers.ts` holds the drink illustrations and `ovalPath.ts`
   the marker ovals. Each is unit-tested without rendering.
 - **Design tokens live in `src/index.css`'s `@theme`**, light values there and
-  dark values under `prefers-color-scheme`. Tailwind's default palette is off,
+  dark values under `:root[data-theme="dark"]`, set only by the header's theme
+  switch (`src/lib/theme.ts`; light is the default whatever the device prefers). Tailwind's default palette is off,
   so no hex appears in a component. The three animations and their
   reduced-motion stops are plain CSS in the same file.
 - **The browser caches the payload** for up to 60 seconds (the API's

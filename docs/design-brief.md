@@ -11,8 +11,12 @@ cream paper sheet for the menu, printed like the paper menu at the cart. Calm,
 blue, small-business; pink and yellow only as marker ovals and stickers.
 
 ## Colour tokens
-Defined once in `client/src/index.css` (`@theme`), switched for dark under
-`prefers-color-scheme`. The page follows the device; there is no theme switch.
+Defined once in `client/src/index.css` (`@theme`). **Light is the default for
+every visitor**, whatever their device prefers; the dark values apply only under
+`:root[data-theme="dark"]`, set by the header's theme switch and remembered in
+`localStorage` (`klowee.theme`). The site stopped following the device at the
+owner's request on 2026-11-13 (decision 019). The og image, favicon and static
+shell are light.
 Components use tokens only; no hex appears in a component.
 
 | Token | Light | Dark | Use |
@@ -71,7 +75,10 @@ font swaps in. Sentence case for headings; the menu prints in lowercase.
    {dates}, {venue}." with a "See details" link to `#popups`; else the
    `ticker_fallback` setting, the whole line linking to `#book`; else no strip.
 2. **Header:** "klowee cafe" wordmark and links: our story, menu, pop-ups,
-   packages, book. Not sticky. The packages link goes when there are no packages.
+   packages, book, then the theme switch: a small `panel` pill reading
+   "☾ Dark mode" on the light page and "☀ Light mode" on the dark one (the glyph
+   is hidden from screen readers). Not sticky. The packages link goes when there
+   are no packages.
 3. **Hero:** clouds, logo sticker, `hero_heading` (h1), `hero_body`, "Book the
    cart" and "See the menu".
 4. **Cup shelf:** one cup per drink on the current pop-up menu, available only,
@@ -116,6 +123,10 @@ Polaroids straighten with a 200ms transition, and the ticker's dot pulses
 - `index.html` ships the loading render (header, hero shell with the logo,
   quiet placeholder blocks) so the first screen paints from HTML; a test keeps
   it identical to `App`'s own loading render. React replaces it in place.
+- A stored dark choice is applied by a small inline script in `index.html`'s
+  head, before first paint, so a returning dark visitor never sees light first.
+  It also sets `<meta name="theme-color">`. The shell's switch carries the light
+  label until React mounts.
 - The hero holds its height while loading, so the page doesn't jump when the
   text arrives. The ticker's strip is reserved (one empty line) while loading,
   because production always has at least the fallback line; a message that
@@ -124,7 +135,7 @@ Polaroids straighten with a 200ms transition, and the ticker's dot pulses
   again?" and a retry button; header and footer stay.
 
 ## Responsive
-Container 1000px with 22px gutters. At 760px and below: header links wrap,
+Container 1000px with 22px gutters. At 760px and below: header links wrap and the theme switch drops below them,
 smaller cups (72 × 106) and arrows, one menu column, one package column,
 stacked story, and the clouds reposition (the fifth hides).
 
