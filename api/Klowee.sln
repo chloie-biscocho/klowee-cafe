@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MenuLoad", "..\tools\MenuLo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SheetImport", "..\tools\SheetImport\SheetImport.csproj", "{D7F48C19-3D0C-434A-B618-470B7A58C434}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SheetImport.Tests", "..\tools\SheetImport.Tests\SheetImport.Tests.csproj", "{97442FF9-B7E7-46C7-A053-9B62538F208D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -97,6 +99,18 @@ Global
 		{D7F48C19-3D0C-434A-B618-470B7A58C434}.Release|x64.Build.0 = Release|Any CPU
 		{D7F48C19-3D0C-434A-B618-470B7A58C434}.Release|x86.ActiveCfg = Release|Any CPU
 		{D7F48C19-3D0C-434A-B618-470B7A58C434}.Release|x86.Build.0 = Release|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Debug|x64.Build.0 = Debug|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Debug|x86.Build.0 = Debug|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Release|x64.ActiveCfg = Release|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Release|x64.Build.0 = Release|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Release|x86.ActiveCfg = Release|Any CPU
+		{97442FF9-B7E7-46C7-A053-9B62538F208D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

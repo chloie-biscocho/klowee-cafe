@@ -11,6 +11,8 @@ using Klowee.SheetImport;
 //   --apply               Write it: retired drinks, historical versions, customers, orders,
 //                         payments; then reconcile against the API. Re-runs skip imported rows.
 //   --rollback [--apply]  Delete every order carrying an import marker.
+//   cardholders           Handover 16a: read every order and write loyalty-cardholders.csv, the
+//                         customers whose orders show a Coffee Club card reward. Read only.
 //
 // Never prints credentials. Writes only through the API.
 
@@ -29,6 +31,15 @@ if (missing.Count > 0)
 
 try
 {
+    // Handover 16a: who holds a Coffee Club card today. Reads orders through the API only; no workbook.
+    if (args.FirstOrDefault() == "cardholders")
+    {
+        using var reader = await Api.SignInAsync(Environment.GetEnvironmentVariable("KLOWEE_API_URL")!,
+            Environment.GetEnvironmentVariable("KLOWEE_OWNER_EMAIL")!, Environment.GetEnvironmentVariable("KLOWEE_OWNER_PASSWORD")!);
+        Console.WriteLine($"API   {new Uri(Environment.GetEnvironmentVariable("KLOWEE_API_URL")!).Host} (read only)");
+        return await CardholdersCommand.RunAsync(reader, $"{Dir}/loyalty-cardholders.csv", Console.Out);
+    }
+
     var (sheetRows, tabs) = Workbook.Read(workbookPath);
     var rows = sheetRows.Select(Rows.Parse).ToList();
     var apiUrl = Environment.GetEnvironmentVariable("KLOWEE_API_URL")!;

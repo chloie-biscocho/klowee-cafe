@@ -6,8 +6,8 @@ using System.Text.Json.Serialization;
 namespace Klowee.SheetImport;
 
 // The admin API's shapes, as much of them as the import reads.
-public record Category(Guid Id, string Name, int SortOrder);
-public record Item(Guid Id, string Name, Guid CategoryId, bool IsArchived);
+public record Category(Guid Id, string Name, int SortOrder, Guid? LoyaltyClubId = null);
+public record Item(Guid Id, string Name, Guid CategoryId, bool IsArchived, string LoyaltyMode = "Inherit", Guid? LoyaltyClubId = null);
 public record VersionSummary(Guid Id, string Name, string Context, DateOnly EffectiveFrom, bool IsPublished, int ItemCount);
 public record VersionItem(Guid Id, Guid MenuItemId, string Name, decimal Price);
 public record VersionDetail(Guid Id, string Name, string Context, DateOnly EffectiveFrom, bool IsPublished, List<VersionItem> Items);
@@ -20,6 +20,11 @@ public record PersonRef(Guid Id, string Name);
 public record OrderSummary(Guid Id, DateOnly OrderedOn, PersonRef Customer, decimal Total, decimal Paid, string Status);
 public record OrderDetail(Guid Id, DateOnly OrderedOn, string? Notes, string DiscountType, decimal Subtotal, decimal DiscountAmount, decimal Total, decimal Paid, string Status);
 public record Paged<T>(List<T> Items, int Page, int PageSize, int TotalCount);
+// An order in full, for the cardholder scan (handover 16a).
+public record FullAddOn(Guid AddOnId, string Name, decimal UnitPrice);
+public record FullReward(string Type);
+public record FullItem(Guid MenuItemId, string Name, int Quantity, List<FullAddOn> AddOns, FullReward? Reward);
+public record FullOrder(Guid Id, DateOnly OrderedOn, PersonRef Customer, string? Notes, string DiscountType, decimal DiscountValue, string Status, List<FullItem> Items);
 public record SummaryReport(decimal Revenue, decimal Collected, int OrderCount);
 public record Setting(string Key, string Value);
 
@@ -66,6 +71,7 @@ public sealed class Api : IDisposable
     public Task<List<Customer>> CustomersAsync() => GetAsync<List<Customer>>("customers?includeInactive=true");
     public Task<Customer> CustomerAsync(Guid id) => GetAsync<Customer>($"customers/{id}");
     public Task<OrderDetail> OrderAsync(Guid id) => GetAsync<OrderDetail>($"orders/{id}");
+    public Task<FullOrder> FullOrderAsync(Guid id) => GetAsync<FullOrder>($"orders/{id}");
 
     public Task<Paged<OrderSummary>> OrdersAsync(DateOnly from, DateOnly to, int page) =>
         GetAsync<Paged<OrderSummary>>($"orders?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}&page={page}&pageSize=200");
