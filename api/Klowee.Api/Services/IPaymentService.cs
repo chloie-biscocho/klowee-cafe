@@ -14,4 +14,10 @@ public interface IPaymentService
     /// payment per order touched. 409 if it is more than the tab owes.
     /// </summary>
     Task<IReadOnlyList<PaymentDto>> SettleAsync(Guid customerId, PaymentRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The settle itself, inside a transaction the caller owns (confirming a
+    /// payment claim, handover 17). Each payment created is linked to <paramref name="claimId"/>.
+    /// </summary>
+    Task<IReadOnlyList<PaymentDto>> SettleInTransactionAsync(Guid customerId, PaymentRequest request, Guid? claimId, CancellationToken cancellationToken);
 }

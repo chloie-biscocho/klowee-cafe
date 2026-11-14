@@ -25,14 +25,19 @@ public class SiteSettingService : ISiteSettingService
         "book_body",
         "instagram_url",
         "facebook_url",
-        "contact_email"
+        "contact_email",
+        PublicTabService.NoteKey
     };
 
     /// <summary>
     /// Settings the business uses internally, never sent to the public site.
     /// Empty since loyalty_stamps_per_reward retired (decision 020: the clubs carry their own rules).
     /// </summary>
-    public static readonly IReadOnlySet<string> InternalKeys = new HashSet<string>(StringComparer.Ordinal);
+    public static readonly IReadOnlySet<string> InternalKeys = new HashSet<string>(StringComparer.Ordinal)
+    {
+        // Shown on customers' tab pages (handover 17), not on the homepage.
+        PublicTabService.NoteKey
+    };
 
     private readonly KloweeDbContext _db;
 

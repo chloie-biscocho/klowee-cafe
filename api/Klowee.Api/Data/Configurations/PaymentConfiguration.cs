@@ -15,5 +15,7 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
 
         builder.HasIndex(p => p.PaidOn);
         // Order relationship is configured from OrderConfiguration.
+
+        builder.HasOne(p => p.PaymentClaim).WithMany().HasForeignKey(p => p.PaymentClaimId).OnDelete(DeleteBehavior.Restrict);
     }
 }

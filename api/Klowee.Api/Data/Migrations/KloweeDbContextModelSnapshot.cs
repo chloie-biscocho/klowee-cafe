@@ -165,6 +165,15 @@ namespace Klowee.Api.Data.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("notes");
 
+                    b.Property<string>("TabToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("tab_token");
+
+                    b.Property<DateTimeOffset?>("TabTokenCreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("tab_token_created_at");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -176,6 +185,11 @@ namespace Klowee.Api.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_customers_name")
                         .HasFilter("deleted_at IS NULL");
+
+                    b.HasIndex("TabToken")
+                        .IsUnique()
+                        .HasDatabaseName("ix_customers_tab_token")
+                        .HasFilter("tab_token IS NOT NULL");
 
                     b.ToTable("customers", (string)null);
                 });
@@ -1306,6 +1320,10 @@ namespace Klowee.Api.Data.Migrations
                         .HasColumnType("date")
                         .HasColumnName("paid_on");
 
+                    b.Property<Guid?>("PaymentClaimId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_claim_id");
+
                     b.Property<string>("Reference")
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)")
@@ -1324,7 +1342,161 @@ namespace Klowee.Api.Data.Migrations
                     b.HasIndex("PaidOn")
                         .HasDatabaseName("ix_payments_paid_on");
 
+                    b.HasIndex("PaymentClaimId")
+                        .HasDatabaseName("ix_payments_payment_claim_id");
+
                     b.ToTable("payments", (string)null);
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.PaymentClaim", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("channel");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid?>("PaymentMethodId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_method_id");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("reference");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reject_reason");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<Guid?>("ResolvedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_by");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payment_claims");
+
+                    b.HasIndex("PaymentMethodId")
+                        .HasDatabaseName("ix_payment_claims_payment_method_id");
+
+                    b.HasIndex("CustomerId", "Status")
+                        .HasDatabaseName("ix_payment_claims_customer_id_status");
+
+                    b.ToTable("payment_claims", (string)null);
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.PaymentMethod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("account_name");
+
+                    b.Property<string>("AccountNumber")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("account_number");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("channel");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("label");
+
+                    b.Property<string>("QrUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("qr_url");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payment_methods");
+
+                    b.ToTable("payment_methods", (string)null);
                 });
 
             modelBuilder.Entity("Klowee.Api.Entities.SiteSetting", b =>
@@ -1717,7 +1889,35 @@ namespace Klowee.Api.Data.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_payments_orders_order_id");
 
+                    b.HasOne("Klowee.Api.Entities.PaymentClaim", "PaymentClaim")
+                        .WithMany()
+                        .HasForeignKey("PaymentClaimId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_payments_payment_claims_payment_claim_id");
+
                     b.Navigation("Order");
+
+                    b.Navigation("PaymentClaim");
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.PaymentClaim", b =>
+                {
+                    b.HasOne("Klowee.Api.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_payment_claims_customers_customer_id");
+
+                    b.HasOne("Klowee.Api.Entities.PaymentMethod", "PaymentMethod")
+                        .WithMany()
+                        .HasForeignKey("PaymentMethodId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_payment_claims_payment_methods_payment_method_id");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("PaymentMethod");
                 });
 
             modelBuilder.Entity("Klowee.Api.Entities.Event", b =>

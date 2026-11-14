@@ -179,6 +179,10 @@ builder.Services.AddScoped<IPublicHomeService, PublicHomeService>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
 builder.Services.AddScoped<ILoyaltyService, LoyaltyService>();
 builder.Services.AddScoped<ILoyaltyClubService, LoyaltyClubService>();
+builder.Services.AddScoped<IPublicTabService, PublicTabService>();
+builder.Services.AddScoped<IPaymentClaimService, PaymentClaimService>();
+builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
+builder.Services.AddScoped<ICardRequestService, CardRequestService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
@@ -274,9 +278,40 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // POST /api/auth/login only: 5 attempts per minute per client IP, then 429.
 // The IP is the real one because UseForwardedHeaders runs first.
 builder.Services.AddOptions<LoginRateLimitOptions>();
+builder.Services.AddOptions<TabRateLimitOptions>();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // The public tab page (handover 17): reads by client IP (the same IP as the
+    // login limit, from CF-Connecting-IP); writes by token. The token is hashed
+    // before it becomes a partition key, so not even memory holds it raw.
+    options.AddPolicy(TabRateLimitOptions.ReadPolicy, httpContext =>
+    {
+        var limits = httpContext.RequestServices.GetRequiredService<IOptions<TabRateLimitOptions>>().Value;
+        var ip = httpContext.Connection.RemoteIpAddress ?? IPAddress.None;
+        return RateLimitPartition.GetFixedWindowLimiter("tab-read:" + ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = limits.ReadsPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+        });
+    });
+    options.AddPolicy(TabRateLimitOptions.ClaimPolicy, httpContext =>
+    {
+        var limits = httpContext.RequestServices.GetRequiredService<IOptions<TabRateLimitOptions>>().Value;
+        return RateLimitPartition.GetFixedWindowLimiter("tab-claim:" + TokenKey(httpContext), _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = limits.ClaimsPerHour, Window = TimeSpan.FromHours(1), QueueLimit = 0
+        });
+    });
+    options.AddPolicy(TabRateLimitOptions.CardRequestPolicy, httpContext =>
+    {
+        var limits = httpContext.RequestServices.GetRequiredService<IOptions<TabRateLimitOptions>>().Value;
+        return RateLimitPartition.GetFixedWindowLimiter("tab-card:" + TokenKey(httpContext), _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = limits.CardRequestsPerDay, Window = TimeSpan.FromDays(1), QueueLimit = 0
+        });
+    });
+
     options.AddPolicy(LoginRateLimitOptions.PolicyName, httpContext =>
     {
         var limits = httpContext.RequestServices.GetRequiredService<IOptions<LoginRateLimitOptions>>().Value;
@@ -362,9 +397,28 @@ app.UseForwardedHeaders();
 
 // Outermost after the proxy headers, so the logged status is the one the
 // client got: a domain error becomes its 4xx in the handler below, inside this.
+// The public tab page is left out too: its path holds the customer's token,
+// and tokens are never logged (the service logs the customer id instead).
 app.UseWhen(
-    context => !context.Request.Path.StartsWithSegments("/api/health"),
+    context => !context.Request.Path.StartsWithSegments("/api/health")
+               && !context.Request.Path.StartsWithSegments("/api/public/tab"),
     branch => branch.UseHttpLogging());
+
+// Every tab-page response, errors and 429s included: never cached, never indexed.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/public/tab"))
+    {
+        context.Response.OnStarting(() =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            context.Response.Headers["X-Robots-Tag"] = "noindex";
+            return Task.CompletedTask;
+        });
+    }
+
+    await next();
+});
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
@@ -388,4 +442,10 @@ app.MapControllers();
 app.Run();
 
 /// <summary>Exposed so the integration test project can boot the real app.</summary>
-public partial class Program;
+public partial class Program
+{
+    /// <summary>A tab token as a rate-limit partition: hashed, never kept raw.</summary>
+    private static string TokenKey(HttpContext context) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(context.Request.RouteValues["token"]?.ToString() ?? string.Empty)));
+}

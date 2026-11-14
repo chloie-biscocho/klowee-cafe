@@ -13,5 +13,9 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(c => c.Notes).HasMaxLength(1000);
 
         builder.HasIndex(c => c.Name).IsUnique().HasFilter(SoftDelete.Filter);
+
+        // The tab link's secret: looked up on every public request, and unique.
+        builder.Property(c => c.TabToken).HasMaxLength(64);
+        builder.HasIndex(c => c.TabToken).IsUnique().HasFilter("tab_token IS NOT NULL");
     }
 }

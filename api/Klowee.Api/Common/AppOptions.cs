@@ -22,6 +22,13 @@ public class AppOptions
     /// </summary>
     public string AllowedOrigins { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The public site's address, for building customers' "my tab" links
+    /// (<c>App__PublicSiteUrl=https://klowee-cafe.vercel.app</c>). Not a secret.
+    /// Development falls back to the client's Vite dev server.
+    /// </summary>
+    public string PublicSiteUrl { get; set; } = string.Empty;
+
     public string[] ParseAllowedOrigins() =>
         AllowedOrigins
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

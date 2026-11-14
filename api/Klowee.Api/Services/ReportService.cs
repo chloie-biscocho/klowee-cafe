@@ -47,6 +47,10 @@ public class ReportService : IReportService
 
         var firstOrders = orders.GroupBy(o => o.CustomerId).Select(g => g.Min(o => o.OrderedOn));
 
+        // Waiting for the owners, whatever the range (handover 17).
+        var pendingClaims = await _db.PaymentClaims.CountAsync(c => c.Status == Entities.PaymentClaimStatus.Pending, cancellationToken);
+        var pendingRequests = await _db.LoyaltyMemberships.CountAsync(m => m.Status == Entities.MembershipStatus.Requested, cancellationToken);
+
         return new SummaryReportDto(
             start,
             end,
@@ -67,7 +71,9 @@ public class ReportService : IReportService
                 .ThenBy(t => t.Name)
                 .Take(10)
                 .ToList(),
-            NewCustomers: firstOrders.Count(first => first >= start && first <= end));
+            NewCustomers: firstOrders.Count(first => first >= start && first <= end),
+            PendingClaimsCount: pendingClaims,
+            PendingCardRequestsCount: pendingRequests);
     }
 
     public async Task<IReadOnlyList<OutstandingRowDto>> OutstandingAsync(CancellationToken cancellationToken)

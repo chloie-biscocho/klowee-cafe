@@ -84,6 +84,26 @@ public class CustomersController : ControllerBase
     public async Task<ActionResult<CustomerDetailDto>> Merge(Guid id, Guid targetId, CancellationToken cancellationToken) =>
         Ok(await _customers.MergeAsync(id, targetId, cancellationToken));
 
+    /// <summary>
+    /// Creates (or replaces) the customer's private "my tab" link and returns it.
+    /// A replaced link stops working at once.
+    /// </summary>
+    [HttpPost("{id:guid}/tab-link")]
+    [ProducesResponseType<Contracts.Tabs.TabLinkDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<Contracts.Tabs.TabLinkDto>> CreateTabLink(Guid id, CancellationToken cancellationToken) =>
+        Ok(await _customers.CreateTabLinkAsync(id, cancellationToken));
+
+    /// <summary>Removes the customer's tab link; the page stops working at once.</summary>
+    [HttpDelete("{id:guid}/tab-link")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RemoveTabLink(Guid id, CancellationToken cancellationToken)
+    {
+        await _customers.RemoveTabLinkAsync(id, cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>The stamp ledger, newest first; one club's entries with <c>clubId</c>.</summary>
     [HttpGet("{id:guid}/loyalty")]
     [ProducesResponseType<IReadOnlyList<LoyaltyEntryDto>>(StatusCodes.Status200OK)]

@@ -24,4 +24,8 @@ public class Payment : BaseEntity
     public DateOnly PaidOn { get; set; }
     public string? Reference { get; set; }
     public string? Notes { get; set; }
+
+    /// <summary>The customer's report this payment confirmed, when it came from one (handover 17).</summary>
+    public Guid? PaymentClaimId { get; set; }
+    public PaymentClaim? PaymentClaim { get; set; }
 }

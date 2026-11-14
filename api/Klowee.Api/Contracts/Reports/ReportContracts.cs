@@ -20,7 +20,9 @@ public record SummaryReportDto(
     int DrinkCount,
     IReadOnlyList<ChannelTotalDto> ByChannel,
     IReadOnlyList<TopItemDto> TopItems,
-    int NewCustomers);
+    int NewCustomers,
+    int PendingClaimsCount = 0,
+    int PendingCardRequestsCount = 0);
 
 public record OutstandingRowDto(
     Guid CustomerId,

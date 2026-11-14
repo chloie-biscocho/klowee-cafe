@@ -70,12 +70,22 @@ public class PaymentService : IPaymentService
         PaymentRequest request,
         CancellationToken cancellationToken)
     {
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        var payments = await SettleInTransactionAsync(customerId, request, claimId: null, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return payments;
+    }
+
+    public async Task<IReadOnlyList<PaymentDto>> SettleInTransactionAsync(
+        Guid customerId,
+        PaymentRequest request,
+        Guid? claimId,
+        CancellationToken cancellationToken)
+    {
         if (!await _db.Customers.AnyAsync(c => c.Id == customerId, cancellationToken))
         {
             throw NotFoundException.For("Customer", customerId);
         }
-
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
 
         // The tab: orders this customer pays for (their own, unless someone
         // else pays, plus any they cover for others), oldest first.
@@ -118,6 +128,7 @@ public class PaymentService : IPaymentService
             remaining -= amount;
 
             var payment = NewPayment(order.Id, amount, request);
+            payment.PaymentClaimId = claimId;
             _db.Payments.Add(payment);
             created.Add((payment, order, paid.GetValueOrDefault(order.Id) + amount));
         }
@@ -127,8 +138,6 @@ public class PaymentService : IPaymentService
         {
             await _loyalty.ReconcileAsync(order, paidAfter, linesChanged: false, cancellationToken);
         }
-
-        await transaction.CommitAsync(cancellationToken);
 
         return created
             .Select(c => new PaymentDto(c.Payment.Id, c.Payment.OrderId, c.Payment.Amount, c.Payment.Channel,

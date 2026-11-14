@@ -13,7 +13,8 @@ public record CustomerSummaryDto(
     bool IsActive,
     decimal OutstandingBalance,
     IReadOnlyList<CustomerClubDto> Clubs,
-    DateOnly? LastOrderOn);
+    DateOnly? LastOrderOn,
+    bool HasTabLink);
 
 public record CustomerDetailDto(
     Guid Id,
@@ -24,7 +25,10 @@ public record CustomerDetailDto(
     decimal OutstandingBalance,
     IReadOnlyList<CustomerClubDto> Clubs,
     DateOnly? LastOrderOn,
-    IReadOnlyList<OrderSummaryDto> RecentOrders);
+    IReadOnlyList<OrderSummaryDto> RecentOrders,
+    bool HasTabLink,
+    string? TabUrl,
+    DateTimeOffset? TabLinkCreatedAt);
 
 /// <summary>
 /// One reward on the customer's card. The current card lists every reward

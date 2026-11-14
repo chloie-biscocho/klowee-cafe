@@ -1,3 +1,5 @@
+using Klowee.Api.Contracts.Tabs;
+using Microsoft.Extensions.Options;
 using Klowee.Api.Common;
 using Klowee.Api.Contracts.Customers;
 using Klowee.Api.Data;
@@ -17,11 +19,45 @@ public class CustomerService : ICustomerService
     private readonly IOrderService _orders;
     private readonly ILoyaltyService _loyalty;
 
-    public CustomerService(KloweeDbContext db, IOrderService orders, ILoyaltyService loyalty)
+    private readonly string? _publicSiteUrl;
+
+    public CustomerService(
+        KloweeDbContext db,
+        IOrderService orders,
+        ILoyaltyService loyalty,
+        IOptions<AppOptions> app,
+        IHostEnvironment environment)
     {
         _db = db;
         _orders = orders;
         _loyalty = loyalty;
+        _publicSiteUrl = app.Value.PublicSiteUrl is { Length: > 0 } url ? url
+            : environment.IsDevelopment() ? "http://localhost:5174"   // the client's Vite dev server
+            : null;
+    }
+
+    /// <summary>Creates or replaces the customer's tab link: the old one stops working at once.</summary>
+    public async Task<TabLinkDto> CreateTabLinkAsync(Guid id, CancellationToken cancellationToken)
+    {
+        if (_publicSiteUrl is null)
+        {
+            throw new ConflictException("The public site's address (App:PublicSiteUrl) isn't set, so links can't be made.");
+        }
+
+        var customer = await LoadAsync(id, cancellationToken);
+        customer.TabToken = TabLinks.NewToken();
+        customer.TabTokenCreatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+        return new TabLinkDto(TabLinks.Url(_publicSiteUrl, customer.TabToken), customer.TabTokenCreatedAt.Value);
+    }
+
+    /// <summary>Removes the customer's tab link; the page stops working at once. Idempotent.</summary>
+    public async Task RemoveTabLinkAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var customer = await LoadAsync(id, cancellationToken);
+        customer.TabToken = null;
+        customer.TabTokenCreatedAt = null;
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<CustomerSummaryDto>> ListAsync(
@@ -57,7 +93,10 @@ public class CustomerService : ICustomerService
         return new CustomerDetailDto(
             summary.Id, summary.Name, summary.Nickname, summary.Notes, summary.IsActive,
             summary.OutstandingBalance, summary.Clubs, summary.LastOrderOn,
-            recent.Take(20).ToList());
+            recent.Take(20).ToList(),
+            customer.TabToken is not null,
+            customer.TabToken is not null && _publicSiteUrl is not null ? TabLinks.Url(_publicSiteUrl, customer.TabToken) : null,
+            customer.TabTokenCreatedAt);
     }
 
     public async Task<CustomerDetailDto> CreateAsync(CustomerRequest request, CancellationToken cancellationToken)
@@ -286,7 +325,8 @@ public class CustomerService : ICustomerService
             c.Id, c.Name, c.Nickname, c.Notes, c.IsActive,
             f.Outstanding.GetValueOrDefault(c.Id),
             f.Clubs.GetValueOrDefault(c.Id) ?? [],
-            f.LastOrder.TryGetValue(c.Id, out var last) ? last : null);
+            f.LastOrder.TryGetValue(c.Id, out var last) ? last : null,
+            c.TabToken is not null);
 
     private async Task EnsureNameIsFreeAsync(string name, Guid? excludingId, CancellationToken cancellationToken)
     {

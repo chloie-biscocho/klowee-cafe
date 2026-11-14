@@ -29,7 +29,7 @@ public class ApiExceptionHandler : IExceptionHandler
         if (exception is not ApiException apiException)
         {
             _logger.LogError(exception, "Unhandled exception for {Method} {Path}",
-                httpContext.Request.Method, httpContext.Request.Path);
+                httpContext.Request.Method, Services.TabLinks.Redact(httpContext.Request.Path)); // never a tab token
             return false;
         }
 

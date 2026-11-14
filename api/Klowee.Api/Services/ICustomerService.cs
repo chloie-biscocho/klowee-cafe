@@ -18,6 +18,12 @@ public interface ICustomerService
     /// <summary>409 while the customer has orders (as drinker or payer): deactivate instead.</summary>
     Task DeleteAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>Creates or replaces the customer's private tab link (decision 021).</summary>
+    Task<Contracts.Tabs.TabLinkDto> CreateTabLinkAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Removes the tab link: the page stops working at once.</summary>
+    Task RemoveTabLinkAsync(Guid id, CancellationToken cancellationToken);
+
     /// <summary>Moves orders, payer references, stamps and used rewards (club by club) to the target, then deletes the source.</summary>
     Task<CustomerDetailDto> MergeAsync(Guid id, Guid targetId, CancellationToken cancellationToken);
 }

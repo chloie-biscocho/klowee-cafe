@@ -15,6 +15,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Klowee.Api.Tests;
 
@@ -36,6 +37,9 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
     public const string OwnerPassword = "s3cret-pop-up-cart";
     public const string WrongPassword = "not-the-password";
 
+    /// <summary>Where customers' tab links point (App:PublicSiteUrl).</summary>
+    public const string PublicSiteUrl = "https://klowee.test";
+
     private const string TestJwtKey = "klowee-test-signing-key-at-least-32-characters-long";
 
     public static readonly JsonSerializerOptions Json =
@@ -49,6 +53,9 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
 
     /// <summary>Object storage, in memory. Inspect it to see what an upload stored.</summary>
     public FakeStorageService Storage { get; } = new();
+
+    /// <summary>Everything the app logged, at the app's configured levels.</summary>
+    public CapturedLogs Logs { get; } = new();
 
     public KloweeApiFactory()
     {
@@ -66,6 +73,7 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("Supabase__ServiceRoleKey", "test-service-role-key");
         Environment.SetEnvironmentVariable("Jwt__Issuer", "klowee-cafe");
         Environment.SetEnvironmentVariable("Jwt__Audience", "klowee-cafe");
+        Environment.SetEnvironmentVariable("App__PublicSiteUrl", PublicSiteUrl);
 
         // An in-memory SQLite database lives exactly as long as a connection to it
         // is open, so this one is held open for the fixture's lifetime.
@@ -78,6 +86,7 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.ConfigureLogging(logging => logging.AddProvider(Logs));
 
         builder.ConfigureTestServices(services =>
         {
@@ -95,6 +104,13 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
             // Every test signs in from the same (absent) address; the real limit
             // would trip within one test class. HostingTests puts it back.
             services.Configure<LoginRateLimitOptions>(options => options.PermitLimit = 10_000);
+            // Likewise the tab page's limits; TabTests puts the real ones back.
+            services.Configure<TabRateLimitOptions>(options =>
+            {
+                options.ReadsPerMinute = 10_000;
+                options.ClaimsPerHour = 10_000;
+                options.CardRequestsPerDay = 10_000;
+            });
         });
     }
 
