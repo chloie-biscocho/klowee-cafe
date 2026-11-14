@@ -52,6 +52,25 @@ public static class LoyaltyCard
     public static bool IsEarned(int stamps, int slotCount, int slot, int cycle) =>
         Math.Max(0, stamps) >= cycle * slotCount + (slot - 1);
 
+    /// <summary>Every reward on one card (cycle), each locked, available or used: what a card in the stack shows.</summary>
+    public static IReadOnlyList<CardVoucher> RewardsOfCycle(
+        int ledgerSum,
+        int slotCount,
+        IReadOnlyList<CardReward> rewards,
+        IReadOnlyList<CardRedemption> redemptions,
+        int cycle)
+    {
+        var stamps = Math.Max(0, ledgerSum);
+        return rewards.OrderBy(r => r.Slot).Select(reward =>
+        {
+            var redemption = redemptions.FirstOrDefault(r => r.RewardId == reward.RewardId && r.Cycle == cycle);
+            var state = redemption is not null ? RewardState.Used
+                : IsEarned(stamps, slotCount, reward.Slot, cycle) ? RewardState.Available
+                : RewardState.Locked;
+            return new CardVoucher(reward.RewardId, reward.Slot, reward.Label, reward.Type, cycle, state, redemption?.Id, redemption?.OrderId);
+        }).ToList();
+    }
+
     public static CardState For(
         int ledgerSum,
         int slotCount,

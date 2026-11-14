@@ -63,7 +63,27 @@ public record CustomerClubDto(
     int Position,
     int Cycle,
     IReadOnlyList<CustomerRewardDto> Rewards,
-    int PendingDrinks);
+    int PendingDrinks,
+    IReadOnlyList<LoyaltyCardDto> Cards);
+
+/// <summary>
+/// One slot of a card. A filled slot from a paid order has the order's date
+/// and id; one from the paper-card carry-over ("carriedOver") or a hand
+/// adjustment ("adjustment") has neither: dates are never invented.
+/// </summary>
+/// <param name="Source">"order", "carriedOver" or "adjustment"; null when empty.</param>
+public record LoyaltySlotDto(int Slot, bool Filled, DateOnly? Date, Guid? OrderId, string? Source);
+
+/// <summary>
+/// One card in the stack (handover 16b): every card from 1 to the current
+/// one, each with all its slots and all its rewards. Same data for the admin
+/// and the customer page.
+/// </summary>
+public record LoyaltyCardDto(
+    int CardNumber,
+    bool IsCurrent,
+    IReadOnlyList<LoyaltySlotDto> Slots,
+    IReadOnlyList<CustomerRewardDto> Rewards);
 
 public record CustomerRequest
 {

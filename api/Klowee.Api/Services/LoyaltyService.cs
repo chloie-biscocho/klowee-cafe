@@ -157,13 +157,20 @@ public class LoyaltyService : ILoyaltyService
         var ids = result.Keys.ToList();
         var clubIds = clubs.Select(c => c.Id).ToList();
 
-        var sums = (await _db.LoyaltyEntries
+        // The live entries, oldest first (sorted in memory: SQLite can't order by created_at),
+        // with each order's date for the dated slots.
+        var entries = (await _db.LoyaltyEntries
                 .AsNoTracking()
                 .Where(e => ids.Contains(e.CustomerId) && clubIds.Contains(e.ClubId))
-                .Select(e => new { e.CustomerId, e.ClubId, e.Delta })
+                .Select(e => new
+                {
+                    e.CustomerId, e.ClubId, e.Delta, e.Reason, e.Notes, e.OrderId, e.CreatedAt, e.Id,
+                    OrderedOn = e.Order == null ? (DateOnly?)null : e.Order.OrderedOn
+                })
                 .ToListAsync(cancellationToken))
-            .GroupBy(e => (e.CustomerId, e.ClubId))
-            .ToDictionary(g => g.Key, g => g.Sum(e => e.Delta));
+            .OrderBy(e => e.CreatedAt).ThenBy(e => e.Id)
+            .ToLookup(e => (e.CustomerId, e.ClubId));
+        var sums = entries.ToDictionary(g => g.Key, g => g.Sum(e => e.Delta));
 
         var redemptions = (await _db.LoyaltyRedemptions
                 .AsNoTracking()
@@ -189,22 +196,33 @@ public class LoyaltyService : ILoyaltyService
                     // No card (or only asked for one): nothing to show but the offer.
                     return new CustomerClubDto(
                         club.Id, club.Name, club.Style, membership is null ? "none" : "requested", membership?.Id, null,
-                        club.SlotCount, 0, 0, [], 0);
+                        club.SlotCount, 0, 0, [], 0, []);
                 }
 
-                var card = LoyaltyCard.For(
-                    sums.GetValueOrDefault((customerId, club.Id)),
-                    club.SlotCount,
-                    Rewards(club),
-                    redemptions[(customerId, club.Id)].ToList());
+                var sum = sums.GetValueOrDefault((customerId, club.Id));
+                var used = redemptions[(customerId, club.Id)].ToList();
+                var card = LoyaltyCard.For(sum, club.SlotCount, Rewards(club), used);
+                var stack = LoyaltySlots.Build(
+                    entries[(customerId, club.Id)].Select(e => new SlotEntry(
+                        e.Delta,
+                        e.OrderId is not null ? SlotSource.Order
+                            : e.Notes is LoyaltyCarryOver.AdjustmentNote or LoyaltyCarryOver.OldAdjustmentNote ? SlotSource.CarriedOver
+                            : SlotSource.Adjustment,
+                        e.OrderedOn,
+                        e.OrderId)).ToList(),
+                    club.SlotCount);
 
                 return new CustomerClubDto(
                     club.Id, club.Name, club.Style, "member", membership.Id, membership.JoinedOn,
                     club.SlotCount, card.Position, card.Cycle,
-                    card.Rewards.Select(v => new CustomerRewardDto(
-                        v.RewardId, v.Slot, v.Label, v.Type, v.State.ToString().ToLowerInvariant(),
-                        v.Cycle, v.RedemptionId, v.OrderId)).ToList(),
-                    pending.GetValueOrDefault((customerId, club.Id)));
+                    card.Rewards.Select(ToDto).ToList(),
+                    pending.GetValueOrDefault((customerId, club.Id)),
+                    stack.Select(c => new LoyaltyCardDto(
+                        c.CardNumber,
+                        c.IsCurrent,
+                        c.Slots.Select(s => new LoyaltySlotDto(s.Slot, s.Filled, s.Date, s.OrderId, SourceName(s.Source))).ToList(),
+                        LoyaltyCard.RewardsOfCycle(sum, club.SlotCount, Rewards(club), used, c.CardNumber - 1).Select(ToDto).ToList()))
+                        .ToList());
             }).ToList();
         }
 
@@ -429,6 +447,17 @@ public class LoyaltyService : ILoyaltyService
             throw new ConflictException($"This customer has no {club.Name} card. Give them one first.");
         }
     }
+
+    private static CustomerRewardDto ToDto(CardVoucher v) => new(
+        v.RewardId, v.Slot, v.Label, v.Type, v.State.ToString().ToLowerInvariant(), v.Cycle, v.RedemptionId, v.OrderId);
+
+    private static string? SourceName(SlotSource? source) => source switch
+    {
+        SlotSource.Order => "order",
+        SlotSource.CarriedOver => "carriedOver",
+        SlotSource.Adjustment => "adjustment",
+        _ => null
+    };
 
     private static List<CardReward> Rewards(LoyaltyClub club) =>
         club.Rewards.Where(r => r.DeletedAt is null)

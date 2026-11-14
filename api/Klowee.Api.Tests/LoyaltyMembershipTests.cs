@@ -193,4 +193,41 @@ public class LoyaltyMembershipTests : IClassFixture<KloweeApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync($"/api/loyalty/clubs/{LoyaltyClub.CoffeeClubId}", body(LoyaltyClub.CoffeeClubId))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync($"/api/loyalty/clubs/{LoyaltyClub.CoffeeClubId}", body(LoyaltyClub.MatchaClubId))).StatusCode);
     }
+
+    [Fact]
+    public async Task TheCustomersCards_CarryEachStampsOrderDate_AndTheCarryOverUndated()
+    {
+        var (client, m) = await SetupAsync();
+        var kee = await CreateCardholderAsync(_factory, client, "Kee dated stamps");
+        await GiveStampsAsync(client, kee.Id, 11);
+        var order = await PaidOrderAsync(client, kee.Id, m.Latte, Today.AddDays(-2));
+        var second = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Americano, 2)]));
+        await EnsureAsync(await PayAsync(client, second.Id, second.Total));
+
+        var card = await CardAsync(client, kee.Id);
+
+        Assert.Equal([(1, false), (2, true)], card.Cards.Select(c => (c.CardNumber, c.IsCurrent)));
+        var first = card.Cards[0];
+        Assert.All(first.Slots.Take(11), s => Assert.Equal(("adjustment", (DateOnly?)null), (s.Source, s.Date)));
+        Assert.Equal(("order", (DateOnly?)Today.AddDays(-2), (Guid?)order), (first.Slots[11].Source, first.Slots[11].Date, first.Slots[11].OrderId));
+        Assert.Equal(3, first.Rewards.Count);                                     // every reward of card 1, not only the available ones
+        var now = card.Cards[1];
+        Assert.Equal([(1, (DateOnly?)Today), (2, Today)], now.Slots.Where(s => s.Filled).Select(s => (s.Slot, s.Date)));
+        Assert.Equal((card.Cycle, card.Position), (now.CardNumber - 1, now.Slots.Count(s => s.Filled)));
+    }
+
+    [Fact]
+    public async Task AVoidedEntry_LeavesNoSlot()
+    {
+        var (client, m) = await SetupAsync();
+        var kee = await CreateCardholderAsync(_factory, client, "Kee voided stamp");
+        var order = await CreateOrderAsync(client, OrderBody(kee.Id, [Line(m.Latte, 2)]));
+        await EnsureAsync(await PayAsync(client, order.Id, order.Total));
+        var payment = (await GetOrderAsync(client, order.Id)).Payments.Single();
+        await EnsureAsync(await client.DeleteAsync($"/api/orders/{order.Id}/payments/{payment.Id}"));   // unpaid: its stamps are voided
+
+        var card = Assert.Single((await CardAsync(client, kee.Id)).Cards);
+
+        Assert.DoesNotContain(card.Slots, s => s.Filled);
+    }
 }
