@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using Klowee.Api.Entities;
 using Klowee.Api.Services;
 using Microsoft.EntityFrameworkCore;
@@ -131,13 +132,13 @@ public class LoyaltyCarryOverTests : IClassFixture<KloweeApiFactory>
         Assert.Equal((orders, payments), await _factory.WithDbAsync(async db =>
             (await db.Orders.IgnoreQueryFilters().CountAsync(), await db.Payments.IgnoreQueryFilters().CountAsync())));
 
-        // The cardholder's unpaid old order stamps when paid; the paid one the old card counted never does again.
+        // Neither old order stamps when paid (handover 17a: both are on the paper card already).
         await EnsureAsync(await PayAsync(client, f.UnpaidOrder, 160m));
-        Assert.Equal(7, await StampsAsync(client, f.Customers["Card one"]));
+        Assert.Equal(6, await StampsAsync(client, f.Customers["Card one"]));
         var payment = await _factory.WithDbAsync(db => db.Payments.SingleAsync(p => p.OrderId == f.PaidOrder));
         await EnsureAsync(await client.DeleteAsync($"/api/orders/{f.PaidOrder}/payments/{payment.Id}"));
         await EnsureAsync(await PayAsync(client, f.PaidOrder, 160m));
-        Assert.Equal(7, await StampsAsync(client, f.Customers["Card one"]));
+        Assert.Equal(6, await StampsAsync(client, f.Customers["Card one"]));
     }
 
     [Fact]
@@ -147,7 +148,11 @@ public class LoyaltyCarryOverTests : IClassFixture<KloweeApiFactory>
         var list = WriteList("b", Rows);
         var client = await _factory.CreateOwnerClientAsync();
         await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, list).RunAsync());
-        await EnsureAsync(await PayAsync(client, f.UnpaidOrder, 160m));          // a real stamp after the carry-over
+        // A real stamp after the carry-over: an order dated after its day (an older one wouldn't stamp, handover 17a).
+        var m = await SeedMenuAsync(_factory, "carry");
+        var after = await CreateOrderAsync(client, OrderBody(f.Customers["Card one"], [Line(m.Latte)],
+            orderedOn: LoyaltyStampsAfter.ManilaDate(DateTimeOffset.UtcNow).AddDays(1)));
+        await EnsureAsync(await PayAsync(client, after.Id, after.Total));
 
         Assert.True((await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, list).RunAsync())).AlreadyApplied);
 
@@ -211,6 +216,60 @@ public class LoyaltyCarryOverTests : IClassFixture<KloweeApiFactory>
         Assert.Throws<InvalidDataException>(() => CardholderList.Parse("customer,has_card,position,estimate\nIrish,maybe,,\n"));
         Assert.Throws<InvalidDataException>(() => CardholderList.Parse("customer,has_card,position,estimate\nIrish,yes,12,\n"));
         Assert.Throws<InvalidDataException>(() => CardholderList.Parse("customer,has_card,card_number,position,estimate\nIrish,yes,-1,,\n"));
+    }
+
+    [Fact]
+    public async Task CarriedCards_NeverStampOrdersFromBeforeTheCarryOver_LaterOrdersStillDo()
+    {
+        // Handover 17a: on paper a card was stamped when the drink was ordered, so
+        // the carried position already counts Card one's unpaid October latte.
+        var f = await ArrangeAsync("f");
+        var client = await _factory.CreateOwnerClientAsync();
+        var carryOverDay = new DateOnly(2026, 11, 8);
+        await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, WriteList("f", Rows), carryOverDay).RunAsync());
+
+        var card = await _factory.WithDbAsync(db => db.LoyaltyMemberships.SingleAsync(m => m.CustomerId == f.Customers["Card one"]));
+        Assert.Equal((null, (DateOnly?)carryOverDay), (card.JoinedOn, card.StampsAfter));
+        Assert.Equal(0, (await CardAsync(client, f.Customers["Card one"])).PendingDrinks);   // the unpaid latte won't stamp
+
+        await EnsureAsync(await PayAsync(client, f.UnpaidOrder, 160m));
+        Assert.Equal(6, await StampsAsync(client, f.Customers["Card one"]));                   // still the paper position
+
+        // An order the day after the carry-over stamps when paid, with its date.
+        var m = await SeedMenuAsync(_factory, "carry");
+        var later = await CreateOrderAsync(client, OrderBody(f.Customers["Card one"], [Line(m.Latte)], orderedOn: carryOverDay.AddDays(1)));
+        Assert.Equal(1, (await CardAsync(client, f.Customers["Card one"])).PendingDrinks);
+        await EnsureAsync(await PayAsync(client, later.Id, later.Total));
+        var after = await CardAsync(client, f.Customers["Card one"]);
+        Assert.Equal(7, after.Cycle * after.SlotCount + after.Position);
+        Assert.Equal(carryOverDay.AddDays(1), after.Cards.Single(c => c.IsCurrent).Slots[6].Date);
+    }
+
+    [Fact]
+    public async Task TheBackfill_DatesCardsCarriedBeforeTheColumn_WithTheCarryOverDay_Once()
+    {
+        var f = await ArrangeAsync("g");
+        var client = await _factory.CreateOwnerClientAsync();
+        await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, WriteList("g", Rows)).RunAsync());
+        // As production stands before 17a: carried cards with no StampsAfter, and one card given by hand.
+        var given = await CreateCustomerAsync(client, "Given by hand g");
+        await EnsureAsync(await client.PostAsJsonAsync($"/api/customers/{given.Id}/loyalty/memberships", new { clubId = LoyaltyClub.CoffeeClubId }));
+        var marker = await _factory.WithDbAsync(async db =>
+        {
+            foreach (var card in await db.LoyaltyMemberships.ToListAsync()) card.StampsAfter = null;
+            db.DataMigrations.RemoveRange(db.DataMigrations.Where(x => x.Name == LoyaltyStampsAfter.MarkerName));
+            await db.SaveChangesAsync();
+            return await db.DataMigrations.SingleAsync(x => x.Name == LoyaltyCarryOver.MarkerName);
+        });
+
+        var dated = await _factory.WithDbAsync(db => LoyaltyStampsAfter.BackfillAsync(db));
+
+        var day = LoyaltyStampsAfter.ManilaDate(marker.CreatedAt);
+        var cards = await _factory.WithDbAsync(db => db.LoyaltyMemberships.Where(x => f.Customers.Values.Contains(x.CustomerId) || x.CustomerId == given.Id).ToListAsync());
+        Assert.Equal(4, dated);   // Card one, two, four and zero
+        Assert.All(cards.Where(c => c.CustomerId != given.Id), c => Assert.Equal(day, c.StampsAfter));
+        Assert.Null(cards.Single(c => c.CustomerId == given.Id).StampsAfter);
+        Assert.Null(await _factory.WithDbAsync(db => LoyaltyStampsAfter.BackfillAsync(db)));   // once
     }
 
     [Fact]

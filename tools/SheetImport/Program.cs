@@ -13,6 +13,8 @@ using Klowee.SheetImport;
 //   --rollback [--apply]  Delete every order carrying an import marker.
 //   cardholders           Handover 16a: read every order and write loyalty-cardholders.csv, the
 //                         customers whose orders show a Coffee Club card reward. Read only.
+//   straystamps [--apply] Handover 17a: list stamps given by mistake to carried-over cards; --apply voids
+//                         them. Password asked without echo (StrayStampsCommand.cs).
 //
 // Never prints credentials. Writes only through the API.
 
@@ -20,6 +22,8 @@ const string Dir = "docs/import";
 var apply = args.Contains("--apply");
 var rollback = args.Contains("--rollback");
 var workbookPath = args.SkipWhile(a => a != "--workbook").Skip(1).FirstOrDefault() ?? $"{Dir}/KLOWEE_CAFE_SALES_REPORT.xlsx";
+
+if (args.FirstOrDefault() == "straystamps") return await StrayStampsCommand.RunAsync(args, Console.Out);
 
 var missing = new[] { "KLOWEE_API_URL", "KLOWEE_OWNER_EMAIL", "KLOWEE_OWNER_PASSWORD" }
     .Where(name => string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(name))).ToList();

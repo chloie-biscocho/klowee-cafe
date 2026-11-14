@@ -183,6 +183,7 @@ builder.Services.AddScoped<IPublicTabService, PublicTabService>();
 builder.Services.AddScoped<IPaymentClaimService, PaymentClaimService>();
 builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
 builder.Services.AddScoped<ICardRequestService, CardRequestService>();
+builder.Services.AddScoped<IStrayStampService, StrayStampService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
@@ -363,7 +364,8 @@ if (plan.Migrate || plan.SeedOwners || plan.SeedSampleData || plan.RunDataSteps)
             // until the old card is carried over. Behind a marker row; one
             // transaction, so a failure leaves nothing half-done and the next
             // start tries again.
-            var carryOver = new LoyaltyCarryOver(db, configuration["Loyalty:CardholderList"]);
+            var carryOver = new LoyaltyCarryOver(db, configuration["Loyalty:CardholderList"],
+                scope.ServiceProvider.GetRequiredService<IClock>().Today);
 
             // Development only: undo an earlier carry-over and run it again
             // (dotnet run -- --Loyalty:RedoCarryOver=true). Production runs once.
@@ -381,6 +383,13 @@ if (plan.Migrate || plan.SeedOwners || plan.SeedSampleData || plan.RunDataSteps)
             else
             {
                 logger.LogInformation("{Summary}", result.Summary());
+            }
+
+            // Handover 17a: cards carried over before StampsAfter existed get the
+            // carry-over day. Dates only; stray stamps are the owner's to void.
+            if (await LoyaltyStampsAfter.BackfillAsync(db) is { } dated)
+            {
+                logger.LogInformation("Loyalty stamps-after: {Cards} carried-over cards dated.", dated);
             }
         }
     }

@@ -611,6 +611,10 @@ namespace Klowee.Api.Data.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("note");
 
+                    b.Property<DateOnly?>("StampsAfter")
+                        .HasColumnType("date")
+                        .HasColumnName("stamps_after");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useGiveCardMutation } from '../../../api/salesApi'
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { problemMessage } from '../../../lib/errors'
-import { formatPeso } from '../../../lib/format'
+import { formatDate, formatPeso } from '../../../lib/format'
 import { availableRewards, clubSummary, memberClubs } from '../../../lib/loyalty'
 import type { CustomerSummaryDto } from '../../../types/api'
 
@@ -21,6 +21,8 @@ export function LoyaltyLine({ customer, orderedOn }: { customer: CustomerSummary
   // The card to offer: the first active one they don't hold (The Coffee Club; the Matcha Club comes with it).
   const offer = customer.clubs.find((c) => c.membership !== 'member')
   const startsAfterOrder = members.filter((c) => c.joinedOn !== null && orderedOn < c.joinedOn)
+  // Carried-over cards: the paper card already counted drinks ordered up to the carry-over (handover 17a).
+  const onPaper = members.filter((c) => c.stampsAfter && orderedOn <= c.stampsAfter)
 
   return (
     <div className="-mt-1 flex flex-col gap-1 text-xs text-muted">
@@ -48,6 +50,11 @@ export function LoyaltyLine({ customer, orderedOn }: { customer: CustomerSummary
       </p>
       {startsAfterOrder.length > 0 && (
         <p className="text-warning">This order is dated before the card starts, so it won't stamp.</p>
+      )}
+      {onPaper.length > 0 && (
+        <p className="text-warning">
+          This order is dated on or before {formatDate(onPaper[0]!.stampsAfter!)}, when the paper card moved here: it's already on the paper card, so it won't stamp.
+        </p>
       )}
       {error && (
         <p role="alert" className="text-danger">

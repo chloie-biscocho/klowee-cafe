@@ -454,6 +454,8 @@ export interface CustomerClubDto {
   pendingDrinks: number
   /** Every card from 1 to the current one, with dated slots (handover 16b). Empty without a card. */
   cards: LoyaltyCardDto[]
+  /** Carried-over cards: orders dated on or before this day are already on the paper card and never stamp (handover 17a). */
+  stampsAfter?: string | null
 }
 
 export type SlotSource = 'order' | 'carriedOver' | 'adjustment'

@@ -138,6 +138,14 @@ public class LoyaltyMembership : BaseEntity
     /// </summary>
     public DateOnly? JoinedOn { get; set; }
 
+    /// <summary>
+    /// Orders dated on or before this day never stamp this card (handover 17a).
+    /// Set on carried-over cards to the carry-over day: their paper position
+    /// already counts every drink ordered until then, paid or not (on paper a
+    /// card was stamped when the drink was ordered). Null on cards given later.
+    /// </summary>
+    public DateOnly? StampsAfter { get; set; }
+
     public string? Note { get; set; }
 }
 

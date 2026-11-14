@@ -30,12 +30,16 @@ public class LoyaltyService : ILoyaltyService
 
     /// <summary>
     /// Whether a customer's order on this date stamps this club (handover 16a):
-    /// the club earns, and the customer holds its card since that date or before.
+    /// the club earns, and the customer holds its card since that date or before,
+    /// and the order is after the day a carried-over card's paper position was
+    /// taken (handover 17a: those drinks are already on the paper card). One rule
+    /// for stamping, the pending count, reward availability and ReconcileAsync.
     /// </summary>
     public static bool Stamps(LoyaltyClub club, LoyaltyMembership? membership, DateOnly orderedOn) =>
         Earns(club, orderedOn)
         && membership is { Status: MembershipStatus.Active }
-        && (membership.JoinedOn is null || orderedOn >= membership.JoinedOn);
+        && (membership.JoinedOn is null || orderedOn >= membership.JoinedOn)
+        && (membership.StampsAfter is null || orderedOn > membership.StampsAfter);
 
     /// <summary>The customer's live Active memberships, by club.</summary>
     private async Task<Dictionary<Guid, LoyaltyMembership>> MembershipsOfAsync(Guid customerId, CancellationToken cancellationToken) =>
@@ -222,7 +226,8 @@ public class LoyaltyService : ILoyaltyService
                         c.IsCurrent,
                         c.Slots.Select(s => new LoyaltySlotDto(s.Slot, s.Filled, s.Date, s.OrderId, SourceName(s.Source))).ToList(),
                         LoyaltyCard.RewardsOfCycle(sum, club.SlotCount, Rewards(club), used, c.CardNumber - 1).Select(ToDto).ToList()))
-                        .ToList());
+                        .ToList(),
+                    membership.StampsAfter);
             }).ToList();
         }
 

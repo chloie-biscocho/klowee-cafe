@@ -152,10 +152,12 @@ The data step:
    and Okumidori Matcha → Matcha) and Dirty Matcha to The Matcha Club. It only
    fills blanks, and reports names it can't find.
 2. It voids every old single-card entry, marked `carried_over_at`, so the
-   orders it counted never stamp again. Unpaid old orders stamp when paid.
+   orders it counted never stamp again. (Handover 16a said unpaid old orders
+   stamp when paid; handover 17a reverses that for carried cards, below.)
 3. For each row with `has_card` = yes (names matched ignoring case; no single
    match is reported and skipped):
-   - an Active Coffee Club card since the beginning;
+   - an Active Coffee Club card since the beginning, with `stamps_after` set
+     to the carry-over day (handover 17a, below);
    - one Adjustment of `12 × (card_number − 1) + position`, using the owner's
      position, else the estimate ("carried over from paper card");
    - every reward on the earlier cards, and on the current card every reward
@@ -171,6 +173,42 @@ weren't, so the rule and its cap were replaced before anything was merged.
 Development has `--Loyalty:RedoCarryOver=true`, which undoes an earlier run
 (its adjustments, redemptions and cards; voided entries restored; marker
 cleared) and runs the rule again.
+
+#### Orders already on the paper card never stamp again (handover 17a, 2026-11-14)
+
+The owners confirmed that on paper a card was stamped when the drink was
+**ordered**; in the system it is stamped when the order is **paid**. A carried
+card's position came from the paper card, so it already counts every drink
+ordered up to the carry-over, paid or not. Paying one of those old orders
+later stamped the card a second time (in the handover 17 smoke, Dean went from
+5 to 7 by paying two October orders), and the pending count promised stamps
+that would be double.
+
+Rule: **for a carried-over card, an order dated on or before the carry-over
+day never stamps that club and never counts as pending for it.** Orders dated
+after it stamp when paid. Cards given later (Give card) are unchanged: they
+stamp from `joined_on`, that day included.
+
+- One stored date per card, `loyalty_memberships.stamps_after` (nullable,
+  additive migration `LoyaltyStampsAfter`), read by the single rule
+  `LoyaltyService.Stamps(club, membership, orderedOn)`. Stamping,
+  `ReconcileAsync`, the pending count, reward availability and the public tab
+  page all go through it.
+- The carry-over writes it on the cards it creates. Cards carried before the
+  column existed get it from a second startup step behind its own marker
+  (`loyalty-stamps-after`): the carry-over marker's `created_at`, as a Manila
+  date. That step only sets dates. It voids nothing.
+- **Stamps already given by mistake** (an old order paid after the carry-over)
+  stay until the owner voids them: `GET /api/loyalty/stray-stamps` lists them,
+  each card's position before and after, and any reward an order already used
+  that depended on them; `POST /api/loyalty/stray-stamps/void` re-runs the
+  normal reconcile on each such order with its lines treated as changed, in
+  one transaction. Money never moves; orders that used a reward are listed,
+  never undone. `SheetImport straystamps [--apply]` drives both with the
+  password asked without echo. A paid order keeps its stamps under a normal
+  reconcile, so production's stray stamps stay put until `--apply` is run.
+- A consequence: a real sale entered for a carried cardholder **dated on the
+  carry-over day itself** doesn't stamp. Fix such a sale with Adjust stamps.
 
 Why at startup and not inside the EF migration: production migrations run as
 an EF bundle in the deploy workflow, which executes SQL only. The carry-over

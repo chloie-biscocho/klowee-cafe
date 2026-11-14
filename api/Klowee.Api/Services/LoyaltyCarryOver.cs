@@ -246,12 +246,16 @@ public class LoyaltyCarryOver
 
     private readonly KloweeDbContext _db;
     private readonly string _listPath;
+    private readonly DateOnly _today;
 
     /// <param name="listPath">The cardholder list; the copy published with the API by default.</param>
-    public LoyaltyCarryOver(KloweeDbContext db, string? listPath = null)
+    /// <param name="today">The carry-over day in the business time zone (handover 17a): a carried card
+    /// never stamps orders dated on or before it. Today in Asia/Manila by default.</param>
+    public LoyaltyCarryOver(KloweeDbContext db, string? listPath = null, DateOnly? today = null)
     {
         _db = db;
         _listPath = listPath ?? Path.Combine(AppContext.BaseDirectory, "Data", CardholderList.FileName);
+        _today = today ?? LoyaltyStampsAfter.ManilaDate(DateTimeOffset.UtcNow);
     }
 
     public async Task<CarryOverResult> RunAsync(CancellationToken cancellationToken = default)
@@ -433,6 +437,8 @@ public class LoyaltyCarryOver
                 _db.LoyaltyMemberships.Add(new LoyaltyMembership
                 {
                     CustomerId = customer.Id, ClubId = coffee.Id, Status = MembershipStatus.Active, JoinedOn = null,
+                    // The paper position counts every drink ordered until today (handover 17a).
+                    StampsAfter = _today,
                     Note = "paper card holder (carried over)"
                 });
             }

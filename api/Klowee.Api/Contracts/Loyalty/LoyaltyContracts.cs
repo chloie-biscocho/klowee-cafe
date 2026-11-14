@@ -74,3 +74,17 @@ public record LoyaltyClubRequest
 
     public List<Guid>? CategoryIds { get; init; }
 }
+
+// ---- Handover 17a: stamps given by mistake to carried-over cards ----
+
+/// <summary>A stamp from an order dated on or before the card's carry-over day: already on the paper card.</summary>
+public record StrayStampDto(Guid CustomerId, string CustomerName, Guid ClubId, string ClubName, Guid OrderId, DateOnly OrderedOn, int Stamps);
+
+/// <param name="Before">"card 3, 7 of 12" now.</param>
+/// <param name="After">The same card once the stray stamps are voided.</param>
+public record StrayPositionDto(string CustomerName, string ClubName, DateOnly CarryOverDay, string Before, string After);
+
+/// <summary>A reward an order already used that the card would not have earned without the stray stamps. Listed, never undone.</summary>
+public record StrayRewardDto(string CustomerName, string ClubName, string Reward, int CardNumber, int Slot, Guid OrderId, DateOnly OrderedOn);
+
+public record StrayStampsDto(IReadOnlyList<StrayStampDto> Stamps, IReadOnlyList<StrayPositionDto> Positions, IReadOnlyList<StrayRewardDto> UsedRewards);

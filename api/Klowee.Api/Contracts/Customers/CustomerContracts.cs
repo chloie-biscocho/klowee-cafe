@@ -55,7 +55,8 @@ public record CustomerRewardDto(
 /// <param name="JoinedOn">The first day orders stamp the card; null for "since the beginning" (carried-over cardholders) or no card.</param>
 /// <param name="Position">Slots filled on the current card.</param>
 /// <param name="Cycle">Completed cards (0-based index of the current one).</param>
-/// <param name="PendingDrinks">Drinks of this club on the customer's not-yet-paid orders.</param>
+/// <param name="PendingDrinks">Drinks of this club on the customer's not-yet-paid orders that will stamp once paid.</param>
+/// <param name="StampsAfter">Carried-over cards only: orders dated on or before this day are already on the paper card and never stamp (handover 17a).</param>
 public record CustomerClubDto(
     Guid ClubId,
     string Name,
@@ -68,7 +69,8 @@ public record CustomerClubDto(
     int Cycle,
     IReadOnlyList<CustomerRewardDto> Rewards,
     int PendingDrinks,
-    IReadOnlyList<LoyaltyCardDto> Cards);
+    IReadOnlyList<LoyaltyCardDto> Cards,
+    DateOnly? StampsAfter = null);
 
 /// <summary>
 /// One slot of a card. A filled slot from a paid order has the order's date

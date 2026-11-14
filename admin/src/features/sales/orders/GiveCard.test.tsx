@@ -121,4 +121,20 @@ describe('Give card on the order form', () => {
     await waitFor(() => expect(total()).toBe('₱110'))
     expect(screen.getByText(/No loyalty card/)).toBeInTheDocument()
   })
+
+  it('says an order dated on or before the carry-over won’t stamp a carried card (handover 17a)', async () => {
+    const carried: CustomerSummaryDto = { ...walkIn, id: 'c-carried', name: 'Carried', clubs: [{ ...coffeeCard(5, ['used', 'locked', 'locked']), stampsAfter: '2026-11-14' }] }
+    server.use(http.get(`${API}/customers`, () => HttpResponse.json([kee, carried])))
+    const { user } = renderApp('/sales/orders/new', signedIn)
+    await choose(user, 'Carried')
+    const date = screen.getByLabelText('Date')
+
+    await user.clear(date)
+    await user.type(date, '2026-11-14')
+    expect(await screen.findByText(/already on the paper card, so it won't stamp/)).toBeInTheDocument()
+
+    await user.clear(date)
+    await user.type(date, '2026-11-15')
+    await waitFor(() => expect(screen.queryByText(/already on the paper card/)).not.toBeInTheDocument())
+  })
 })
