@@ -41,7 +41,10 @@
   --color-card-ink: #111111;
   --color-card-pink: #f07a8e;
   --color-cobalt: #0b4bb3;
-  --color-matcha: #4f7f3a;
+  /* A shade deeper than the printed green, so cream lettering on it reaches 4.5:1 (handover 17a). */
+  --color-matcha: #437234;
+  /* The club name's one pink letter: a shade deeper than card-pink so large lettering reaches 3:1 on the cream. */
+  --color-accent-pink: #e0566f;
   --color-bean: #8b5e52;
   --color-leaf: #5e8c3a;
   --color-squiggle-red: #f0584a;

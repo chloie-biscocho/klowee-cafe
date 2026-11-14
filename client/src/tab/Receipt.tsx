@@ -11,8 +11,14 @@ import type { WriteResult } from './useTab'
  * unpaid order with a dotted leader, a ruled total. Below it, what's been
  * reported and is waiting for Klowee, a rejected report's reason, and Pay.
  */
+/** A long tab shows this many orders, then a button for the rest, so Pay stays close (handover 17a). */
+const SHOWN = 4
+
 export function Receipt({ tab, onClaim }: { tab: PublicTab; onClaim: (claim: ClaimRequest) => Promise<WriteResult> }) {
   const [paying, setPaying] = useState(false)
+  const [showAll, setShowAll] = useState(false)
+  const hidden = showAll ? 0 : Math.max(0, tab.unpaidOrders.length - SHOWN)
+  const rows = hidden > 0 ? tab.unpaidOrders.slice(0, SHOWN) : tab.unpaidOrders
   const pending = tab.claims.filter((c) => c.status === 'Pending')
   const latest = tab.claims[0]
   const rejected = latest?.status === 'Rejected' ? latest : null
@@ -30,8 +36,8 @@ export function Receipt({ tab, onClaim }: { tab: PublicTab; onClaim: (claim: Cla
         <p className="border-t-2 border-menu-ink pt-2.5 text-center text-[1.25rem] font-bold">you're all paid up</p>
       ) : (
         <>
-          <ul>
-            {tab.unpaidOrders.map((order, i) => (
+          <ul id="receipt-orders">
+            {rows.map((order, i) => (
               <li key={i} className="flex items-baseline gap-2 py-[3px]">
                 <span className="lowercase">
                   {order.items}
@@ -45,6 +51,17 @@ export function Receipt({ tab, onClaim }: { tab: PublicTab; onClaim: (claim: Cla
               </li>
             ))}
           </ul>
+          {tab.unpaidOrders.length > SHOWN && (
+            <button
+              type="button"
+              aria-expanded={showAll}
+              aria-controls="receipt-orders"
+              className="mt-1 cursor-pointer border-0 bg-transparent p-0 text-[0.95rem] font-bold text-menu-ink underline underline-offset-4"
+              onClick={() => setShowAll((open) => !open)}
+            >
+              {showAll ? 'Show fewer' : `Show all ${tab.unpaidOrders.length} orders (${hidden} more)`}
+            </button>
+          )}
           <p className="mt-2.5 flex justify-between border-t-2 border-menu-ink pt-2.5 text-[1.25rem] font-bold">
             <span>you owe</span>
             <span>{formatPeso(tab.balance)}</span>

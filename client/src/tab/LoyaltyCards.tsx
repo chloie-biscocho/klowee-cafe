@@ -43,6 +43,19 @@ function Squiggles() {
   )
 }
 
+/** The club's name in capitals, its accent letter (if any) in pink, as the paper card prints it. */
+function ClubName({ name, accent }: { name: string; accent: number | null }) {
+  const upper = name.toUpperCase()
+  if (accent === null || accent < 0 || accent >= upper.length || upper.length !== name.length) return <>{upper}</>
+  return (
+    <>
+      {upper.slice(0, accent)}
+      <span className="text-accent-pink">{upper[accent]}</span>
+      {upper.slice(accent + 1)}
+    </>
+  )
+}
+
 /** A rewards' words on two lines, as printed: "50%" / "OFF". */
 const printed = (label: string) => label.toUpperCase().replace(' ', '\n')
 
@@ -54,9 +67,12 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 /**
  * One card face, drawn from the data like the printed card: the name in the
  * heavy display type, the slots in two rows, rewards in pink and the last in
- * the club's colour. A filled slot gets a see-through rubber stamp (SIPPED, or
- * CLAIMED on a used reward) tilted like the admin's. Dimmed with every slot
- * empty when the customer has no card yet.
+ * the club's colour, one letter of the name in pink when the club has one.
+ * A filled slot gets a rubber stamp pressed over its own design (SIPPED, or
+ * CLAIMED on a used reward), tilted like the admin's: solid ink in a thick
+ * outline on a light wash, wider than the circle when it must be, so the word
+ * reads at phone width (handover 17a). Dimmed with every slot empty when the
+ * customer has no card yet.
  */
 function CardFace({ club, card, live, next }: { club: TabClub; card: TabCard | null; live: boolean; next: number | null }) {
   const rewards = card?.rewards ?? club.rewards
@@ -67,24 +83,26 @@ function CardFace({ club, card, live, next }: { club: TabClub; card: TabCard | n
   const clubText = matcha ? 'text-matcha' : 'text-cobalt'
   const clubBg = matcha ? 'bg-matcha' : 'bg-cobalt'
   const clubBgDim = matcha ? 'bg-matcha/30' : 'bg-cobalt/30'
+  // On the club-colour slot the stamp is cream ink on a wash of that colour.
+  const stampWashDark = matcha ? 'bg-matcha/85' : 'bg-cobalt/85'
   const clubRing = matcha ? 'shadow-[inset_0_0_0_2.5px_var(--color-matcha)]' : 'shadow-[inset_0_0_0_2.5px_var(--color-cobalt)]'
 
   return (
     // Dimmed (no card yet): the slots, stamps and squiggles fade, the lettering
     // keeps full contrast so it stays readable.
-    <div className="relative overflow-hidden rounded-[18px] bg-card px-3.5 pt-[18px] pb-4 text-center text-card-ink">
+    <div className="relative overflow-hidden rounded-[18px] bg-card px-2 pt-[18px] pb-4 text-center text-card-ink sm:px-3.5 lg:px-6 lg:pt-6 lg:pb-5">
       <div className={live ? '' : 'opacity-40'}>
         <Squiggles />
       </div>
       <p aria-hidden="true" className="px-5 font-hand text-[0.58rem] font-medium tracking-[.1em] sm:text-[0.66rem] sm:tracking-[.14em]">
         KLOWEE CAFE'S LOYALTY CARD PRESENTS
       </p>
-      <p aria-hidden="true" className={`mt-0.5 mb-3 font-display text-[clamp(1.55rem,7.4vw,2.05rem)] leading-[1.05] tracking-[.01em] lg:text-[1.9rem] ${clubText}`}>
-        {club.name.toUpperCase()}
+      <p aria-hidden="true" className={`mt-0.5 mb-3 font-display text-[clamp(1.55rem,7.4vw,2.05rem)] leading-[1.05] tracking-[.01em] lg:text-[2.5rem] ${clubText}`}>
+        <ClubName name={club.name} accent={club.accentLetter ?? null} />
       </p>
       <ol
         aria-hidden="true"
-        className="mx-auto grid max-w-[360px] gap-x-1.5 gap-y-1"
+        className="mx-auto grid max-w-[620px] gap-x-1 gap-y-1.5 sm:gap-x-1.5 lg:gap-x-3 lg:gap-y-2"
         style={{ gridTemplateColumns: `repeat(${Math.ceil(club.slotCount / 2)}, minmax(0, 1fr))` }}
       >
         {slots.map((slot) => {
@@ -94,7 +112,7 @@ function CardFace({ club, card, live, next }: { club: TabClub; card: TabCard | n
           const ready = live && reward?.state === 'available'
           return (
             <li key={slot.slot} className="flex flex-col items-center">
-              <span className="h-4 font-hand text-[0.62rem] leading-4 font-bold text-card-ink tabular-nums">
+              <span className="mb-0.5 h-[1.1em] font-sans text-[clamp(0.66rem,2.6vw,0.86rem)] leading-[1.1] font-bold text-card-ink tabular-nums">
                 {live && slot.filled && slot.date ? stampDate(slot.date) : ''}
               </span>
               <span
@@ -104,7 +122,7 @@ function CardFace({ club, card, live, next }: { club: TabClub; card: TabCard | n
               >
                 {reward ? (
                   <span
-                    className={`px-0.5 font-hand text-[clamp(0.5rem,2.5vw,0.66rem)] leading-[1.1] font-bold tracking-[.04em] whitespace-pre-line ${
+                    className={`px-0.5 font-hand text-[clamp(0.5rem,2.5vw,0.84rem)] leading-[1.1] font-bold tracking-[.04em] whitespace-pre-line ${
                       // Dark ink on the pink (white measured 2.7:1); cream on the club colour.
                       isLast && live ? 'text-card' : 'text-card-ink'
                     }`}
@@ -117,16 +135,16 @@ function CardFace({ club, card, live, next }: { club: TabClub; card: TabCard | n
                   </span>
                 )}
                 {live && slot.filled && (
-                  // The rubber stamp is decoration over the slot's own design; its
-                  // word is CSS content, not text, and the card's description
-                  // says the same in words for screen readers.
+                  // Solid ink on a light wash, so the word measures against the
+                  // wash whatever the slot's colour; the design shows around it.
                   <span
-                    data-stamp={used ? 'CLAIMED' : 'SIPPED'}
-                    className={`absolute top-1/2 left-1/2 rounded-[3px] border-[1.5px] px-[2px] font-display text-[clamp(0.34rem,1.55vw,0.5rem)] leading-[1.3] opacity-80 before:content-[attr(data-stamp)] ${
-                      isLast ? 'border-card text-card' : 'border-cobalt text-cobalt'
+                    className={`absolute top-1/2 left-1/2 z-[1] rounded-[4px] border-[2.5px] px-[0.28em] pt-[0.12em] pb-[0.06em] font-display text-[clamp(0.56rem,2.45vw,0.9rem)] leading-none whitespace-nowrap shadow-[0_0_0_1px_var(--color-card)] ${
+                      isLast ? `border-card text-card ${stampWashDark}` : 'border-cobalt bg-card/80 text-cobalt'
                     }`}
                     style={{ transform: `translate(-50%, -50%) rotate(${stampTilt(slot.slot)}deg)` }}
-                  />
+                  >
+                    {used ? 'CLAIMED' : 'SIPPED'}
+                  </span>
                 )}
               </span>
             </li>
@@ -340,7 +358,7 @@ export function LoyaltyCards({ clubs, onRequest }: { clubs: TabClub[]; onRequest
   }
 
   return (
-    <section aria-labelledby={`${id}-h`} className="rounded-[22px] bg-panel px-5 pt-5 pb-[18px]">
+    <section aria-labelledby={`${id}-h`} className="rounded-[22px] bg-panel px-3 pt-5 pb-[18px] sm:px-5 lg:px-7 lg:pt-7">
       <h2 id={`${id}-h`} className="mb-2.5 font-serif text-[1.25rem] text-deep">
         Your loyalty cards
       </h2>

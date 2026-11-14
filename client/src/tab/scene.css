@@ -1,0 +1,39 @@
+/*
+ * The coffee cart scene at the foot of the tab page (handover 17a). Loaded
+ * with the scene's own lazy chunk. Compositor-only: every animation moves
+ * transform or opacity, and everything stops under reduced motion.
+ */
+
+/* Cups refill slowly, over and over: the homepage's cover technique (src/index.css .cup-cover), looped. */
+.scene-cup .cup-cover {
+  animation: refill 7s cubic-bezier(0.3, 0.7, 0.2, 1) infinite;
+  animation-delay: calc(var(--i) * 1.1s);
+}
+@keyframes refill {
+  0% { transform: scaleY(1); }
+  35%, 85% { transform: scaleY(0); }
+  100% { transform: scaleY(1); }
+}
+
+/* Steam: a wisp rises and fades. */
+.scene-steam {
+  opacity: 0;
+  animation: steam 3.2s ease-out infinite;
+  animation-delay: calc(var(--i) * 0.9s);
+}
+@keyframes steam {
+  0% { transform: translateY(6px) scaleY(0.8); opacity: 0; }
+  30% { opacity: 0.75; }
+  100% { transform: translateY(-14px) scaleY(1.1); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-cup .cup-cover {
+    animation: none;
+    transform: scaleY(0);
+  }
+  .scene-steam {
+    animation: none;
+    opacity: 0.6;
+  }
+}

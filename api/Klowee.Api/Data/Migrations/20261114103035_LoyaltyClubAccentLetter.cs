@@ -16,14 +16,14 @@ namespace Klowee.Api.Data.Migrations
                 type: "integer",
                 nullable: true);
 
-            // The paper card's pink letter on the two seeded clubs (fixed ids), found
-            // in the name rather than counted by hand; only while the name is as seeded.
-            var coffee = "The Coffee Club";
-            var matcha = "The Matcha Club";
-            migrationBuilder.Sql($"UPDATE loyalty_clubs SET accent_letter = {Entities.LoyaltyClub.CoffeeAccent(coffee)} " +
-                $"WHERE id = '{Entities.LoyaltyClub.CoffeeClubId}' AND lower(name) = '{coffee.ToLowerInvariant()}' AND accent_letter IS NULL;");
-            migrationBuilder.Sql($"UPDATE loyalty_clubs SET accent_letter = {Entities.LoyaltyClub.MatchaAccent(matcha)} " +
-                $"WHERE id = '{Entities.LoyaltyClub.MatchaClubId}' AND lower(name) = '{matcha.ToLowerInvariant()}' AND accent_letter IS NULL;");
+            // The paper card's pink letter on the two seeded clubs (fixed ids), only
+            // while the name is as seeded: 13 is the U of "The Coffee Club", 5 the
+            // first A of "The Matcha Club". Frozen here; LoyaltyClubDefaults finds the
+            // same letters for the tests, and a test checks they are U and A.
+            migrationBuilder.Sql("UPDATE loyalty_clubs SET accent_letter = 13 " +
+                "WHERE id = 'c0ffee00-0000-4000-8000-000000000001' AND lower(name) = 'the coffee club' AND accent_letter IS NULL;");
+            migrationBuilder.Sql("UPDATE loyalty_clubs SET accent_letter = 5 " +
+                "WHERE id = '3a7c4a00-0000-4000-8000-000000000002' AND lower(name) = 'the matcha club' AND accent_letter IS NULL;");
         }
 
         /// <inheritdoc />

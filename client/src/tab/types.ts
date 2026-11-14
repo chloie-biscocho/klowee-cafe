@@ -73,6 +73,8 @@ export interface TabClub {
   rewards: TabReward[]
   pendingDrinks: number
   cards: TabCard[]
+  /** The index in `name` of the letter printed in pink (handover 17a); null or absent for none. */
+  accentLetter?: number | null
 }
 
 export interface TabPayMethod {

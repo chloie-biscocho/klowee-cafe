@@ -7,6 +7,21 @@ const longDate = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric
 /** "Nov 13" */
 export const formatShortDate = (isoDate: string) => shortDate.format(asUtc(isoDate))
 
+const yearInManila = (now: Date) => new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone: 'Asia/Manila' }).format(now)
+const shortDateYear = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+
+const todayInManila = (now: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(now)
+
+/**
+ * "Nov 13" for a date this year up to today; "Dec 6, 2025" for another year
+ * (handover 17a). A date after today also gets its year ("Dec 6, 2026"):
+ * that is a wrong date in the records, and the year makes it visible.
+ */
+export const formatPaidOn = (isoDate: string, now: Date = new Date()) =>
+  isoDate.slice(0, 4) === yearInManila(now) && isoDate <= todayInManila(now)
+    ? shortDate.format(asUtc(isoDate))
+    : shortDateYear.format(asUtc(isoDate))
+
 /** "November 13", for screen readers. */
 export const formatLongDate = (isoDate: string) => longDate.format(asUtc(isoDate))
 

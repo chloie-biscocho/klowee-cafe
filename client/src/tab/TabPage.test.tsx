@@ -185,8 +185,8 @@ describe('the tab page: loyalty cards', () => {
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
 
     const live = within(cards()).getByRole('group', { name: /Coffee Club, card 1: 6 of 12 stamped/ })
-    expect(live.querySelectorAll('[data-stamp="SIPPED"]')).toHaveLength(5)
-    expect(live.querySelectorAll('[data-stamp="CLAIMED"]')).toHaveLength(1)   // slot 5, the 50% off used
+    expect(within(live).getAllByText('SIPPED')).toHaveLength(5)            // real text now (handover 17a)
+    expect(within(live).getByText('CLAIMED')).toBeInTheDocument()          // slot 5, the 50% off used
     expect(live).toHaveAccessibleName(/slot 5 \(50% off, used\): stamped October 14/)
     expect(within(live).getByText('10/10')).toBeInTheDocument()      // the first stamp's date, M/D
     expect(cards()).toHaveTextContent('6 of 12. 50% off used.')
@@ -213,7 +213,7 @@ describe('the tab page: loyalty cards', () => {
     await user.click(await screen.findByRole('tab', { name: 'Matcha Club' }))
     expect(screen.getByRole('tab', { name: 'Matcha Club' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('img', { name: /Matcha Club card, not yet yours. Its rewards: 50% off on slot 5, free topping on slot 8/ })).toBeInTheDocument()
-    expect(cards().querySelector('[data-stamp]')).toBeNull()
+    expect(within(cards()).queryByText('SIPPED')).not.toBeInTheDocument()
     expect(within(cards()).getByText("You don't have a Matcha Club card yet.")).toBeInTheDocument()
 
     await user.click(within(cards()).getByRole('button', { name: 'Ask for a card' }))
@@ -277,6 +277,37 @@ describe('the tab page: loyalty cards', () => {
   })
 })
 
+describe('the tab page: the look (handover 17a)', () => {
+  it('prints the club name with its one pink letter', async () => {
+    await renderTab({ ...tab, clubs: [{ ...coffeeMember, accentLetter: 13 }] })
+    const pink = document.querySelector('.text-accent-pink')
+    expect(pink).toHaveTextContent(/^U$/)
+    expect(pink!.parentElement).toHaveTextContent('THE COFFEE CLUB')
+  })
+
+  it('without an accent letter, prints the name in one colour', async () => {
+    await renderTab({ ...tab, clubs: [{ ...coffeeMember, accentLetter: null }] })
+    expect(document.querySelector('.text-accent-pink')).toBeNull()
+  })
+
+  it('draws the sky and the cart as decoration only, the cart in a box of fixed shape', async () => {
+    await renderTab()
+    const sky = document.querySelector('.cloud')!.closest('.fixed')!
+    expect(sky).toHaveAttribute('aria-hidden', 'true')
+
+    const sign = await waitFor(() => {
+      const slot = document.querySelector('[data-slot="sign"]')
+      expect(slot).not.toBeNull()
+      return slot!
+    })
+    const scene = sign.parentElement!
+    expect(scene).toHaveAttribute('aria-hidden', 'true')
+    expect(scene.className).toContain('aspect-[440/200]')
+    expect(scene.querySelector('[data-slot="characters"]')).toBeInTheDocument()
+    expect(scene.querySelectorAll('.cup-cover')).toHaveLength(3)
+  })
+})
+
 describe('the tab page: links and errors', () => {
   it('a dead link says to ask for a new one', async () => {
     server.use(http.get(TAB_URL, () => HttpResponse.json({ status: 404, detail: "This link isn't active." }, { status: 404 })))
@@ -301,5 +332,23 @@ describe('the tab page: links and errors', () => {
     render(<Root path="/" />)
     expect(await screen.findByRole('link', { name: 'Klowee Cafe home' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'your tab' })).not.toBeInTheDocument()
+  })
+})
+
+describe('the tab page: a long tab (handover 17a)', () => {
+  it('shows four orders and a button for the rest, so the total and Pay stay close', async () => {
+    const orders = Array.from({ length: 9 }, (_, i) => ({ orderedOn: `2026-10-${String(i + 10).padStart(2, '0')}`, items: `Drink ${i + 1}`, total: 100, paid: 0, due: 100 }))
+    const user = await renderTab({ ...tab, balance: 900, unpaidOrders: orders })
+    const sheet = screen.getByRole('heading', { name: 'your tab' }).closest('section')!
+
+    expect(within(sheet).getAllByRole('listitem')).toHaveLength(4)
+    expect(within(sheet).getByText('you owe').parentElement).toHaveTextContent('₱900')   // every order counts
+    expect(within(sheet).getByRole('button', { name: 'Pay with GCash' })).toBeInTheDocument()
+
+    const more = within(sheet).getByRole('button', { name: 'Show all 9 orders (5 more)' })
+    expect(more).toHaveAttribute('aria-expanded', 'false')
+    await user.click(more)
+    expect(within(sheet).getAllByRole('listitem')).toHaveLength(9)
+    expect(within(sheet).getByRole('button', { name: 'Show fewer' })).toHaveAttribute('aria-expanded', 'true')
   })
 })
