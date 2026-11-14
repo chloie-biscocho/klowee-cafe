@@ -50,6 +50,21 @@ in phase 2 — switch it to RTK Query or React Query rather than growing a secon
 hand-rolled cache. The rule is the same in both apps: the moment server data
 needs invalidating, it belongs to a data library, not to an effect.
 
+## The tab page (handover 17)
+
+The customer's tab page (`client/src/tab/useTab.ts`, decision 021) brought the
+first writes: "I've paid" and "Ask for a card". It still uses plain `fetch`,
+deliberately, against the rule above. Both writes are one POST followed by
+one refetch of the only read the page has, and nothing else on screen
+depends on them: there is no second view to keep in step, no list to
+invalidate, no cache shared with the homepage (the two pages are separate
+chunks picked by path). The hook keeps the same three states plus a fourth
+for a dead link, aborts superseded reads, and shows a new claim at once from
+the POST's response before refetching quietly. A data library would add
+Redux or React Query to a 23 kB page to solve problems it doesn't have. The
+rule above still holds: a second page with writes that touch shared data
+would move the client to RTK Query.
+
 ## Consequences
 
 - The client ships no Redux; its runtime is React and ReactDOM only.

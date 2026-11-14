@@ -310,6 +310,9 @@ main.tsx ─► App ─► useHomeData()  ──►  fetch GET /api/public/home 
   reduced-motion stops are plain CSS in the same file.
 - **The browser caches the payload** for up to 60 seconds (the API's
   `Cache-Control`); there is no client-side cache beyond that.
+- **A second page by path.** `src/Root.tsx` renders `App` for every path except
+  `/tab/…`, which lazy-loads the customer's tab page (see "Customer tab pages"
+  below). Still no router.
 
 ## Phase 2: office sales
 
@@ -358,6 +361,45 @@ A customer's card is derived, never stored: `S` = the club's ledger sum,
 - `loyalty_stamps_per_reward` is retired (decision 020); the clubs carry their own rules.
 - **Development seed:** three sample customers and six orders in mixed states,
   only into a database with no customers yet.
+
+## Customer tab pages (handover 17)
+
+Each customer can have a private page at `/tab/{token}` on the public site
+(decision 021). The token is the only key.
+
+```
+admin ── POST /customers/{id}/tab-link ──► new token ──► URL from App:PublicSiteUrl, copied and sent
+customer's phone
+  /tab/{token} ─► index.html (head script: data-page=tab, noindex; hides the homepage shell)
+              ─► main.tsx ─► Root: path starts with /tab/ ─► lazy TabPage (own JS + CSS chunk, Bowlby One)
+                   useTab(token) ─► GET  /api/public/tab/{token}             loading | error | gone (404) | ready
+                   submitClaim   ─► POST /api/public/tab/{token}/claims      → Pending claim, then refetch
+                   requestCard   ─► POST /api/public/tab/{token}/clubs/{id}/request → Requested membership
+owners' dashboard
+  Payments to confirm ─► POST /payment-claims/{id}/confirm ─► SettleInTransactionAsync (oldest first,
+                                                              stamps via ReconcileAsync), claim Confirmed
+                      ─► POST /payment-claims/{id}/reject {reason}
+  Card requests       ─► POST /loyalty/memberships/{id}/approve | decline
+```
+
+- **`PublicTabService`** builds the payload from the services that own the
+  rules: `OrderService.SummariesAsync` for the tab (orders where
+  `payer ?? customer` is this customer), `LoyaltyService.CardsAsync` for the
+  cards (the same `LoyaltySlots.Build` replay as the admin, minus order ids).
+- **New tables:** `payment_methods` (the accounts customers pay into, with a
+  QR image from the `site` upload folder) and `payment_claims`;
+  `payments.payment_claim_id` links a confirmed claim to the payments it made.
+  Setting `tab_page_note` is internal (not in the homepage payload).
+- **Headers and limits** are applied in `Program.cs` for the whole
+  `/api/public/tab` path: `no-store`, `noindex`, rate-limit policies
+  `tab-read` (IP), `tab-claim` and `tab-card-request` (hashed token), tunable
+  through `TabRateLimitOptions`.
+- **Logging:** the path is excluded from HTTP logging and redacted in the
+  exception handler; services log customer and claim ids only.
+- **Admin:** `api/tabsApi.ts` holds the endpoints. Confirming invalidates what
+  a payment does (`Order`, `Customer`, `Loyalty`, `Report`) plus
+  `PaymentClaim`; the sidebar badge reads `pendingClaimsCount` and
+  `pendingCardRequestsCount` from the month's summary.
 
 ## Hosting and delivery
 

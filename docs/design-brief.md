@@ -145,6 +145,34 @@ marketing sentences (the pop-ups' Instagram note, the packages lead, the story
 slot's placeholder note) are not shipped; the pop-ups keep only "Tap a photo to
 see more from that pop-up."
 
+## The tab page (handover 17)
+A customer's private page at `/tab/{token}`, layout **C. Receipt** of
+`docs/mockups/klowee-my-tab-options.html` with two cards as tabs, chosen by the
+owner. Same tokens, fonts and theme switch as the homepage; light by default.
+- **Header:** logo, "klowee cafe", "hi, {name}", the theme switch.
+- **Receipt:** the menu sheet's `paper` and `menu-ink` in Shantell Sans (its
+  dark treatment in dark): "your tab", a dotted-leader row per unpaid order
+  with a second line for the date and "N paid", a ruled "you owe ₱…". Nothing
+  owed: "you're all paid up". Reports waiting for Klowee are yellow sticker
+  chips; a rejected report shows its reason. Pay opens a native `<dialog>`
+  (Karla): method switch, the QR, account name and number with Copy, Save QR
+  with a hint for paying on the same phone, amount and reference.
+- **Loyalty cards:** drawn from the data on the printed card's cream face,
+  which stays cream in both themes (tokens `card`, `card-slot`, `card-ink`,
+  `card-pink`, `cobalt`, `matcha`, `bean`, `leaf`, three `squiggle-*`).
+  The club's name in **Bowlby One** (`font-display`, self-hosted, loaded only
+  on this page), slots in two rows with a bean heart (Coffee) or leaf (Matcha),
+  reward slots pink with dark ink, the last in the club colour with cream
+  lettering. A filled slot gets a see-through rubber stamp, **SIPPED** or
+  **CLAIMED**, cobalt ink (cream on the club-colour slot), tilted by the
+  admin's `stampTilt`; the date above as `M/D`. Finished cards stack behind
+  the current one with "Card 2 of 3" and arrows (and swipe). Without a card,
+  the slots and squiggles fade while the lettering keeps full contrast.
+- **Layout:** one column up to 900px (max 480px wide); two columns above it,
+  receipt and payments left, cards right.
+- **Dead link:** "this link isn't active anymore" with "Ask Klowee for a new
+  one". Network error: the homepage's error card with retry.
+
 ## Accessibility floor
 Skip link, header/main/footer landmarks, every section labelled by its heading.
 Visible 3px `deep` focus rings. Cups are images with the drink's name as label
