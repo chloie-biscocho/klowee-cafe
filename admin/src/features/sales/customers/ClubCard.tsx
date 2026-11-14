@@ -9,6 +9,9 @@ import type { CustomerClubDto, CustomerRewardDto } from '../../../types/api'
 import { useToastedAction } from '../../toasts/useToastedAction'
 import { StampCard } from './StampCard'
 
+/** How far each card behind shows above and left of the one in front: a target big enough to click. */
+const PEEK = 12
+
 const STATE_STYLE: Record<CustomerRewardDto['state'], string> = {
   locked: 'text-muted',
   available: 'font-semibold text-success',
@@ -160,7 +163,8 @@ function MemberCard({
         </div>
       )}
 
-      <div className="relative" style={{ paddingTop: behind.length * 6, paddingLeft: behind.length * 6 }}>
+      {/* Each card behind peeks out PEEK px above and left of the one in front: a clickable edge. */}
+      <div className="relative" style={{ paddingTop: behind.length * PEEK, paddingLeft: behind.length * PEEK }}>
         {behind.map((card, index) => (
           <button
             key={card.cardNumber}
@@ -170,10 +174,10 @@ function MemberCard({
             className="absolute rounded-lg border border-line bg-canvas motion-safe:transition-transform motion-safe:hover:-translate-y-0.5"
             style={{
               // The newest card behind sits nearest the front.
-              top: (behind.length - 1 - index) * 6,
-              left: (behind.length - 1 - index) * 6,
-              right: (index + 1) * 6,
-              bottom: (index + 1) * 6,
+              top: (behind.length - 1 - index) * PEEK,
+              left: (behind.length - 1 - index) * PEEK,
+              right: (index + 1) * PEEK,
+              bottom: (index + 1) * PEEK,
               zIndex: behind.length - index,
             }}
           />
