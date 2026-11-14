@@ -396,6 +396,14 @@ owners' dashboard
   through `TabRateLimitOptions`.
 - **Logging:** the path is excluded from HTTP logging and redacted in the
   exception handler; services log customer and claim ids only.
+- **Paper-era orders (handover 17a, decision 020):** a carried-over card's
+  `loyalty_memberships.stamps_after` (the carry-over day) makes
+  `LoyaltyService.Stamps()` refuse orders dated on or before it; everything
+  that stamps or counts pending goes through that one rule.
+  `GET /api/loyalty/stray-stamps` lists stamps given before the rule existed;
+  `POST /api/loyalty/stray-stamps/void` re-runs `ReconcileAsync` on those
+  orders with `linesChanged: true` (a normal reconcile keeps a paid order's
+  stamps). `SheetImport straystamps [--apply]` drives both.
 - **Admin:** `api/tabsApi.ts` holds the endpoints. Confirming invalidates what
   a payment does (`Order`, `Customer`, `Loyalty`, `Report`) plus
   `PaymentClaim`; the sidebar badge reads `pendingClaimsCount` and

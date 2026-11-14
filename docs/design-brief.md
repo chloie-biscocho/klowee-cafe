@@ -159,17 +159,31 @@ owner. Same tokens, fonts and theme switch as the homepage; light by default.
   with a hint for paying on the same phone, amount and reference.
 - **Loyalty cards:** drawn from the data on the printed card's cream face,
   which stays cream in both themes (tokens `card`, `card-slot`, `card-ink`,
-  `card-pink`, `cobalt`, `matcha`, `bean`, `leaf`, three `squiggle-*`).
-  The club's name in **Bowlby One** (`font-display`, self-hosted, loaded only
-  on this page), slots in two rows with a bean heart (Coffee) or leaf (Matcha),
+  `card-pink`, `cobalt`, `matcha` #437234, `accent-pink`, `bean`, `leaf`,
+  three `squiggle-*`). The club's name in **Bowlby One** (`font-display`,
+  self-hosted, loaded only on this page; never below 24px, its large-text
+  size), with the club's accent letter (the U of CLUB) in `accent-pink`
+  (3.28:1). Slots in two rows with a bean heart (Coffee) or leaf (Matcha),
   reward slots pink with dark ink, the last in the club colour with cream
-  lettering. A filled slot gets a see-through rubber stamp, **SIPPED** or
-  **CLAIMED**, cobalt ink (cream on the club-colour slot), tilted by the
-  admin's `stampTilt`; the date above as `M/D`. Finished cards stack behind
+  lettering. A filled slot gets a rubber stamp in real text, **SIPPED** or
+  **CLAIMED**: Bowlby One, solid ink in a 2.5px outline on a light wash
+  (cobalt on cream; cream on the club-colour slot), allowed to overhang the
+  circle, tilted by the admin's `stampTilt`; measured 5.95:1 over pink and
+  about 7:1 elsewhere. The date above as a bold `M/D`. Circles are about
+  46px wide on a 360px phone and 83px at 1440px. Finished cards stack behind
   the current one with "Card 2 of 3" and arrows (and swipe). Without a card,
   the slots and squiggles fade while the lettering keeps full contrast.
-- **Layout:** one column up to 900px (max 480px wide); two columns above it,
-  receipt and payments left, cards right.
+- **Layout:** one column up to 900px (max 480px wide, small side padding so
+  the circles stay large); two columns above it, up to 1200px, receipt and
+  payments left (40%), cards right (60%). A long receipt shows four orders
+  and "Show all N orders" so Pay stays near the top. Payment dates carry the
+  year when not this year or after today.
+- **Sky and scene:** the homepage's `Clouds` twice in a fixed layer behind the
+  page. At the foot, `CartScene` (its own lazy chunk): awning, three cups
+  refilling with the cup-cover technique, steam, the round logo as the sign,
+  and `sign` / `characters` slots for animated Klowe and Kee later. Fixed
+  aspect ratio, transform and opacity only, static under reduced motion,
+  decorative (`aria-hidden`).
 - **Dead link:** "this link isn't active anymore" with "Ask Klowee for a new
   one". Network error: the homepage's error card with retry.
 

@@ -90,9 +90,21 @@ public static class StrayStampsCommand
         }
 
         s.AppendLine($"Stray stamps: {listing.Stamps.Sum(x => x.Stamps)} on {listing.Stamps.Select(x => x.OrderId).Distinct().Count()} order(s).");
+        var carryOverDays = listing.Positions.ToDictionary(p => (p.CustomerName, p.ClubName), p => p.CarryOverDay);
+        var onTheDay = 0;
         foreach (var stamp in listing.Stamps)
         {
-            s.AppendLine($"  {stamp.CustomerName,-16} {stamp.ClubName,-16} order {stamp.OrderedOn:yyyy-MM-dd} ({stamp.OrderId.ToString()[..8]})  {stamp.Stamps} stamp(s)");
+            // A sale entered on the carry-over day itself may have been a real one after the switch: check the paper card.
+            var sameDay = carryOverDays.TryGetValue((stamp.CustomerName, stamp.ClubName), out var day) && stamp.OrderedOn == day;
+            onTheDay += sameDay ? 1 : 0;
+            s.AppendLine($"  {stamp.CustomerName,-16} {stamp.ClubName,-16} order {stamp.OrderedOn:yyyy-MM-dd} ({stamp.OrderId.ToString()[..8]})  {stamp.Stamps} stamp(s){(sameDay ? "  <- ON THE CARRY-OVER DAY: check the paper card" : "")}");
+        }
+
+        if (onTheDay > 0)
+        {
+            s.AppendLine();
+            s.AppendLine($"{onTheDay} order(s) are dated on the carry-over day itself. If a drink was NOT stamped on the paper card,");
+            s.AppendLine("--apply still voids its stamp: give it back afterwards with Adjust stamps on the customer's card.");
         }
 
         s.AppendLine();
