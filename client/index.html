@@ -16,6 +16,9 @@
     <!-- Light for everyone; dark only if the visitor chose it with the header
          switch. Applied here, before first paint, so a dark choice never
          flashes light. Key and colour match src/lib/theme.ts (tested). -->
+    <!-- The same script marks a customer's private tab page (/tab/…, handover
+         17): not indexed, and the homepage shell below is hidden until React
+         draws the tab page in its place (src/main.tsx). -->
     <script>
       try {
         if (localStorage.getItem('klowee.theme') === 'dark') {
@@ -23,7 +26,21 @@
           document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1A2452')
         }
       } catch (e) {}
+      if (location.pathname.indexOf('/tab/') === 0) {
+        document.documentElement.dataset.page = 'tab'
+        document.title = 'your tab · klowee cafe'
+        var robots = document.createElement('meta')
+        robots.name = 'robots'
+        robots.content = 'noindex'
+        document.head.appendChild(robots)
+      }
     </script>
+    <style>
+      /* #top is the homepage's own wrapper: only the static shell has it here. */
+      html[data-page='tab'] #root > #top {
+        display: none;
+      }
+    </style>
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Klowee Cafe" />

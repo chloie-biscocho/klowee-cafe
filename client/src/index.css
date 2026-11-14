@@ -29,10 +29,30 @@
   /* The yellow stickers keep navy ink in both schemes. */
   --color-sticker-ink: #1c2b6b;
   --color-transparent: transparent;
+  /* Behind the tab page's Pay dialog. */
+  --color-scrim: rgb(10 14 30 / 0.55);
+
+  /*
+   * The loyalty card on the tab page (handover 17), drawn from the printed
+   * card. Not redefined for dark: the card keeps its cream face in both.
+   */
+  --color-card: #f8f2e4;
+  --color-card-slot: #fffdfb;
+  --color-card-ink: #111111;
+  --color-card-pink: #f07a8e;
+  --color-cobalt: #0b4bb3;
+  --color-matcha: #4f7f3a;
+  --color-bean: #8b5e52;
+  --color-leaf: #5e8c3a;
+  --color-squiggle-red: #f0584a;
+  --color-squiggle-orange: #f5a623;
+  --color-squiggle-teal: #2b9c8f;
 
   --font-serif: 'Young Serif', 'Young Serif Fallback', 'Young Serif Fallback Times', Georgia, serif;
   --font-sans: Karla, 'Helvetica Neue', Arial, sans-serif;
   --font-hand: 'Shantell Sans', 'Comic Neue', 'Trebuchet MS', sans-serif;
+  /* The loyalty card's name; its @font-face loads with the tab page only (src/tab/tab.css). */
+  --font-display: 'Bowlby One', 'Arial Black', Impact, sans-serif;
 
   --breakpoint-sm: 480px;
   --breakpoint-md: 760px;

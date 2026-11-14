@@ -1,0 +1,12 @@
+/*
+ * Loaded with the tab page only (imported by TabPage, so it ships in that
+ * lazy chunk): the loyalty card's display face, Bowlby One, self-hosted from
+ * public/fonts/ under the SIL Open Font License (public/fonts/OFL.txt). Google
+ * Fonts serves it in latin only; the card's lettering needs nothing more.
+ */
+@font-face {
+  font-family: 'Bowlby One';
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/bowlby-one-latin.woff2') format('woff2');
+}
