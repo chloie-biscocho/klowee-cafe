@@ -56,7 +56,13 @@ public class PaymentClaimService : IPaymentClaimService
         var claim = await PendingAsync(id, cancellationToken);
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
 
-        // The settle refuses (409) more than the tab owes now, and then nothing is written.
+        // Leave Pending first, atomically: of two confirms at once (a double
+        // click, both owners), only one moves the row; the other gets a 409
+        // and settles nothing. The settle below then runs once.
+        await ResolveAsync(id, PaymentClaimStatus.Confirmed, null, cancellationToken);
+
+        // The settle refuses (409) more than the tab owes now; the transaction
+        // then rolls back, and the claim is Pending again.
         await _payments.SettleInTransactionAsync(claim.CustomerId, new PaymentRequest
         {
             Amount = claim.Amount,
@@ -66,29 +72,21 @@ public class PaymentClaimService : IPaymentClaimService
             Notes = "reported on the tab page"
         }, claim.Id, cancellationToken);
 
-        claim.Status = PaymentClaimStatus.Confirmed;
-        claim.ResolvedAt = DateTimeOffset.UtcNow;
-        claim.ResolvedBy = _user.UserId;
-        await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-
         return await GetAsync(id, cancellationToken);
     }
 
     public async Task<PaymentClaimDto> RejectAsync(Guid id, RejectClaimRequest request, CancellationToken cancellationToken)
     {
-        var claim = await PendingAsync(id, cancellationToken);
-        claim.Status = PaymentClaimStatus.Rejected;
-        claim.RejectReason = request.Reason.Trim();
-        claim.ResolvedAt = DateTimeOffset.UtcNow;
-        claim.ResolvedBy = _user.UserId;
-        await _db.SaveChangesAsync(cancellationToken);
+        await PendingAsync(id, cancellationToken);
+        await ResolveAsync(id, PaymentClaimStatus.Rejected, request.Reason.Trim(), cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <summary>The claim as it stands (untracked), or 404, or 409 when it was already resolved.</summary>
     private async Task<PaymentClaim> PendingAsync(Guid id, CancellationToken cancellationToken)
     {
-        var claim = await _db.PaymentClaims.FirstOrDefaultAsync(c => c.Id == id, cancellationToken)
+        var claim = await _db.PaymentClaims.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, cancellationToken)
             ?? throw NotFoundException.For("Payment claim", id);
         if (claim.Status != PaymentClaimStatus.Pending)
         {
@@ -96,6 +94,29 @@ public class PaymentClaimService : IPaymentClaimService
         }
 
         return claim;
+    }
+
+    /// <summary>
+    /// Pending → resolved as one conditional UPDATE. Postgres makes a second
+    /// concurrent update wait for the first, then re-checks "still Pending",
+    /// finds it isn't, and changes nothing: that one gets the 409.
+    /// </summary>
+    private async Task ResolveAsync(Guid id, PaymentClaimStatus status, string? reason, CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var user = _user.UserId;
+        var moved = await _db.PaymentClaims
+            .Where(c => c.Id == id && c.Status == PaymentClaimStatus.Pending)
+            .ExecuteUpdateAsync(set => set
+                .SetProperty(c => c.Status, status)
+                .SetProperty(c => c.RejectReason, reason)
+                .SetProperty(c => c.ResolvedAt, now)
+                .SetProperty(c => c.ResolvedBy, user)
+                .SetProperty(c => c.UpdatedAt, now), cancellationToken);
+        if (moved == 0)
+        {
+            throw new ConflictException("Someone else just handled this claim. Refresh to see it.");
+        }
     }
 
     private async Task<PaymentClaimDto> GetAsync(Guid id, CancellationToken cancellationToken) =>
