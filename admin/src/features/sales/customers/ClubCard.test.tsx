@@ -11,10 +11,23 @@ describe('Customer loyalty cards', () => {
     renderApp(`/sales/customers/${keeDetail.id}`, signedIn)
 
     const card = await screen.findByRole('region', { name: 'Coffee Club card' })
+    expect(within(card).getByText('card 1, 4 of 12')).toBeInTheDocument()
     expect(within(card).getByRole('list', { name: '4 of 12 slots filled' })).toBeInTheDocument()
     expect(within(card).getByLabelText('Slot 4, filled')).toBeInTheDocument()
     expect(within(card).getByLabelText('Slot 5, next, 50% OFF available')).toBeInTheDocument()
     expect(within(card).getByText('2 drinks on the tab will stamp once paid.')).toBeInTheDocument()
+  })
+
+  it('reads which card a carried-over cardholder is on', async () => {
+    server.use(
+      http.get(`${API}/customers/:id`, () =>
+        HttpResponse.json({ ...keeDetail, clubs: [{ ...coffeeCard(7, ['used', 'available', 'locked']), cycle: 3 }] }),
+      ),
+    )
+    renderApp(`/sales/customers/${keeDetail.id}`, signedIn)
+
+    const card = await screen.findByRole('region', { name: 'Coffee Club card' })
+    expect(within(card).getByText('card 4, 7 of 12')).toBeInTheDocument()
   })
 
   it('marks a reward used by hand, and makes a hand-marked one available again', async () => {

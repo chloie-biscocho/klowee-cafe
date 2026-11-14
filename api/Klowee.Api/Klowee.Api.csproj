@@ -19,4 +19,11 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The owner-reviewed list of paper cardholders (handover 16a), read once by
+         the loyalty carry-over at startup. A copy of docs/import/loyalty-cardholders.csv,
+         because the Docker build only sees api/; CardholderListTests fails if they differ. -->
+    <Content Include="Data/loyalty-cardholders.csv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

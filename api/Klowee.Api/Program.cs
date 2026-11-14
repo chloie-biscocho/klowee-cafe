@@ -328,8 +328,25 @@ if (plan.Migrate || plan.SeedOwners || plan.SeedSampleData || plan.RunDataSteps)
             // until the old card is carried over. Behind a marker row; one
             // transaction, so a failure leaves nothing half-done and the next
             // start tries again.
-            var carryOver = await new LoyaltyCarryOver(db).RunAsync();
-            logger.LogInformation("{Summary}", carryOver.Summary());
+            var carryOver = new LoyaltyCarryOver(db, configuration["Loyalty:CardholderList"]);
+
+            // Development only: undo an earlier carry-over and run it again
+            // (dotnet run -- --Loyalty:RedoCarryOver=true). Production runs once.
+            if (app.Environment.IsDevelopment() && configuration.GetValue<bool>("Loyalty:RedoCarryOver"))
+            {
+                logger.LogWarning("Loyalty carry-over: undoing the earlier run ({Rows} rows removed) to run it again.",
+                    await carryOver.UndoAsync());
+            }
+
+            var result = await carryOver.RunAsync();
+            if (result.Skipped is not null)
+            {
+                logger.LogWarning("{Summary}", result.Summary());
+            }
+            else
+            {
+                logger.LogInformation("{Summary}", result.Summary());
+            }
         }
     }
     catch (Exception ex) when (!app.Environment.IsDevelopment())

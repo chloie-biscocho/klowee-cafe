@@ -109,8 +109,7 @@ function MemberCard({
         <h3 className="font-semibold">
           {club.name}
           <span className="ml-2 text-sm font-normal text-muted">
-            {club.position} of {club.slotCount}
-            {club.cycle > 0 && ` · card ${club.cycle + 1}`}
+            card {club.cycle + 1}, {club.position} of {club.slotCount}
             {club.joinedOn && ` · since ${formatDate(club.joinedOn)}`}
           </span>
         </h3>

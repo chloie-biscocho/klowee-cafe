@@ -6,9 +6,9 @@ using static Klowee.Api.Tests.SalesFixture;
 namespace Klowee.Api.Tests;
 
 /// <summary>
-/// The one-time carry-over of the old single card onto The Coffee Club, on a
-/// fixture of old balances 0, 4, 6, 11 and 23. Its own database: it is a
-/// one-time step, and the marker row it writes is global.
+/// The one-time carry-over of the paper Coffee Club cards from the
+/// owner-reviewed list (handover 16a). Its own database: the marker row is
+/// global, so each test starts from an undone carry-over.
 /// </summary>
 public class LoyaltyCarryOverTests : IClassFixture<KloweeApiFactory>
 {
@@ -16,151 +16,215 @@ public class LoyaltyCarryOverTests : IClassFixture<KloweeApiFactory>
 
     public LoyaltyCarryOverTests(KloweeApiFactory factory) => _factory = factory;
 
-    private sealed record Fixture(Dictionary<int, Guid> Customers, Guid PaidOrder, Guid NoEntries);
+    private sealed record Fixture(Dictionary<string, Guid> Customers, Guid PaidOrder, Guid UnpaidOrder);
 
     /// <summary>
-    /// The database as the LoyaltyClubs migration leaves it: the old entries,
-    /// all on The Coffee Club (the column's backfill), the categories unmapped.
-    /// Balances: 0 (+10 earned, −10 redeemed), 4, 6, 11 (+12, −1), 23.
+    /// The database as the migrations leave it: customers with old single-card
+    /// entries (all on The Coffee Club, the column's backfill), one paid order
+    /// whose stamp the old card counted, and one unpaid order.
     /// </summary>
-    private async Task<Fixture> ArrangeAsync()
+    private async Task<Fixture> ArrangeAsync(string suffix)
     {
         var m = await SeedMenuAsync(_factory, "carry");
+        await _factory.WithDbAsync(db => new LoyaltyCarryOver(db).UndoAsync());
         return await _factory.WithDbAsync(async db =>
         {
-            // Undo the fixture's mapping, and add the names handover 16 maps.
-            foreach (var c in await db.MenuCategories.ToListAsync())
+            var customers = new Dictionary<string, Guid>();
+            foreach (var name in new[] { "Card one", "Card two", "Card four", "No card", "Card zero" })
             {
-                c.LoyaltyClubId = null;
-            }
-
-            db.MenuCategories.AddRange(
-                new MenuCategory { Name = "coffee", SortOrder = 1 },                      // matched ignoring case
-                new MenuCategory { Name = "Signature Coffee", SortOrder = 2 },
-                new MenuCategory { Name = "Houseblend Matcha", SortOrder = 3 },
-                new MenuCategory { Name = "Refreshers", SortOrder = 4 });                // stays unmapped
-            var dirty = new MenuItem { Name = "Dirty Matcha", Category = await db.MenuCategories.FirstAsync() };
-            db.MenuItems.Add(dirty);
-
-            var customers = new Dictionary<int, Guid>();
-            foreach (var balance in new[] { 0, 4, 6, 11, 23 })
-            {
-                var customer = new Customer { Name = $"Old card {balance}" };
+                var customer = new Customer { Name = $"{name} {suffix}" };
                 db.Customers.Add(customer);
-                customers[balance] = customer.Id = Guid.NewGuid();
+                customers[name] = customer.Id = Guid.NewGuid();
+                db.LoyaltyEntries.Add(new LoyaltyEntry
+                {
+                    CustomerId = customer.Id, ClubId = LoyaltyClub.CoffeeClubId, Delta = 7, Reason = LoyaltyReason.Earned
+                });
             }
 
-            Entry(customers[0], 10, LoyaltyReason.Earned);
-            Entry(customers[0], -10, LoyaltyReason.Redeemed);
-            Entry(customers[4], 4, LoyaltyReason.Earned);
-            Entry(customers[6], 3, LoyaltyReason.Earned);
-            Entry(customers[6], 3, LoyaltyReason.Adjustment);
-            Entry(customers[11], 12, LoyaltyReason.Earned);
-            Entry(customers[11], -1, LoyaltyReason.Adjustment);
-            Entry(customers[23], 23, LoyaltyReason.Earned);
-
-            // One of the 4's stamps came from a paid order, the way the import left them.
-            var order = new Order
+            Order NewOrder(Guid customer, bool paid) => new()
             {
-                CustomerId = customers[4], OrderedOn = new DateOnly(2026, 10, 1), Subtotal = 160m, Total = 160m,
+                CustomerId = customer, OrderedOn = new DateOnly(2026, 10, 1), Subtotal = 160m, Total = 160m,
                 Items = { new OrderItem { MenuVersionItemId = m.Latte, Quantity = 1, UnitPrice = 160m, LineTotal = 160m } },
-                Payments = { new Payment { Amount = 160m, Channel = PaymentChannel.Cash, PaidOn = new DateOnly(2026, 10, 1) } }
+                Payments = paid ? [new Payment { Amount = 160m, Channel = PaymentChannel.Cash, PaidOn = new DateOnly(2026, 10, 1) }] : []
             };
-            db.Orders.Add(order);
+
+            var paidOrder = NewOrder(customers["Card one"], paid: true);
+            var unpaidOrder = NewOrder(customers["Card one"], paid: false);
+            db.Orders.AddRange(paidOrder, unpaidOrder);
             db.LoyaltyEntries.Add(new LoyaltyEntry
             {
-                CustomerId = customers[4], ClubId = LoyaltyClub.CoffeeClubId, Order = order, Delta = 1, Reason = LoyaltyReason.Earned
+                CustomerId = customers["Card one"], ClubId = LoyaltyClub.CoffeeClubId, Order = paidOrder, Delta = 1, Reason = LoyaltyReason.Earned
             });
             await db.SaveChangesAsync();
-
-            // The 4 now sums to 5 with the order's stamp; take one back so it still reads 4.
-            db.LoyaltyEntries.Add(new LoyaltyEntry
-            {
-                CustomerId = customers[4], ClubId = LoyaltyClub.CoffeeClubId, Delta = -1, Reason = LoyaltyReason.Adjustment
-            });
-
-            var noEntries = new Customer { Name = "Never stamped" };
-            db.Customers.Add(noEntries);
-            await db.SaveChangesAsync();
-            return new Fixture(customers, order.Id, noEntries.Id);
-
-            void Entry(Guid customer, int delta, LoyaltyReason reason) =>
-                db.LoyaltyEntries.Add(new LoyaltyEntry { CustomerId = customer, ClubId = LoyaltyClub.CoffeeClubId, Delta = delta, Reason = reason });
+            return new Fixture(customers, paidOrder.Id, unpaidOrder.Id);
         });
     }
 
-    [Fact]
-    public async Task CarriesEachBalance_CappedAt11_PreUsesPassedRewards_MapsCategories_AndRunsOnce()
+    /// <summary>The list as the owner saves it from a spreadsheet: Windows line endings, reformatted dates, a blank row.</summary>
+    private static string WriteList(string suffix, params string[] rows)
     {
-        var fixture = await ArrangeAsync();
+        var path = Path.Combine(Path.GetTempPath(), $"cardholders-{Guid.NewGuid():N}.csv");
+        var lines = new[] { "customer,has_card,card_number,position,estimate,last_reward,last_reward_on,coffees_paid_since,evidence,flag" }
+            .Concat(rows.Select(r => r.Replace("{s}", suffix)))
+            .Append(",, ,,,,,,,");
+        File.WriteAllText(path, string.Join("\r\n", lines) + "\r\n");
+        return path;
+    }
+
+    private static string[] Rows =>
+    [
+        "Card one {s},yes,1,,6,50% off (slot 5),10/21/2025,1,\"notes \"\"50% loyalty\"\"\",",
+        "Card two {s},yes,2,3,9,,,,,",                        // the owner's 3 beats the estimate
+        "card four {s},yes,4,7,2,,,,,",                       // names match ignoring case
+        "No card {s},no,0,,5,,,,,",
+        "Card zero {s},yes,0,,,,,0,,no reward slot",          // 0 means "not set": card 1, position 0
+        "Ghost {s},yes,1,,4,,,,,",                            // no such customer: reported, skipped
+    ];
+
+    private Task<List<LoyaltyRedemption>> UsedAsync(Guid customer) =>
+        _factory.WithDbAsync(db => db.LoyaltyRedemptions.Where(r => r.CustomerId == customer).ToListAsync());
+
+    [Fact]
+    public async Task CarriesTheReviewedList_CardsOneTwoAndFour_AndNoOneElse()
+    {
+        var f = await ArrangeAsync("a");
         var client = await _factory.CreateOwnerClientAsync();
         var (orders, payments) = await _factory.WithDbAsync(async db =>
             (await db.Orders.IgnoreQueryFilters().CountAsync(), await db.Payments.IgnoreQueryFilters().CountAsync()));
 
-        var result = await _factory.WithDbAsync(db => new LoyaltyCarryOver(db).RunAsync());
+        var result = await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, WriteList("a", Rows)).RunAsync());
 
-        // Old balance → carried, and which Coffee Club rewards count as already used on card 1.
+        Assert.Null(result.Skipped);
         Assert.Equal(
-            [(0, 0, 0), (4, 4, 0), (6, 6, 1), (11, 11, 2), (23, 11, 2)],
-            result.Customers.OrderBy(c => c.OldBalance).Select(c => (c.OldBalance, c.Carried, c.RewardsMarkedUsed)));
+            [("Card four a", 4, 7, 43, 10), ("Card one a", 1, 6, 6, 1), ("Card two a", 2, 3, 15, 3), ("Card zero a", 1, 0, 0, 0)],
+            result.Cardholders.OrderBy(c => c.Name).Select(c => (c.Name, c.Card, c.Position, c.Stamps, c.RewardsMarkedUsed)));
+        Assert.Contains(result.NamesNotFound, n => n.Contains("Ghost a") && n.Contains("no match"));
 
-        foreach (var (balance, expected) in new Dictionary<int, (int, string, string, string)>
-                 {
-                     [0] = (0, "locked", "locked", "locked"),
-                     [4] = (4, "available", "locked", "locked"),       // the 5th drink gets 50% off
-                     [6] = (6, "used", "locked", "locked"),
-                     [11] = (11, "used", "used", "available"),         // the free drink is waiting
-                     [23] = (11, "used", "used", "available"),
-                 })
-        {
-            var card = await CardAsync(client, fixture.Customers[balance]);
-            var states = card.Rewards.Where(r => r.Cycle == 0).OrderBy(r => r.Slot).Select(r => r.State).ToList();
-            Assert.Equal(expected, (card.Position, states[0], states[1], states[2]));
-        }
+        // Card 1: 6 of 12, the 50% passed.
+        var one = await CardAsync(client, f.Customers["Card one"]);
+        Assert.Equal(("member", 0, 6), (one.Membership, one.Cycle, one.Position));
+        Assert.Equal(["used", "locked", "locked"], one.Rewards.Select(r => r.State));
 
-        // The old entries are voided history; one adjustment per customer with stamps.
-        var ledger = await LedgerAsync(client, fixture.Customers[23]);
-        var carried = Assert.Single(ledger);
-        Assert.Equal((LoyaltyReason.Adjustment, 11, LoyaltyCarryOver.AdjustmentNote), (carried.Reason, carried.Delta, carried.Notes));
-        Assert.Empty(await LedgerAsync(client, fixture.Customers[0]));
-        Assert.Equal(3, await _factory.WithDbAsync(db => db.LoyaltyEntries.IgnoreQueryFilters()
-            .CountAsync(e => e.CustomerId == fixture.Customers[4] && e.CarriedOverAt != null)));
+        // Card 2 at 3: 15 stamps; card 1's rewards all used (so not listed), this card's all ahead.
+        var two = await CardAsync(client, f.Customers["Card two"]);
+        Assert.Equal((1, 3), (two.Cycle, two.Position));
+        Assert.Equal([(1, "locked"), (1, "locked"), (1, "locked")], two.Rewards.Select(r => (r.Cycle, r.State)));
+        Assert.Equal(3, (await UsedAsync(f.Customers["Card two"])).Count(r => r.Cycle == 0));
 
-        // Mapping, with the names not found reported.
-        Assert.Contains("coffee → The Coffee Club", result.CategoriesMapped);
-        Assert.Contains("Dirty Matcha (item) → The Matcha Club", result.CategoriesMapped);
-        Assert.Contains("category \"Okumidori Matcha\"", result.NamesNotFound);
-        var refreshers = await _factory.WithDbAsync(db => db.MenuCategories.SingleAsync(c => c.Name == "Refreshers"));
-        Assert.Null(refreshers.LoyaltyClubId);
+        // Card 4 at 7: 43 stamps; three full cards of rewards used, and this card's 50%.
+        // Slot 7 is filled, so the extra shot (slot 8) is ready for the next drink.
+        var four = await CardAsync(client, f.Customers["Card four"]);
+        Assert.Equal((3, 7), (four.Cycle, four.Position));
+        Assert.Equal(["used", "available", "locked"], four.Rewards.Select(r => r.State));
+        Assert.Equal([3, 3, 3, 1], (await UsedAsync(f.Customers["Card four"])).GroupBy(r => r.Cycle).OrderBy(g => g.Key).Select(g => g.Count()));
+
+        // has_card = no: no card, nothing written, the old entries voided like everyone's.
+        var none = await CardAsync(client, f.Customers["No card"]);
+        Assert.Equal(("none", 0), (none.Membership, none.Position));
+        Assert.Empty(await LedgerAsync(client, f.Customers["No card"]));
+
+        // Card zero: a card from the beginning, nothing to carry.
+        var zero = await CardAsync(client, f.Customers["Card zero"]);
+        Assert.Equal(("member", 0, 0), (zero.Membership, zero.Cycle, zero.Position));
 
         // Orders and payments untouched.
         Assert.Equal((orders, payments), await _factory.WithDbAsync(async db =>
             (await db.Orders.IgnoreQueryFilters().CountAsync(), await db.Payments.IgnoreQueryFilters().CountAsync())));
 
-        // Twice is once: the marker stops it, and without the marker every customer is already done.
-        Assert.True((await _factory.WithDbAsync(db => new LoyaltyCarryOver(db).RunAsync())).AlreadyApplied);
+        // The cardholder's unpaid old order stamps when paid; the paid one the old card counted never does again.
+        await EnsureAsync(await PayAsync(client, f.UnpaidOrder, 160m));
+        Assert.Equal(7, await StampsAsync(client, f.Customers["Card one"]));
+        var payment = await _factory.WithDbAsync(db => db.Payments.SingleAsync(p => p.OrderId == f.PaidOrder));
+        await EnsureAsync(await client.DeleteAsync($"/api/orders/{f.PaidOrder}/payments/{payment.Id}"));
+        await EnsureAsync(await PayAsync(client, f.PaidOrder, 160m));
+        Assert.Equal(7, await StampsAsync(client, f.Customers["Card one"]));
+    }
+
+    [Fact]
+    public async Task RunsOnce_AndTwiceIsOnceEvenWithoutTheMarker()
+    {
+        var f = await ArrangeAsync("b");
+        var list = WriteList("b", Rows);
+        var client = await _factory.CreateOwnerClientAsync();
+        await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, list).RunAsync());
+        await EnsureAsync(await PayAsync(client, f.UnpaidOrder, 160m));          // a real stamp after the carry-over
+
+        Assert.True((await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, list).RunAsync())).AlreadyApplied);
+
         await _factory.WithDbAsync(async db =>
         {
             db.DataMigrations.RemoveRange(db.DataMigrations);
             return await db.SaveChangesAsync();
         });
-        var again = await _factory.WithDbAsync(db => new LoyaltyCarryOver(db).RunAsync());
-        Assert.Empty(again.Customers);
-        Assert.Empty(again.CategoriesMapped);
-        Assert.Equal(11, await StampsAsync(client, fixture.Customers[23]));
-        Assert.Equal(2, (await _factory.WithDbAsync(db => db.LoyaltyRedemptions.Where(r => r.CustomerId == fixture.Customers[11]).ToListAsync())).Count);
+        var again = await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, list).RunAsync());
 
-        // A carried-over paid order never stamps again, even when its payment is
-        // redone and its drink now belongs to a club.
-        await _factory.WithDbAsync(async db =>
+        Assert.Equal((0, 0), (again.EntriesVoided, again.Cardholders.Count));
+        Assert.Equal(7, await StampsAsync(client, f.Customers["Card one"]));      // 6 carried + the new stamp, kept
+        Assert.Equal(43, await StampsAsync(client, f.Customers["Card four"]));
+    }
+
+    [Fact]
+    public async Task WithoutTheList_ItDoesNotRun_AndSaysSo()
+    {
+        var f = await ArrangeAsync("c");
+
+        var result = await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, "/nowhere/loyalty-cardholders.csv").RunAsync());
+
+        Assert.Contains("missing", result.Skipped);
+        Assert.False(await _factory.WithDbAsync(db => db.DataMigrations.AnyAsync()));
+        Assert.Equal(6, await _factory.WithDbAsync(db => db.LoyaltyEntries.CountAsync(e => f.Customers.Values.Contains(e.CustomerId))));
+    }
+
+    [Fact]
+    public async Task TheDevelopmentRedo_RestoresTheOldEntries_AndRunsTheRuleAgain()
+    {
+        var f = await ArrangeAsync("d");
+        var list = WriteList("d", Rows);
+        var client = await _factory.CreateOwnerClientAsync();
+        await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, list).RunAsync());
+
+        await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, list).UndoAsync());
+
+        // Back to before: old entries live again, no cards, no marker.
+        Assert.Equal(6, await _factory.WithDbAsync(db => db.LoyaltyEntries.CountAsync(e => f.Customers.Values.Contains(e.CustomerId))));
+        Assert.False(await _factory.WithDbAsync(db => db.LoyaltyMemberships.AnyAsync(m => f.Customers.Values.Contains(m.CustomerId))));
+        Assert.False(await _factory.WithDbAsync(db => db.DataMigrations.AnyAsync()));
+
+        var again = await _factory.WithDbAsync(db => new LoyaltyCarryOver(db, list).RunAsync());
+        Assert.Equal(4, again.Cardholders.Count);
+        Assert.Equal(15, await StampsAsync(client, f.Customers["Card two"]));
+    }
+
+    [Fact]
+    public void TheList_ReadsWhatASpreadsheetSaves_AndRefusesWhatItCannotRead()
+    {
+        var rows = CardholderList.Parse(
+            "customer,has_card,card_number,position,estimate,last_reward_on\r\n" +
+            "Irish,yes,4,,7,8/15/2026\r\n" +
+            "Gaga,yes,0,,,\r\n" +
+            "Prince (sample),no,,,0,11/8/2026\r\n" +
+            ",, ,,,\r\n");
+
+        Assert.Equal(
+            [("Irish", true, 4, 7), ("Gaga", true, 1, 0), ("Prince (sample)", false, 1, 0)],
+            rows.Select(r => (r.Customer, r.HasCard, r.CardNumber, r.Slots)));
+        Assert.Throws<InvalidDataException>(() => CardholderList.Parse("customer,has_card,position,estimate\nIrish,maybe,,\n"));
+        Assert.Throws<InvalidDataException>(() => CardholderList.Parse("customer,has_card,position,estimate\nIrish,yes,12,\n"));
+        Assert.Throws<InvalidDataException>(() => CardholderList.Parse("customer,has_card,card_number,position,estimate\nIrish,yes,-1,,\n"));
+    }
+
+    [Fact]
+    public void ThePublishedList_IsTheOwnersFile()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !Directory.Exists(Path.Combine(root.FullName, "docs", "import")))
         {
-            var latte = await db.MenuCategories.SingleAsync(c => c.Name == "Coffee carry");
-            latte.LoyaltyClubId = LoyaltyClub.CoffeeClubId;
-            return await db.SaveChangesAsync();
-        });
-        var payment = await _factory.WithDbAsync(db => db.Payments.SingleAsync(p => p.OrderId == fixture.PaidOrder));
-        await EnsureAsync(await client.DeleteAsync($"/api/orders/{fixture.PaidOrder}/payments/{payment.Id}"));
-        await EnsureAsync(await PayAsync(client, fixture.PaidOrder, 160m));
-        Assert.Equal(4, await StampsAsync(client, fixture.Customers[4]));
+            root = root.Parent;
+        }
+
+        Assert.NotNull(root);
+        Assert.Equal(
+            File.ReadAllBytes(Path.Combine(root.FullName, "docs", "import", CardholderList.FileName)),
+            File.ReadAllBytes(Path.Combine(root.FullName, "api", "Klowee.Api", "Data", CardholderList.FileName)));
     }
 }
