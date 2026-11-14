@@ -349,7 +349,7 @@ A customer's card is derived, never stored: `S` = the club's ledger sum,
   - `PaymentService`: add, delete, settle.
   - `LoyaltyService`: cards per club, ledger, adjust, manual redemptions, plus `ReconcileAsync` (one Earned entry per order and club) after every change.
   - `LoyaltyClubService`: the clubs. `LoyaltyClubMap`: which club a drink stamps.
-  - `LoyaltyCarryOver`: the one-time move of the old card onto The Coffee Club, at startup behind a `data_migrations` marker row.
+  - `LoyaltyCarryOver`: the one-time carry-over of the paper Coffee Club cards from the owner-reviewed `loyalty-cardholders.csv` (handover 16a), at startup behind a `data_migrations` marker row. Cards are memberships (`loyalty_memberships`): only cardholders stamp.
   - `CustomerService` (merge moves stamps and used rewards club by club), `ReportService`.
 - **Status is derived** (`Unpaid` / `Partial` / `Paid` from payments). Totals
   are stored and recomputed on every edit, and `unit_price` is never recomputed.

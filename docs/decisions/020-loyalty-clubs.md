@@ -104,44 +104,90 @@ that isn't active earns nothing and isn't shown. Its first activation dates it
 (`activated_on`, business time zone), and an order dated before that never
 stamps it: there is no backfill.
 
-### Carry-over from the old card
+### Cards are by invitation (handover 16a)
+
+A card is given only to customers who ask for one, and **only cardholders
+collect stamps**. `loyalty_memberships` holds one live row per (customer,
+club): `Requested` or `Active`, with `joined_on`. An order stamps a club only
+for an Active member, dated on or after `joined_on`. A null `joined_on` means
+"since the beginning", and only the carry-over writes it. Rewards, adjustments
+and hand-marked uses are refused for non-members, and a non-member's card on
+the customer is empty ("none").
+
+Giving a card (admin: **Give card**) makes it Active from today. Taking it away
+is refused while it has stamps or used rewards unless forced, which voids
+them. A club can **come with another**: `auto_join_from_club_id`. The Matcha
+Club comes with The Coffee Club:
+- when it is activated, every Coffee member gets a Matcha card dated that day;
+- a Coffee card given later brings a Matcha card;
+- taking the Coffee card away leaves the Matcha card.
+
+Until it launches, The Matcha Club has no members and shows nowhere. Merging
+customers keeps the card held longer.
+
+### Carry-over from a reviewed list of paper cardholders
 
 The `LoyaltyClubs` migration creates both clubs, with fixed ids so ContentSync
-copies of the menu point at the same club in every environment. It backfills
-every existing ledger entry to The Coffee Club. A data step then runs
-**once, at startup, behind a marker row** (`data_migrations`):
+copies of the menu point at the same club in every environment, and backfills
+every existing ledger entry to The Coffee Club. A data step then runs **once,
+at startup, behind a marker row** (`data_migrations`).
 
+Who holds a paper card today isn't in the data as such. A scan
+(`SheetImport cardholders`, read only) lists the customers whose orders show a
+card reward:
+- old free-drink discounts and 50% discounts;
+- notes such as "50% loyalty card", "100% loyalty card" and "free extra shot".
+
+For each, it gives the last reward's slot and estimates the position: the
+slot plus the Coffee Club drinks paid since, mod 12. The owner reviews it in a
+spreadsheet: `has_card`, an optional `position` (0–11), and `card_number`,
+which says which pass round the card they are on (blank or 0 = 1). The result
+is `docs/import/loyalty-cardholders.csv`, the carry-over's input in every
+environment. A copy ships with the API, because the Docker build sees only
+`api/`, and a test keeps the two identical. Without the file, the carry-over
+doesn't run and logs a warning.
+
+The data step:
 1. It maps categories by name (Coffee, Signature Coffee → Coffee; Houseblend
    and Okumidori Matcha → Matcha) and Dirty Matcha to The Matcha Club. It only
    fills blanks, and reports names it can't find.
-2. For each customer with live entries:
-   - their old balance `B` (floor 0, cap 11);
-   - every old entry voided and marked `carried_over_at`;
-   - one Adjustment of `+B` ("carried over from the old card");
-   - a redemption on card 1 for every Coffee Club reward on a slot ≤ `B`, so
-     nobody gets a reward twice.
+2. It voids every old single-card entry, marked `carried_over_at`, so the
+   orders it counted never stamp again. Unpaid old orders stamp when paid.
+3. For each row with `has_card` = yes (names matched ignoring case; no single
+   match is reported and skipped):
+   - an Active Coffee Club card since the beginning;
+   - one Adjustment of `12 × (card_number − 1) + position`, using the owner's
+     position, else the estimate ("carried over from paper card");
+   - every reward on the earlier cards, and on the current card every reward
+     with slot ≤ position, marked used.
+
+   A customer on card 4 at position 7 therefore reads "card 4, 7 of 12", with
+   the 50% off used and the extra shot ready.
+4. Everyone else gets no card, and nothing is written for them.
+
+Handover 16 first carried everyone's old balance with a cap of 11. That
+treated the old 10-stamp counts as if they were the paper card, which they
+weren't, so the rule and its cap were replaced before anything was merged.
+Development has `--Loyalty:RedoCarryOver=true`, which undoes an earlier run
+(its adjustments, redemptions and cards; voided entries restored; marker
+cleared) and runs the rule again.
 
 Why at startup and not inside the EF migration: production migrations run as
 an EF bundle in the deploy workflow, which executes SQL only. The carry-over
-needs the old-balance rule, the cap and the reward thresholds, and it needs
-tests on a fixture (balances 0, 4, 6, 11, 23), which only a C# service on the
-test suite's SQLite allows. Startup work finishes before the API serves a
-request, so no order is stamped under the new rules before the old card is
+reads a file and applies rules that need tests, which only a C# service on
+the test suite's SQLite allows. Startup work finishes before the API serves a
+request, so no order is stamped under the new rules before the cards are
 carried over. The step runs in one transaction, so a failure leaves nothing
 half done and the next start tries again. It is idempotent even without the
-marker: customers already carried over are skipped, and mappings only fill
-blanks. It never touches orders or payments.
-
-An order the carry-over already counted never stamps again, even if its
-payments are redone later; `carried_over_at` on its old entry says so.
+marker: the void step runs once, carried cardholders are skipped, and mappings
+only fill blanks. It never touches orders or payments.
 
 ## Consequences
 
-- **Customers with more than 11 old stamps are capped at 11.** On dev that is
-  15 of 61; one had 42 stamps (4 free drinks under the old rule) and now has
-  one free drink waiting. A customer at exactly 10 had a free drink under the
-  old rule and now needs one more. The owners correct individual cards from
-  their paper cards (Adjust stamps, Mark used).
+- **Only the 13 customers on the reviewed list hold a card** (on dev, the same
+  data as production up to the import). Everyone else earns nothing until the
+  owners give them one. A card that differs from the paper one is corrected
+  with Adjust stamps and Mark used / Make available.
 - `GET /customers` returns `clubs[]` instead of `loyaltyBalance` and
   `availableRewards`. The customer-facing page (handover 17) reads the same
   shape.
