@@ -3,25 +3,60 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { API, signedIn } from '../../../test/fixtures'
 import { renderApp } from '../../../test/renderApp'
-import { coffeeCard, coffeeClub, kee, keeDetail, prince } from '../../../test/salesFixtures'
+import { coffeeCard, coffeeClub, kee, keeDetail, prince, stackOf } from '../../../test/salesFixtures'
 import { server } from '../../../test/server'
 
 describe('Customer loyalty cards', () => {
-  it('draws the card: filled slots, the next one, rewards and drinks still to stamp', async () => {
+  it('draws the card: two rows of six, stamped slots, reward slots, drinks still to stamp', async () => {
     renderApp(`/sales/customers/${keeDetail.id}`, signedIn)
 
     const card = await screen.findByRole('region', { name: 'Coffee Club card' })
     expect(within(card).getByText('card 1, 4 of 12')).toBeInTheDocument()
-    expect(within(card).getByRole('list', { name: '4 of 12 slots filled' })).toBeInTheDocument()
-    expect(within(card).getByLabelText('Slot 4, filled')).toBeInTheDocument()
-    expect(within(card).getByLabelText('Slot 5, next, 50% OFF available')).toBeInTheDocument()
+    const slots = within(card).getByRole('list', { name: 'Card 1: 4 of 12 slots stamped' })
+    expect(within(slots).getAllByRole('listitem')).toHaveLength(12)
+    expect(within(card).getByLabelText('Slot 4, stamped, added by hand')).toHaveAttribute('title', 'Added by hand')
+    expect(within(card).getByLabelText('Slot 5, empty, 50% OFF available')).toBeInTheDocument()
+    expect(within(card).getByLabelText('Slot 12, empty, FREE DRINK locked')).toHaveTextContent('free drink')
     expect(within(card).getByText('2 drinks on the tab will stamp once paid.')).toBeInTheDocument()
+    expect(within(card).queryByText(/Card \d of/)).not.toBeInTheDocument()      // one card: no stack, no counter
+    expect(within(card).queryByRole('button', { name: /Show card/ })).not.toBeInTheDocument()
+  })
+
+  it('shows dated order stamps as links, the newest card first, and earlier cards behind it', async () => {
+    const stamps = (overall: number) =>
+      overall === 25
+        ? { date: '2026-09-02', orderId: 'o-sep2', source: 'order' as const }
+        : { date: null, orderId: null, source: 'carriedOver' as const }
+    server.use(
+      http.get(`${API}/customers/:id`, () =>
+        HttpResponse.json({ ...keeDetail, clubs: [{ ...coffeeCard(1, ['locked', 'locked', 'locked']), cycle: 2, position: 1, cards: stackOf(2, 1, stamps) }] }),
+      ),
+    )
+    const { user } = renderApp(`/sales/customers/${keeDetail.id}`, signedIn)
+    const card = await screen.findByRole('region', { name: 'Coffee Club card' })
+
+    // The current card opens first, its stamp dated 9/2 and linked to its order.
+    expect(within(card).getByText('Card 3 of 3')).toBeInTheDocument()
+    expect(within(card).getByRole('link', { name: 'Slot 1, stamped 2 September' })).toHaveAttribute('href', '/sales/orders/o-sep2')
+    expect(within(card).getByText('9/2')).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Adjust stamps' })).toBeInTheDocument()
+
+    // A card behind comes to the front by click; the arrows walk the stack.
+    await user.click(within(card).getByRole('button', { name: 'Show card 1' }))
+    expect(within(card).getByText('Card 1 of 3')).toBeInTheDocument()
+    expect(within(card).getByText('from paper card')).toBeInTheDocument()
+    expect(within(card).getByLabelText('Slot 2, stamped, from the paper card')).toHaveAttribute('title', 'From the paper card')
+    expect(within(card).queryByRole('button', { name: 'Adjust stamps' })).not.toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Previous card' })).toBeDisabled()
+
+    await user.click(within(card).getByRole('button', { name: 'Next card' }))
+    expect(within(card).getByText('Card 2 of 3')).toBeInTheDocument()
   })
 
   it('reads which card a carried-over cardholder is on', async () => {
     server.use(
       http.get(`${API}/customers/:id`, () =>
-        HttpResponse.json({ ...keeDetail, clubs: [{ ...coffeeCard(7, ['used', 'available', 'locked']), cycle: 3 }] }),
+        HttpResponse.json({ ...keeDetail, clubs: [{ ...coffeeCard(7, ['used', 'available', 'locked']), cycle: 3, cards: stackOf(3, 7) }] }),
       ),
     )
     renderApp(`/sales/customers/${keeDetail.id}`, signedIn)

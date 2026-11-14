@@ -449,6 +449,29 @@ export interface CustomerClubDto {
   rewards: CustomerRewardDto[]
   /** Drinks of this club on unpaid orders: they stamp once paid. */
   pendingDrinks: number
+  /** Every card from 1 to the current one, with dated slots (handover 16b). Empty without a card. */
+  cards: LoyaltyCardDto[]
+}
+
+export type SlotSource = 'order' | 'carriedOver' | 'adjustment'
+
+/** One slot: a paid order's stamp has its date and order; paper-card and hand stamps have neither. */
+export interface LoyaltySlotDto {
+  slot: number
+  filled: boolean
+  date: string | null
+  orderId: string | null
+  source: SlotSource | null
+}
+
+export interface LoyaltyCardDto {
+  /** 1-based. */
+  cardNumber: number
+  isCurrent: boolean
+  /** Always slotCount entries, slot 1 first. */
+  slots: LoyaltySlotDto[]
+  /** Every reward on this card, locked, available or used. */
+  rewards: CustomerRewardDto[]
 }
 
 export interface LoyaltyMembershipRequest {

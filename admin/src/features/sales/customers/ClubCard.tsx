@@ -7,6 +7,7 @@ import { formatDate } from '../../../lib/format'
 import { clubLabel } from '../../../lib/loyalty'
 import type { CustomerClubDto, CustomerRewardDto } from '../../../types/api'
 import { useToastedAction } from '../../toasts/useToastedAction'
+import { StampCard } from './StampCard'
 
 const STATE_STYLE: Record<CustomerRewardDto['state'], string> = {
   locked: 'text-muted',
@@ -76,10 +77,16 @@ function MemberCard({
   const [unredeem, { isLoading: isUnredeeming }] = useUnredeemRewardMutation()
   const run = useToastedAction()
 
-  const current = club.rewards.filter((r) => r.cycle === club.cycle)
-  const older = club.rewards.filter((r) => r.cycle < club.cycle)
-  const onSlot = new Map(current.map((r) => [r.slot, r]))
-  const slots = Array.from({ length: club.slotCount }, (_, i) => i + 1)
+  // The stack (handover 16b): the current card first; finished ones behind it.
+  const cards = club.cards
+  const currentNumber = cards.find((c) => c.isCurrent)?.cardNumber ?? cards.length
+  const [shownNumber, setShownNumber] = useState(currentNumber)
+  const shown = cards.find((c) => c.cardNumber === shownNumber) ?? cards[cards.length - 1]
+  const isCurrent = shown?.isCurrent ?? true
+  // Behind the shown card: the others, newest nearest the top, edges showing (three at most).
+  const behind = cards.filter((c) => c !== shown).sort((a, b) => b.cardNumber - a.cardNumber).slice(0, 3)
+  // Rewards still to use on earlier cards, so they aren't missed while the current card shows.
+  const earlierReady = cards.filter((c) => !c.isCurrent && c.rewards.some((r) => r.state === 'available'))
 
   const markUsed = (reward: CustomerRewardDto) =>
     run(
@@ -109,62 +116,106 @@ function MemberCard({
         <h3 className="font-semibold">
           {club.name}
           <span className="ml-2 text-sm font-normal text-muted">
-            card {club.cycle + 1}, {club.position} of {club.slotCount}
+            {isCurrent
+              ? `card ${club.cycle + 1}, ${club.position} of ${club.slotCount}`
+              : `card ${shown?.cardNumber}, finished`}
             {club.joinedOn && ` · since ${formatDate(club.joinedOn)}`}
           </span>
         </h3>
         <div className="flex gap-1.5">
-          <Button size="sm" onClick={onAdjust}>
-            Adjust stamps
-          </Button>
+          {isCurrent && (
+            <Button size="sm" onClick={onAdjust}>
+              Adjust stamps
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={() => setConfirming(true)}>
             Take card away
           </Button>
         </div>
       </div>
 
-      <ol aria-label={`${club.position} of ${club.slotCount} slots filled`} className="flex flex-wrap gap-1.5">
-        {slots.map((slot) => {
-          const filled = slot <= club.position
-          const next = slot === club.position + 1
-          const reward = onSlot.get(slot)
-          return (
-            <li key={slot} className="flex w-14 flex-col items-center gap-0.5">
-              <span
-                aria-label={`Slot ${slot}${filled ? ', filled' : next ? ', next' : ''}${reward ? `, ${reward.label} ${reward.state}` : ''}`}
-                className={`flex size-9 items-center justify-center rounded-full border text-xs tabular-nums ${
-                  filled
-                    ? 'border-accent bg-accent text-white'
-                    : next
-                      ? 'border-accent ring-2 ring-accent/30'
-                      : reward
-                        ? 'border-dashed border-line'
-                        : 'border-line'
-                }`}
-              >
-                {slot}
-              </span>
-              {reward && <span className={`text-center text-[10px] leading-tight ${STATE_STYLE[reward.state]}`}>{reward.label}</span>}
-            </li>
-          )
-        })}
-      </ol>
+      {cards.length > 1 && (
+        <div className="flex items-center gap-2 text-sm" aria-label="Cards">
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label="Previous card"
+            disabled={shownNumber <= 1}
+            onClick={() => setShownNumber((n) => Math.max(1, n - 1))}
+          >
+            ‹
+          </Button>
+          <span aria-live="polite">
+            Card {shown?.cardNumber} of {cards.length}
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label="Next card"
+            disabled={shownNumber >= cards.length}
+            onClick={() => setShownNumber((n) => Math.min(cards.length, n + 1))}
+          >
+            ›
+          </Button>
+        </div>
+      )}
 
-      {club.pendingDrinks > 0 && (
+      <div className="relative" style={{ paddingTop: behind.length * 6, paddingLeft: behind.length * 6 }}>
+        {behind.map((card, index) => (
+          <button
+            key={card.cardNumber}
+            type="button"
+            aria-label={`Show card ${card.cardNumber}`}
+            onClick={() => setShownNumber(card.cardNumber)}
+            className="absolute rounded-lg border border-line bg-canvas motion-safe:transition-transform motion-safe:hover:-translate-y-0.5"
+            style={{
+              // The newest card behind sits nearest the front.
+              top: (behind.length - 1 - index) * 6,
+              left: (behind.length - 1 - index) * 6,
+              right: (index + 1) * 6,
+              bottom: (index + 1) * 6,
+              zIndex: behind.length - index,
+            }}
+          />
+        ))}
+        {shown && (
+          <div
+            key={shown.cardNumber}
+            className="relative z-10 rounded-lg border border-line bg-surface p-3 shadow-sm motion-safe:animate-[card-front_150ms_ease-out]"
+          >
+            <StampCard card={shown} />
+          </div>
+        )}
+      </div>
+      {isCurrent && earlierReady.length > 0 && (
+        <p className="text-sm">
+          Still to use from{' '}
+          {earlierReady.map((c, i) => (
+            <span key={c.cardNumber}>
+              {i > 0 && ', '}
+              <button type="button" className="text-accent hover:underline" onClick={() => setShownNumber(c.cardNumber)}>
+                card {c.cardNumber}
+              </button>
+            </span>
+          ))}
+          .
+        </p>
+      )}
+
+      {isCurrent && club.pendingDrinks > 0 && (
         <p className="text-sm text-muted">
           {club.pendingDrinks} drink{club.pendingDrinks === 1 ? '' : 's'} on the tab will stamp once paid.
         </p>
       )}
 
       <ul className="flex flex-col gap-1.5 text-sm">
-        {[...older, ...current].map((reward) => (
+        {(shown?.rewards ?? []).map((reward) => (
           <li key={`${reward.rewardId}-${reward.cycle}`} className="flex flex-wrap items-center justify-between gap-2">
             <span>
               <span className={STATE_STYLE[reward.state]}>{reward.label}</span>
               <span className="text-muted">
                 {' '}
-                · slot {reward.slot}
-                {reward.cycle < club.cycle && `, from card ${reward.cycle + 1}`} · {reward.state === 'available' ? 'ready to use' : reward.state}
+                · slot {reward.slot} · {reward.state === 'available' ? 'ready to use' : reward.state}
               </span>
               {reward.orderId && (
                 <Link className="ml-2 text-accent hover:underline" to={`/sales/orders/${reward.orderId}`}>

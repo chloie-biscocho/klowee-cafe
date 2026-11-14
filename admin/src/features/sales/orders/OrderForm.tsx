@@ -82,6 +82,7 @@ export function OrderForm({
             customerId={draft.customerId}
             payerId={draft.payerId}
             autoFocus={!order}
+            orderedOn={draft.orderedOn}
             onCustomer={(customerId) => {
               // Rewards belong to the drinker: a different drinker starts with none on the lines.
               const lines =

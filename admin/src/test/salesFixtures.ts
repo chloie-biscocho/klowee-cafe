@@ -4,7 +4,9 @@ import type {
   CustomerDetailDto,
   CustomerRewardDto,
   CustomerSummaryDto,
+  LoyaltyCardDto,
   LoyaltyClubDto,
+  LoyaltySlotDto,
   MenuVersionDetailDto,
   MonthlyRowDto,
   OrderDetailDto,
@@ -45,6 +47,29 @@ export const matchaClub: LoyaltyClubDto = {
   memberCount: 0,
 }
 
+/**
+ * The card stack for a customer on card `cycle + 1` at `position`: earlier cards
+ * full, slots stamped by `stamp(overall slot)` (undated by hand unless given).
+ */
+export const stackOf = (
+  cycle: number,
+  position: number,
+  stamp: (overall: number) => Pick<LoyaltySlotDto, 'date' | 'orderId' | 'source'> = () => ({ date: null, orderId: null, source: 'adjustment' }),
+  rewardsOf: (cardIndex: number) => CustomerRewardDto[] = () => [],
+): LoyaltyCardDto[] =>
+  Array.from({ length: cycle + 1 }, (_, card) => ({
+    cardNumber: card + 1,
+    isCurrent: card === cycle,
+    slots: Array.from({ length: 12 }, (_, i) => {
+      const overall = card * 12 + i + 1
+      const filled = card < cycle || i < position
+      return filled
+        ? { slot: i + 1, filled: true, ...stamp(overall) }
+        : { slot: i + 1, filled: false, date: null, orderId: null, source: null }
+    }),
+    rewards: rewardsOf(card),
+  }))
+
 /** A customer's Coffee Club card with `position` stamps on card 1, and each reward's state. */
 export const coffeeCard = (position: number, states: CustomerRewardDto['state'][], pendingDrinks = 0): CustomerClubDto => ({
   clubId: coffeeClub.id,
@@ -67,6 +92,12 @@ export const coffeeCard = (position: number, states: CustomerRewardDto['state'][
     orderId: null,
   })),
   pendingDrinks,
+  cards: stackOf(0, position, undefined, () =>
+    coffeeClub.rewards.map((r, i) => ({
+      rewardId: r.id, slot: r.slot, label: r.label, type: r.type, state: states[i]!, cycle: 0,
+      redemptionId: states[i] === 'used' ? `red-${r.id}` : null, orderId: null,
+    })),
+  ),
 })
 
 export const kee: CustomerSummaryDto = {

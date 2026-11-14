@@ -36,3 +36,24 @@ export const fromLoyaltyChoice = (choice: string): { loyaltyMode: LoyaltyMode; l
     : choice === 'none'
       ? { loyaltyMode: 'None', loyaltyClubId: null }
       : { loyaltyMode: 'Club', loyaltyClubId: choice }
+
+/** "2026-09-02" → "9/2", the way the owners write it above a stamp. */
+export function stampDate(isoDate: string): string {
+  const [, month, day] = isoDate.split('-').map(Number)
+  return `${month}/${day}`
+}
+
+const monthName = new Intl.DateTimeFormat('en-PH', { month: 'long', timeZone: 'UTC' })
+
+/** "2026-09-02" → "2 September", for screen readers (day first, whatever the locale's order). */
+export function stampDateLong(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  return `${day} ${monthName.format(new Date(Date.UTC(year!, month! - 1, 1)))}`
+}
+
+/**
+ * A small fixed tilt for slot n, from −12 to 12 degrees, so the stamps look
+ * pressed by hand but never move between renders: a pure function of the
+ * slot number, no randomness. 7 is coprime with 25, so slots 1–12 all differ.
+ */
+export const stampTilt = (slot: number) => ((slot * 7 + 3) % 25) - 12

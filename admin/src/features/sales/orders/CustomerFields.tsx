@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { useCreateCustomerMutation } from '../../../api/salesApi'
 import { Combobox, type ComboboxOption } from '../../../components/ui/Combobox'
-import { formatPeso } from '../../../lib/format'
-import { availableRewards, clubSummary, memberClubs } from '../../../lib/loyalty'
 import type { CustomerSummaryDto } from '../../../types/api'
 import { useToastedAction } from '../../toasts/useToastedAction'
 import { CustomerFormModal } from '../customers/CustomerFormModal'
 import { blankToNull } from '../schemas'
+import { LoyaltyLine } from './LoyaltyLine'
 
 /** Active customers, most recent orderers first: the regulars are at the top of the list. */
 function options(customers: CustomerSummaryDto[], keep: (string | null)[]): ComboboxOption[] {
@@ -21,10 +20,13 @@ export function CustomerFields({
   customerId,
   payerId,
   autoFocus,
+  orderedOn,
   onCustomer,
   onPayer,
 }: {
   customers: CustomerSummaryDto[]
+  /** The order's date, for the note when a card starts after it. */
+  orderedOn: string
   customerId: string | null
   payerId: string | null
   autoFocus: boolean
@@ -50,18 +52,7 @@ export function CustomerFields({
         autoFocus={autoFocus}
         footer={{ label: '+ New customer', onSelect: (typed) => setNewName(typed) }}
       />
-      {customer && (
-        <p className="-mt-1 text-xs text-muted">
-          Tab {formatPeso(customer.outstandingBalance)}
-          {memberClubs(customer.clubs).length === 0 && ' · No loyalty card'}
-          {memberClubs(customer.clubs).map((club) => (
-            <span key={club.clubId} className={availableRewards(club).length > 0 ? 'font-semibold text-success' : ''}>
-              {' · '}
-              {clubSummary(club)}
-            </span>
-          ))}
-        </p>
-      )}
+      {customer && <LoyaltyLine customer={customer} orderedOn={orderedOn} />}
 
       {showPayer ? (
         <div className="flex items-end gap-2">

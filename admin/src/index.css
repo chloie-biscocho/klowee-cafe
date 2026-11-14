@@ -20,6 +20,13 @@
   --color-warning: #b7791f;
   --color-warning-soft: #fdf5e6;
 
+  /* Loyalty card reward slots (handover 16b): the paper card's pink slots 5 and 8,
+     blue slot 12. Existing values on purpose; the restyle (handover 18) repoints them here. */
+  --color-stamp-pink: var(--color-danger-soft);
+  --color-stamp-pink-edge: var(--color-danger);
+  --color-stamp-blue: var(--color-accent-soft);
+  --color-stamp-blue-edge: var(--color-accent);
+
   --font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
@@ -40,4 +47,12 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* Loyalty card stack (handover 16b): the card brought to the front settles in. Motion-safe only. */
+@keyframes card-front {
+  from {
+    transform: translateY(4px);
+    opacity: 0.6;
+  }
 }
