@@ -2,6 +2,8 @@ import { useListSettingsQuery } from '../../api/settingsApi'
 import { Card } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Spinner } from '../../components/ui/Spinner'
+import { TAB_NOTE_KEY } from '../../types/api'
+import { CustomerPayments } from './CustomerPayments'
 import { SettingsForm } from './SettingsForm'
 import { toSettingsValues } from './settingsForm'
 
@@ -18,5 +20,12 @@ export function SettingsPage() {
   }
 
   // The form reads the cache once, as its starting point; see SettingsForm.
-  return <SettingsForm initial={toSettingsValues(settings)} />
+  // Customer payments save on their own, outside the homepage form, so Enter
+  // in one of their fields never submits the other.
+  return (
+    <>
+      <SettingsForm initial={toSettingsValues(settings)} />
+      <CustomerPayments note={settings.find((s) => s.key === TAB_NOTE_KEY)?.value ?? ''} />
+    </>
+  )
 }

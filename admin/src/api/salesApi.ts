@@ -35,7 +35,7 @@ export interface OrderListArgs {
  * the stamp ledger, and every report; so those mutations invalidate whole
  * tag types rather than guessing which customer ids are involved.
  */
-const MONEY_CHANGED = ['Customer', 'Loyalty', 'Report'] as const
+export const MONEY_CHANGED = ['Customer', 'Loyalty', 'Report'] as const
 
 export const salesApi = baseApi.injectEndpoints({
   endpoints: (build) => ({

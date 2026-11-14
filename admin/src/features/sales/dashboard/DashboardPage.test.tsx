@@ -16,7 +16,8 @@ describe('Dashboard', () => {
     expect(router.state.location.pathname).toBe('/')
 
     const tabs = screen.getByRole('heading', { name: 'Outstanding tabs' }).closest('div')!.parentElement!
-    expect(within(tabs).getByText('Kee')).toBeInTheDocument()
+    // The sidebar's badge asks for the summary first, so the stats can land before the list.
+    expect(await within(tabs).findByText('Kee')).toBeInTheDocument()
     expect(within(tabs).getByRole('button', { name: 'Settle' })).toBeInTheDocument()
 
     expect(screen.getByText('Spanish Latte')).toBeInTheDocument()

@@ -7,6 +7,8 @@ import {
   useSetCustomerActiveMutation,
   useUpdateCustomerMutation,
 } from '../../../api/salesApi'
+import { useCreateTabLinkMutation } from '../../../api/tabsApi'
+import { useAppDispatch } from '../../../app/hooks'
 import { Button } from '../../../components/ui/Button'
 import { Card, CardHeader } from '../../../components/ui/Card'
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
@@ -15,9 +17,26 @@ import { SkeletonRows, Table, Td, Th } from '../../../components/ui/Table'
 import { formatDate, formatPeso } from '../../../lib/format'
 import { availableRewards, clubLabel, memberClubs } from '../../../lib/loyalty'
 import type { CustomerSummaryDto } from '../../../types/api'
+import { showToast } from '../../toasts/toastSlice'
 import { useToastedAction } from '../../toasts/useToastedAction'
 import { blankToNull, type CustomerValues } from '../schemas'
 import { CustomerFormModal } from './CustomerFormModal'
+
+/** A chain link: this customer has a private tab page (decision 021). */
+function LinkIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="ml-2 inline size-3.5 align-[-2px] text-muted" role="img" aria-label="Has a tab link">
+      <title>Has a tab link</title>
+      <path
+        d="M8.5 11.5a3 3 0 0 0 4.2 0l2.6-2.6a3 3 0 0 0-4.2-4.2l-.9.9M11.5 8.5a3 3 0 0 0-4.2 0l-2.6 2.6a3 3 0 0 0 4.2 4.2l.9-.9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
 
 export function CustomersPage() {
   const [search, setSearch] = useState('')
@@ -30,6 +49,9 @@ export function CustomersPage() {
   const [deleteCustomer, { isLoading: isDeleting }] = useDeleteCustomerMutation()
   const run = useToastedAction()
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const [createLink] = useCreateTabLinkMutation()
+  const [creatingLinks, setCreatingLinks] = useState(false)
 
   // `draft | null`: what the form is editing, or nothing (decision 007).
   const [editing, setEditing] = useState<CustomerSummaryDto | 'new' | null>(null)
@@ -43,6 +65,28 @@ export function CustomersPage() {
       (term === '' || `${c.name} ${c.nickname ?? ''}`.toLowerCase().includes(term)) &&
       (!cardholders || memberClubs(c.clubs).length > 0),
   )
+
+  // Everyone who owes something and can't see it yet.
+  const needLinks = (customers ?? []).filter((c) => c.outstandingBalance > 0 && !c.hasTabLink)
+
+  const createLinks = async () => {
+    setCreatingLinks(true)
+    let created = 0
+    for (const customer of needLinks) {
+      try {
+        await createLink(customer.id).unwrap()
+        created++
+      } catch {
+        break // the same reason would stop every one (no site URL set, signed out)
+      }
+    }
+    setCreatingLinks(false)
+    dispatch(
+      created === needLinks.length
+        ? showToast('success', `Created ${created} link${created === 1 ? '' : 's'}. Copy each from the customer's page to send it.`)
+        : showToast('error', `Created ${created} of ${needLinks.length} links; the rest failed. Try again.`),
+    )
+  }
 
   const save = async (values: CustomerValues) => {
     const body = { name: values.name, nickname: blankToNull(values.nickname), notes: blankToNull(values.notes), isActive: true }
@@ -84,9 +128,14 @@ export function CustomersPage() {
               Has a card
             </label>
           </div>
-          <Button variant="primary" size="sm" onClick={() => setEditing('new')}>
-            New customer
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" loading={creatingLinks} disabled={needLinks.length === 0} onClick={createLinks}>
+              Create links for customers with a balance{needLinks.length > 0 ? ` (${needLinks.length})` : ''}
+            </Button>
+            <Button variant="primary" size="sm" onClick={() => setEditing('new')}>
+              New customer
+            </Button>
+          </div>
         </CardHeader>
 
         <Table>
@@ -113,6 +162,7 @@ export function CustomersPage() {
                   {customer.name}
                   {customer.nickname && <span className="ml-2 text-xs font-normal text-muted">{customer.nickname}</span>}
                   {!customer.isActive && <span className="ml-2 text-xs font-normal text-muted">(inactive)</span>}
+                  {customer.hasTabLink && <LinkIcon />}
                 </Td>
                 <Td className={`text-right ${customer.outstandingBalance > 0 ? 'font-semibold' : 'text-muted'}`}>
                   {formatPeso(customer.outstandingBalance)}

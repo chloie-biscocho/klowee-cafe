@@ -9,7 +9,9 @@ import { monthRange, shiftMonth, todayInManila } from '../../../lib/dates'
 import { formatDate, formatPeso } from '../../../lib/format'
 import { SettleModal } from '../customers/SettleModal'
 import { type ChartRange, rangeParams, toChartMonths } from './chartScale'
+import { CardRequestsPanel } from './CardRequestsPanel'
 import { MonthlyChart } from './MonthlyChart'
+import { PaymentClaimsPanel } from './PaymentClaimsPanel'
 
 const monthTitle = new Intl.DateTimeFormat('en-PH', { month: 'long', year: 'numeric', timeZone: 'UTC' })
 
@@ -41,6 +43,10 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* What's waiting for the owners first (handover 17); each hides when empty. */}
+      <PaymentClaimsPanel />
+      <CardRequestsPanel />
+
       <div className="flex items-center gap-2">
         <Button size="sm" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>
           ←

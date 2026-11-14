@@ -16,6 +16,7 @@ import { CustomerFormModal } from './CustomerFormModal'
 import { LoyaltyLedger } from './LoyaltyLedger'
 import { MergeModal } from './MergeModal'
 import { SettleModal } from './SettleModal'
+import { TabLinkBox } from './TabLinkBox'
 
 type Dialog = 'edit' | 'settle' | 'merge' | 'adjust' | null
 
@@ -67,6 +68,8 @@ export function CustomerDetailPage() {
           </Button>
         </div>
       </Card>
+
+      <TabLinkBox customer={customer} />
 
       {customer.clubs.length > 0 && (
         <Card className="flex flex-col gap-3 p-5">

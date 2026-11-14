@@ -110,6 +110,7 @@ export const kee: CustomerSummaryDto = {
   // Four stamps: the 50% off on slot 5 is ready.
   clubs: [coffeeCard(4, ['available', 'locked', 'locked'], 2)],
   lastOrderOn: '2026-11-02',
+  hasTabLink: true,
 }
 
 export const prince: CustomerSummaryDto = {
@@ -122,9 +123,15 @@ export const prince: CustomerSummaryDto = {
   // Eleven stamps, 50% off used: the extra shot and the free drink are ready.
   clubs: [coffeeCard(11, ['used', 'available', 'available'])],
   lastOrderOn: '2026-11-07',
+  hasTabLink: false,
 }
 
-export const keeDetail: CustomerDetailDto = { ...kee, recentOrders: [] }
+export const keeDetail: CustomerDetailDto = {
+  ...kee,
+  recentOrders: [],
+  tabUrl: 'https://klowee.test/tab/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_AbCdE',
+  tabLinkCreatedAt: '2026-11-08T02:30:00Z',
+}
 
 export const oatMilk: AddOnDto = { id: 'a0000000-0000-0000-0000-000000000001', name: 'Oat milk', price: 30, isActive: true }
 
@@ -189,6 +196,8 @@ export const summary: SummaryReportDto = {
     { menuItemId: 'm1', name: 'Americano', quantity: 4 },
   ],
   newCustomers: 2,
+  pendingClaimsCount: 0,
+  pendingCardRequestsCount: 0,
 }
 
 export const outstanding: OutstandingRowDto[] = [

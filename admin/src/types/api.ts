@@ -310,8 +310,11 @@ export interface SiteSettingDto {
   value: string
 }
 
+/** Shown on customers' tab pages, edited with the payment methods (handover 17). */
+export const TAB_NOTE_KEY = 'tab_page_note' as const
+
 export interface SiteSettingRequest {
-  key: SettingKey
+  key: SettingKey | typeof TAB_NOTE_KEY
   value: string | null
 }
 
@@ -504,10 +507,15 @@ export interface CustomerSummaryDto {
   /** One card per active loyalty club. */
   clubs: CustomerClubDto[]
   lastOrderOn: string | null
+  /** Has a live "my tab" link (decision 021). */
+  hasTabLink: boolean
 }
 
 export interface CustomerDetailDto extends CustomerSummaryDto {
   recentOrders: OrderSummaryDto[]
+  /** The customer's private page, to copy and send; null without a link. */
+  tabUrl: string | null
+  tabLinkCreatedAt: string | null
 }
 
 export interface CustomerRequest {
@@ -662,6 +670,9 @@ export interface SummaryReportDto {
   byChannel: ChannelTotalDto[]
   topItems: TopItemDto[]
   newCustomers: number
+  /** Waiting for the owners, whatever the range (handover 17). */
+  pendingClaimsCount: number
+  pendingCardRequestsCount: number
 }
 
 export interface OutstandingRowDto {
@@ -679,4 +690,72 @@ export interface MonthlyRowDto {
   collected: number
   orders: number
   drinks: number
+}
+
+// ---- My tab (handover 17, decision 021) ----
+
+export interface TabLinkDto {
+  url: string
+  createdAt: string
+}
+
+/** An account customers pay into from their tab page. */
+export interface PaymentMethodDto {
+  id: string
+  channel: PaymentChannel
+  label: string
+  accountName: string
+  accountNumber: string | null
+  qrUrl: string | null
+  isActive: boolean
+  sortOrder: number
+}
+
+export interface PaymentMethodRequest {
+  channel: PaymentChannel
+  label: string
+  accountName: string
+  accountNumber: string | null
+  qrUrl: string | null
+  isActive: boolean
+  sortOrder: number
+}
+
+export const PAYMENT_CLAIM_STATUSES = ['Pending', 'Confirmed', 'Rejected'] as const
+export type PaymentClaimStatus = (typeof PAYMENT_CLAIM_STATUSES)[number]
+
+/** A customer's "I've paid", waiting for the owners to check the account. */
+export interface PaymentClaimDto {
+  id: string
+  customerId: string
+  customerName: string
+  amount: number
+  channel: PaymentChannel
+  paymentMethodLabel: string | null
+  reference: string
+  status: PaymentClaimStatus
+  createdAt: string
+  resolvedAt: string | null
+  rejectReason: string | null
+  /** The customer's tab now, to judge the claim against. */
+  outstanding: number
+}
+
+export interface ConfirmClaimRequest {
+  paidOn?: string | null
+  channel?: PaymentChannel | null
+}
+
+export interface RejectClaimRequest {
+  reason: string
+}
+
+/** A customer asking for a loyalty card from their tab page. */
+export interface CardRequestDto {
+  membershipId: string
+  customerId: string
+  customerName: string
+  clubId: string
+  clubName: string
+  requestedAt: string
 }

@@ -72,6 +72,9 @@ export const TAG_TYPES = [
   'Loyalty',
   'LoyaltyClub',
   'Report',
+  'PaymentClaim',
+  'PaymentMethod',
+  'CardRequest',
 ] as const
 
 type TagType = (typeof TAG_TYPES)[number]

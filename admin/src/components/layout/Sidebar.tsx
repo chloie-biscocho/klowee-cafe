@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router'
+import { useGetSummaryQuery } from '../../api/salesApi'
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
 import { ChangePasswordModal } from '../../features/auth/ChangePasswordModal'
 import { loggedOut, selectUser } from '../../features/auth/authSlice'
 import { showToast } from '../../features/toasts/toastSlice'
+import { monthRange, todayInManila } from '../../lib/dates'
 
 interface NavGroup {
   heading: string
@@ -44,6 +46,11 @@ export function Sidebar() {
   const user = useAppSelector(selectUser)
   const dispatch = useAppDispatch()
   const [changingPassword, setChangingPassword] = useState(false)
+  // The dashboard's own summary (same month, same cache entry): what's waiting
+  // for the owners, payments to confirm and cards asked for (handover 17).
+  const [from, to] = monthRange(todayInManila())
+  const { data: summary } = useGetSummaryQuery({ from, to })
+  const waiting = (summary?.pendingClaimsCount ?? 0) + (summary?.pendingCardRequestsCount ?? 0)
 
   return (
     <aside className="flex w-[220px] shrink-0 flex-col border-r border-line bg-surface">
@@ -77,7 +84,17 @@ export function Sidebar() {
                       }`
                     }
                   >
-                    {link.label}
+                    <span className="flex items-center justify-between gap-2">
+                      {link.label}
+                      {link.to === '/' && waiting > 0 && (
+                        <span
+                          className="min-w-5 rounded-full bg-accent px-1.5 text-center text-[11px] leading-5 font-semibold text-white"
+                          aria-label={`${waiting} waiting`}
+                        >
+                          {waiting}
+                        </span>
+                      )}
+                    </span>
                   </NavLink>
                 </li>
               ))}
