@@ -375,6 +375,10 @@ namespace Klowee.Api.Data.Migrations
                         .HasColumnName("id")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<int?>("AccentLetter")
+                        .HasColumnType("integer")
+                        .HasColumnName("accent_letter");
+
                     b.Property<DateOnly?>("ActivatedOn")
                         .HasColumnType("date")
                         .HasColumnName("activated_on");

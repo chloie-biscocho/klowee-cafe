@@ -388,6 +388,48 @@ public class LoyaltyClubTests : IClassFixture<KloweeApiFactory>
     }
 
     [Fact]
+    public async Task TheSeededClubs_PrintTheirPinkLetter_AndAPickedLetterMustBeALetterOfTheName()
+    {
+        var (client, _) = await SetupAsync();
+        var clubs = (await client.GetFromJsonAsync<List<LoyaltyClubDto>>("/api/loyalty/clubs", KloweeApiFactory.Json))!;
+        var coffee = clubs.Single(c => c.Id == LoyaltyClub.CoffeeClubId);
+        var matcha = clubs.Single(c => c.Id == LoyaltyClub.MatchaClubId);
+        // The U of "Club", the first A of "Matcha" (handover 17a), as the paper card prints them.
+        Assert.Equal((13, 'u'), (coffee.AccentLetter, coffee.Name[coffee.AccentLetter!.Value]));
+        Assert.Equal((5, 'a'), (matcha.AccentLetter, matcha.Name[matcha.AccentLetter!.Value]));
+
+        object Body(string name, int? accentLetter) => new
+        {
+            name, style = "Matcha", slotCount = 10, isActive = false, sortOrder = 4, accentLetter,
+            rewards = new object[] { new { slot = 10, type = "FreeDrink", label = "FREE DRINK" } }
+        };
+        var created = await client.PostAsJsonAsync("/api/loyalty/clubs", Body("The Ube Club", null));
+        await EnsureAsync(created);
+        var club = (await created.Content.ReadFromJsonAsync<LoyaltyClubDto>(KloweeApiFactory.Json))!;
+        Assert.Null(club.AccentLetter);                                  // none by default
+
+        foreach (var bad in new[] { 3, -1, 12, 99 })                     // a space, before, past the end
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync($"/api/loyalty/clubs/{club.Id}", Body("The Ube Club", bad))).StatusCode);
+        }
+
+        var picked = await client.PutAsJsonAsync($"/api/loyalty/clubs/{club.Id}", Body("The Ube Club", 4));
+        await EnsureAsync(picked);
+        Assert.Equal(4, (await picked.Content.ReadFromJsonAsync<LoyaltyClubDto>(KloweeApiFactory.Json))!.AccentLetter);
+
+        // A rename that strands the letter (now past the end) reads as none rather than a wrong letter.
+        await _factory.WithDbAsync(async db =>
+        {
+            var row = await db.LoyaltyClubs.SingleAsync(c => c.Id == club.Id);
+            row.Name = "Ube";
+            return await db.SaveChangesAsync();
+        });
+        var after = (await client.GetFromJsonAsync<List<LoyaltyClubDto>>("/api/loyalty/clubs", KloweeApiFactory.Json))!.Single(c => c.Id == club.Id);
+        Assert.Null(after.AccentLetter);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/loyalty/clubs/{club.Id}")).StatusCode);
+    }
+
+    [Fact]
     public async Task AClubWithStamps_CannotBeDeleted_OnlyDeactivated()
     {
         var (client, _) = await SetupAsync();

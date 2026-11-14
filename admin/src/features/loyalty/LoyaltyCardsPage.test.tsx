@@ -55,6 +55,30 @@ describe('Loyalty cards', () => {
     expect(sent!.isActive).toBe(true)
   })
 
+  it('picks the pink letter from the name, starting from the saved one (handover 17a)', async () => {
+    let sent: LoyaltyClubRequest | null = null
+    server.use(
+      http.get(`${API}/loyalty/clubs`, () => HttpResponse.json([{ ...coffeeClub, accentLetter: 13 }])),
+      http.put(`${API}/loyalty/clubs/:id`, async ({ request }) => {
+        sent = (await request.json()) as LoyaltyClubRequest
+        return HttpResponse.json(coffeeClub)
+      }),
+    )
+    const { user } = renderApp('/menu/loyalty-cards', signedIn)
+    const row = (await screen.findByText('The Coffee Club')).closest('tr')!
+    await user.click(within(row).getByRole('button', { name: 'Edit' }))
+    const picker = within(await screen.findByRole('dialog')).getByRole('group', { name: 'Pink letter' })
+
+    // "The Coffee Club": the U (index 13) is pressed; spaces are not choices.
+    expect(within(picker).getByRole('button', { name: 'Letter 14, U' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(picker).getAllByRole('button')).toHaveLength(1 + 13)
+
+    await user.click(within(picker).getByRole('button', { name: 'Letter 5, C' }))
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(sent).not.toBeNull())
+    expect(sent!.accentLetter).toBe(4)
+  })
+
   it('refuses a free add-on reward without its add-on, before saving', async () => {
     let calls = 0
     server.use(

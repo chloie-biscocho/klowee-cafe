@@ -93,6 +93,7 @@ public record PublicCardDto(int CardNumber, bool IsCurrent, IReadOnlyList<Public
 /// <param name="Membership">"member", "requested" or "none"; stamps and rewards only for members.</param>
 /// <param name="RequestedOn">When they asked for the card, for "Asked on Nov 13".</param>
 /// <param name="ComesWithClubId">The club whose card brings this one (no Ask button of its own).</param>
+/// <param name="AccentLetter">The index in Name of the letter printed in pink, or null.</param>
 public record PublicClubDto(
     Guid ClubId,
     string Name,
@@ -106,7 +107,8 @@ public record PublicClubDto(
     int Cycle,
     IReadOnlyList<PublicRewardDto> Rewards,
     int PendingDrinks,
-    IReadOnlyList<PublicCardDto> Cards);
+    IReadOnlyList<PublicCardDto> Cards,
+    int? AccentLetter = null);
 
 public record PublicPayMethodDto(Guid Id, PaymentChannel Channel, string Label, string AccountName, string? AccountNumber, string? QrUrl);
 

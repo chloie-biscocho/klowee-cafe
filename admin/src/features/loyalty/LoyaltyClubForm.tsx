@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useFieldArray, useForm, useWatch } from 'react-hook-form'
+import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form'
 import { Button } from '../../components/ui/Button'
 import { controlClasses } from '../../components/ui/Field'
 import { Input } from '../../components/ui/Input'
@@ -13,7 +13,48 @@ import {
   type LoyaltyClubDto,
   type MenuCategoryDto,
 } from '../../types/api'
-import { clubDefaults, clubSchema, type ClubInput, type ClubValues } from './schemas'
+import { clubDefaults, clubSchema, validAccent, type ClubInput, type ClubValues } from './schemas'
+
+/**
+ * The paper card prints one letter of the club's name in pink (the U of
+ * "CLUB"). Picks it from the name's letters, or none (handover 17a).
+ */
+function AccentPicker({ name, value, onChange }: { name: string; value: number | null; onChange: (index: number | null) => void }) {
+  const current = validAccent(name, value)
+  return (
+    <fieldset>
+      <legend className="mb-1 text-xs font-semibold text-muted">Pink letter on the card</legend>
+      <div role="group" aria-label="Pink letter" className="flex flex-wrap items-center gap-1">
+        <button
+          type="button"
+          aria-pressed={current === null}
+          className={`h-8 rounded-md border px-2 text-xs ${current === null ? 'border-accent bg-accent-soft font-semibold text-accent' : 'border-line text-muted'}`}
+          onClick={() => onChange(null)}
+        >
+          None
+        </button>
+        {[...name].map((char, index) =>
+          /\p{L}/u.test(char) ? (
+            <button
+              key={index}
+              type="button"
+              aria-pressed={current === index}
+              aria-label={`Letter ${index + 1}, ${char.toUpperCase()}`}
+              className={`h-8 w-7 rounded-md border text-sm font-bold ${
+                current === index ? 'border-stamp-pink-edge bg-stamp-pink text-danger' : 'border-line'
+              }`}
+              onClick={() => onChange(index)}
+            >
+              {char.toUpperCase()}
+            </button>
+          ) : (
+            <span key={index} aria-hidden="true" className="w-2" />
+          ),
+        )}
+      </div>
+    </fieldset>
+  )
+}
 
 /**
  * One loyalty card: its name and look, its slots and the rewards printed on
@@ -44,6 +85,7 @@ export function LoyaltyClubForm({
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'rewards' })
   const rewards = useWatch({ control, name: 'rewards' })
+  const name = useWatch({ control, name: 'name' })
   const errors = formState.errors
   // A card can come with another, but not with itself, nor through a loop back to itself.
   const leadsBack = (candidate: LoyaltyClubDto): boolean => {
@@ -88,6 +130,12 @@ export function LoyaltyClubForm({
           </Select>
           <Input label="Slots" type="number" min="1" error={errors.slotCount?.message} {...register('slotCount')} />
         </div>
+
+        <Controller
+          control={control}
+          name="accentLetter"
+          render={({ field }) => <AccentPicker name={(name ?? '').trim()} value={field.value} onChange={field.onChange} />}
+        />
 
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" className="mt-0.5 size-4 accent-accent" {...register('isActive')} />

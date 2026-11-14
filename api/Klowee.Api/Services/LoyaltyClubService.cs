@@ -168,7 +168,13 @@ public class LoyaltyClubService : ILoyaltyClubService
             await EnsureNoLoopAsync(club.Id, source, cancellationToken);
         }
 
+        if (request.AccentLetter is { } accent && LoyaltyClub.ValidAccent(name, accent) is null)
+        {
+            throw new ValidationFailedException($"The pink letter must be one of the letters of '{name}'.");
+        }
+
         club.Name = name;
+        club.AccentLetter = request.AccentLetter;
         club.Style = request.Style;
         club.AutoJoinFromClubId = request.AutoJoinFromClubId;
         club.SlotCount = request.SlotCount;
@@ -280,7 +286,8 @@ public class LoyaltyClubService : ILoyaltyClubService
                     r.AddOnId is { } a ? addOnNames.GetValueOrDefault(a) : null, r.Label))
                 .ToList(),
             categories.Where(x => x.ClubId == c.Id).OrderBy(x => x.SortOrder).ThenBy(x => x.Name).Select(x => x.Id).ToList(),
-            members.GetValueOrDefault(c.Id))).ToList();
+            members.GetValueOrDefault(c.Id),
+            LoyaltyClub.ValidAccent(c.Name, c.AccentLetter))).ToList();
     }
 
     private async Task<LoyaltyClub> LoadAsync(Guid id, CancellationToken cancellationToken) =>

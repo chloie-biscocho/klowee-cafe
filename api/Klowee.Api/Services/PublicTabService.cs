@@ -215,7 +215,8 @@ public partial class PublicTabService : IPublicTabService
                     card.CardNumber,
                     card.IsCurrent,
                     card.Slots.Select(slot => new PublicSlotDto(slot.Slot, slot.Filled, slot.Date, slot.Source)).ToList(),
-                    card.Rewards.Select(Reward).ToList())).ToList());
+                    card.Rewards.Select(Reward).ToList())).ToList(),
+                LoyaltyClub.ValidAccent(c.Name, clubs[c.ClubId].AccentLetter));
         }).ToList();
     }
 

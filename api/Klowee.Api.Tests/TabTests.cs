@@ -189,6 +189,7 @@ public class TabTests : IClassFixture<KloweeApiFactory>
         Assert.Empty(keeTab.UnpaidOrders);
         var coffee = Assert.Single(keeTab.Clubs, c => c.ClubId == LoyaltyClub.CoffeeClubId);
         Assert.Equal(("member", 1, 12), (coffee.Membership, coffee.Position, coffee.SlotCount));
+        Assert.Equal('u', coffee.Name[coffee.AccentLetter!.Value]);   // the paper card's pink U (handover 17a)
         Assert.Equal(1, coffee.PendingDrinks);   // the c/o latte, once Prince pays
         var card = Assert.Single(coffee.Cards);
         Assert.True(card.IsCurrent);

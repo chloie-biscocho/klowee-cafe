@@ -26,13 +26,16 @@ public static class LoyaltyClubDefaults
 
         if (!existing.Contains(LoyaltyClub.CoffeeClubId))
         {
-            db.LoyaltyClubs.Add(Club(LoyaltyClub.CoffeeClubId, "The Coffee Club", LoyaltyClubStyle.Coffee, isActive: true, sortOrder: 1, shot));
+            var coffee = Club(LoyaltyClub.CoffeeClubId, "The Coffee Club", LoyaltyClubStyle.Coffee, isActive: true, sortOrder: 1, shot);
+            coffee.AccentLetter = LoyaltyClub.CoffeeAccent(coffee.Name);   // the pink U (handover 17a)
+            db.LoyaltyClubs.Add(coffee);
         }
 
         if (!existing.Contains(LoyaltyClub.MatchaClubId))
         {
             var matcha = Club(LoyaltyClub.MatchaClubId, "The Matcha Club", LoyaltyClubStyle.Matcha, isActive: false, sortOrder: 2, shot);
             matcha.AutoJoinFromClubId = LoyaltyClub.CoffeeClubId;   // Coffee cardholders get it (handover 16a)
+            matcha.AccentLetter = LoyaltyClub.MatchaAccent(matcha.Name);
             db.LoyaltyClubs.Add(matcha);
         }
 

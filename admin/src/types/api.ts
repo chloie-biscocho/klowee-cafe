@@ -395,6 +395,8 @@ export interface LoyaltyClubDto {
   categoryIds: string[]
   /** Customers holding this card. */
   memberCount: number
+  /** The index in `name` of the letter printed in pink on the card (handover 17a); null for none. */
+  accentLetter?: number | null
 }
 
 export interface LoyaltyClubRewardRequest {
@@ -415,6 +417,8 @@ export interface LoyaltyClubRequest {
   autoJoinFromClubId: string | null
   rewards: LoyaltyClubRewardRequest[]
   categoryIds: string[] | null
+  /** Must point at a letter of the name; null for none. */
+  accentLetter: number | null
 }
 
 export type RewardState = 'locked' | 'available' | 'used'

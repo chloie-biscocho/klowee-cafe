@@ -26,7 +26,8 @@ public record LoyaltyClubDto(
     Guid? AutoJoinFromClubId,
     IReadOnlyList<LoyaltyClubRewardDto> Rewards,
     IReadOnlyList<Guid> CategoryIds,
-    int MemberCount);
+    int MemberCount,
+    int? AccentLetter = null);
 
 public record LoyaltyClubRewardRequest
 {
@@ -73,6 +74,9 @@ public record LoyaltyClubRequest
     public List<LoyaltyClubRewardRequest> Rewards { get; init; } = [];
 
     public List<Guid>? CategoryIds { get; init; }
+
+    /// <summary>The index in Name of the letter printed in pink, or null for none. Must point at a letter.</summary>
+    public int? AccentLetter { get; init; }
 }
 
 // ---- Handover 17a: stamps given by mistake to carried-over cards ----

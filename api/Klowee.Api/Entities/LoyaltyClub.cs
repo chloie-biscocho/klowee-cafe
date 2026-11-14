@@ -44,6 +44,20 @@ public class LoyaltyClub : BaseEntity
     public Guid? AutoJoinFromClubId { get; set; }
     public LoyaltyClub? AutoJoinFromClub { get; set; }
 
+    /// <summary>
+    /// The one letter of the name printed in pink on the card, as its index in
+    /// <see cref="Name"/> (the paper card's U of "CLUB"); null for none (handover 17a).
+    /// </summary>
+    public int? AccentLetter { get; set; }
+
+    /// <summary>The accent letter if it still points at a letter of this name (a rename can strand it), else null.</summary>
+    public static int? ValidAccent(string name, int? index) =>
+        index is { } i && i >= 0 && i < name.Length && char.IsLetter(name[i]) ? i : null;
+
+    /// <summary>The seeded clubs' accents, found rather than counted: the U of "Club", the first A of "Matcha".</summary>
+    public static int CoffeeAccent(string name) => name.IndexOf("Club", StringComparison.OrdinalIgnoreCase) + 2;
+    public static int MatchaAccent(string name) => name.IndexOf("Matcha", StringComparison.OrdinalIgnoreCase) + 1;
+
     public ICollection<LoyaltyClubReward> Rewards { get; set; } = new List<LoyaltyClubReward>();
 }
 

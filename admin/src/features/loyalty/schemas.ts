@@ -23,6 +23,8 @@ export const clubSchema = z
       }),
     ),
     categoryIds: z.array(z.string()),
+    /** The index in the trimmed name of the pink letter, or null. */
+    accentLetter: z.number().int().nullable(),
   })
   .superRefine((club, ctx) => {
     const seen = new Set<number>()
@@ -57,7 +59,12 @@ export const clubDefaults = (club: LoyaltyClubDto | null): ClubInput => ({
     label: r.label,
   })),
   categoryIds: club?.categoryIds ?? [],
+  accentLetter: club?.accentLetter ?? null,
 })
+
+/** The pink letter if it still points at a letter of the (trimmed) name; a rename can strand it. */
+export const validAccent = (name: string, index: number | null): number | null =>
+  index !== null && index >= 0 && index < name.length && /\p{L}/u.test(name[index]!) ? index : null
 
 export const toClubRequest = (values: ClubValues, sortOrder: number): LoyaltyClubRequest => ({
   name: values.name,
@@ -76,4 +83,5 @@ export const toClubRequest = (values: ClubValues, sortOrder: number): LoyaltyClu
     }))
     .sort((a, b) => a.slot - b.slot),
   categoryIds: values.categoryIds,
+  accentLetter: validAccent(values.name, values.accentLetter),
 })
