@@ -168,6 +168,9 @@ public class TabTests : IClassFixture<KloweeApiFactory>
         // Prince holds no card: the club shows, with nothing on it.
         var princeCoffee = Assert.Single(tab.Clubs, c => c.ClubId == LoyaltyClub.CoffeeClubId);
         Assert.Equal(("none", 0, 0), (princeCoffee.Membership, princeCoffee.Position, princeCoffee.Cards.Count));
+        // ...but its printed rewards, all locked, for the dimmed card.
+        Assert.Equal([5, 8, 12], princeCoffee.Rewards.Select(r => r.Slot));
+        Assert.All(princeCoffee.Rewards, r => Assert.Equal(("locked", 0), (r.State, r.Cycle)));
 
         // No one else's name, no internal ids, no notes.
         foreach (var secret in new[] { "Secretname", "Fullname", kee.Id.ToString(), prince.Id.ToString(), careOf.Id.ToString(), own.Id.ToString(), "private note" })

@@ -187,7 +187,7 @@ public partial class PublicTabService : IPublicTabService
     private async Task<IReadOnlyList<PublicClubDto>> ClubsAsync(Guid customerId, CancellationToken cancellationToken)
     {
         var cards = (await _loyalty.CardsAsync([customerId], cancellationToken))[customerId];
-        var clubs = await _db.LoyaltyClubs.AsNoTracking().ToDictionaryAsync(c => c.Id, cancellationToken);
+        var clubs = await _db.LoyaltyClubs.AsNoTracking().Include(c => c.Rewards).ToDictionaryAsync(c => c.Id, cancellationToken);
         var asked = await _db.LoyaltyMemberships
             .AsNoTracking()
             .Where(m => m.CustomerId == customerId && m.Status == MembershipStatus.Requested)
@@ -204,7 +204,12 @@ public partial class PublicTabService : IPublicTabService
                 source,
                 source is { } s && clubs.TryGetValue(s, out var from) ? from.Name : null,
                 c.Position, c.Cycle,
-                c.Rewards.Select(Reward).ToList(),
+                // A member's rewards and their states; without a card, the
+                // club's printed rewards, so the dimmed card shows what it gives.
+                c.Membership == "member"
+                    ? c.Rewards.Select(Reward).ToList()
+                    : clubs[c.ClubId].Rewards.OrderBy(r => r.Slot)
+                        .Select(r => new PublicRewardDto(r.Slot, r.Label, r.Type, "locked", 0)).ToList(),
                 c.PendingDrinks,
                 c.Cards.Select(card => new PublicCardDto(
                     card.CardNumber,
