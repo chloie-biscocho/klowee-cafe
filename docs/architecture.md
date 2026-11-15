@@ -432,6 +432,49 @@ owners' dashboard
   `PaymentClaim`; the sidebar badge reads `pendingClaimsCount` and
   `pendingCardRequestsCount` from the month's summary.
 
+## Booking requests (handover 20)
+
+The homepage's Book section sends a request; the owners answer it from the
+admin (decision 023). A request is not a booking.
+
+```
+visitor's browser
+  Book section ─► lazy BookingForm chunk (space reserved) ─► POST /api/public/bookings
+                    honeypot `website` filled  → 201 {"received":true}, nothing stored
+                    form off (setting "false") → 409
+                    bad input                  → 400 ValidationProblemDetails, errors per field
+                    over 3/hour or 10/day (IP) → 429 with a sentence to show
+                    otherwise                  → 201 {"received":true}, row New
+owners' admin
+  Dashboard "Booking requests" (New) and the sidebar badge (summary.newBookingsCount)
+  Site → Bookings ─► GET /bookings?status=&page=  (opens on New, newest first)
+                 ─► GET /bookings/{id} · PATCH /bookings/{id} {status, ownerNotes} · DELETE (soft)
+                 ─► Create event: router state ─► /site/events, New event form prefilled
+  Settings → Bookings ─► PUT /settings booking_form_enabled, booking_form_note
+```
+
+- **`BookingService`** owns every rule: validation in the business time
+  zone (`IClock`), the active-package check with the package name copied,
+  the honeypot, the on/off setting (`IsEnabled`: only "false" is off), and
+  the status stamp (who and when, only on a real change). It throws
+  `FieldValidationException`, which `ApiExceptionHandler` writes as
+  `ValidationProblemDetails`, the same shape as attribute failures.
+- **`Program.cs`** adds the `booking` rate-limit policy (a chained limiter:
+  `BookingRateLimitOptions.PerHour` and `PerDay` per client IP), an
+  `OnRejected` that writes the friendly 429 for this path only, and
+  `/api/public/bookings` to the no-store, noindex middleware.
+- **Logging:** ids and outcomes only; HTTP logging has paths, never bodies.
+- **New table:** `booking_requests` (migration `BookingRequests`, additive),
+  index on `status`; `package_id` is `SET NULL` on a package's hard delete.
+- **Client:** `lib/booking.ts` (rules mirroring the API, Manila's "today",
+  the POST and error mapping) and `booking/BookingForm.tsx`. `App` keeps the
+  package a card's "Book this" picked and passes it down, so it applies even
+  if the form's chunk arrives after the click.
+- **Admin:** `api/bookingsApi.ts` (tag `Booking`; a status change or delete
+  also invalidates `Report`, which refreshes the Dashboard and the badge),
+  `features/bookings/`, `BookingRequestsPanel`, `settings/BookingSettings`.
+  `EventForm` takes `initial` values for a new event.
+
 ## Hosting and delivery
 
 | Piece | Host | Built from |

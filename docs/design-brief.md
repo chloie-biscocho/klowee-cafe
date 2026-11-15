@@ -114,7 +114,21 @@ font swaps in. Sentence case for headings; the menu prints in lowercase.
 8. **Packages:** "Event packages", a white card per active package: name, guest
    note, price, inclusions as divided lines, "Book this". Hidden when none.
 9. **Book:** centred white panel, "Bring the cart to your event", `book_body`,
-   Email us, Message on Instagram, Facebook (each only when set).
+   then (handover 20) the **booking request form** when `booking_form_enabled`
+   isn't "false": `booking_form_note` above it; your name, how to reach you
+   (hint "Mobile number, Messenger or Instagram"), event date (earliest
+   today in Manila), number of guests (optional), venue, package (the active
+   ones and "Not sure yet"), anything else (optional, with a count). Two
+   columns from 760px, one below; the site's field shape from the tab page's
+   Pay form (`cloud` fill, 1.5px `line` border, 12px corners). Errors sit
+   under each field in bold `deep` (no red: the palette has none), with a
+   2px `deep` border on the field and focus on the first. Sending, the
+   button says so; sent, a `sky` panel "Request sent. Klowee will get back
+   to you." takes focus, with Send another. Under the button: "Your details
+   are only used to reply about this booking." Then "or message us" and
+   Email us, Message on Instagram, Facebook (each only when set). With the
+   form off, the section is exactly as before. A package card's "Book this"
+   scrolls to the form with that package chosen.
 10. **Footer:** "© {year} Klowee Cafe, Cagayan de Oro" and the two social links.
 
 ## Motion
