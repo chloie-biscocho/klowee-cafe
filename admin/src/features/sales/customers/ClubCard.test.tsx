@@ -16,7 +16,7 @@ describe('Customer loyalty cards', () => {
     expect(within(slots).getAllByRole('listitem')).toHaveLength(12)
     expect(within(card).getByLabelText('Slot 4, stamped, added by hand')).toHaveAttribute('title', 'Added by hand')
     expect(within(card).getByLabelText('Slot 5, empty, 50% OFF available')).toBeInTheDocument()
-    expect(within(card).getByLabelText('Slot 12, empty, FREE DRINK locked')).toHaveTextContent('free drink')
+    expect(within(card).getByLabelText('Slot 12, empty, FREE DRINK locked')).toHaveTextContent(/FREE\s*DRINK/)   // printed as on the card (handover 18)
     expect(within(card).getByText('2 drinks on the tab will stamp once paid.')).toBeInTheDocument()
     expect(within(card).queryByText(/Card \d of/)).not.toBeInTheDocument()      // one card: no stack, no counter
     expect(within(card).queryByRole('button', { name: /Show card/ })).not.toBeInTheDocument()
@@ -176,5 +176,45 @@ describe('Customer loyalty cards', () => {
     expect(await screen.findByText(/No loyalty card/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'One more Americano' }))
     expect(within(screen.getByRole('listitem', { name: 'Americano' })).queryByRole('switch')).not.toBeInTheDocument()
+  })
+})
+
+describe('the admin card matches the customer page’s (handover 18, part 3)', () => {
+  const slot = (card: HTMLElement, name: RegExp) => within(card).getByLabelText(name)
+
+  it('a filled ordinary slot carries SIPPED over its bean heart; an empty one shows its design and no stamp', async () => {
+    renderApp(`/sales/customers/${keeDetail.id}`, signedIn)
+    const card = await screen.findByRole('region', { name: 'Coffee Club card' })
+
+    const filled = slot(card, /^Slot 1, stamped/)
+    expect(filled).toHaveTextContent('SIPPED')
+    expect(filled.querySelector('svg')).not.toBeNull()            // the slot's own design stays under the stamp
+
+    const empty = slot(card, /^Slot 6, empty$/)
+    expect(empty).not.toHaveTextContent(/SIPPED|CLAIMED/)
+    expect(empty.querySelector('svg')).not.toBeNull()
+  })
+
+  it('a used reward slot carries CLAIMED over its words', async () => {
+    server.use(http.get(`${API}/customers/:id`, () => HttpResponse.json({ ...prince, recentOrders: [], tabUrl: null, tabLinkCreatedAt: null })))
+    renderApp(`/sales/customers/${prince.id}`, signedIn)
+    const card = await screen.findByRole('region', { name: 'Coffee Club card' })
+
+    const used = slot(card, /^Slot 5, stamped.*50% OFF used$/)
+    expect(used).toHaveTextContent('CLAIMED')
+    expect(used).toHaveTextContent(/50%\s*OFF/)
+    expect(slot(card, /^Slot 4, stamped/)).toHaveTextContent('SIPPED')
+  })
+
+  it('marks the club name’s accent letter in pink', async () => {
+    server.use(http.get(`${API}/loyalty/clubs`, () => HttpResponse.json([{ ...coffeeClub, accentLetter: 13 }])))
+    renderApp(`/sales/customers/${keeDetail.id}`, signedIn)
+    const card = await screen.findByRole('region', { name: 'Coffee Club card' })
+
+    await waitFor(() => expect(card.querySelector('[data-accent]')).not.toBeNull())
+    const accent = card.querySelector('[data-accent]')!
+    expect(accent).toHaveTextContent(/^U$/)
+    expect(accent.className).toContain('text-accent-pink')
+    expect(accent.parentElement).toHaveTextContent('THE COFFEE CLUB')
   })
 })

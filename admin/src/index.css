@@ -82,8 +82,10 @@
   --font-sans: Karla, 'Helvetica Neue', Arial, sans-serif;
   /* Page titles and the stat cards' big numbers. */
   --font-serif: 'Young Serif', Georgia, serif;
-  /* The loyalty card's club name; its @font-face loads with the card (features/sales/customers/card.css). */
+  /* The loyalty card's club name and its hand-printed words; both @font-faces load
+     with the card only (features/sales/customers/card.css). */
   --font-display: 'Bowlby One', 'Arial Black', Impact, sans-serif;
+  --font-hand: 'Shantell Sans', 'Comic Neue', 'Trebuchet MS', sans-serif;
 }
 
 /* `dark:` follows the switch, never the device setting. */

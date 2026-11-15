@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { useListClubsQuery } from '../../../api/loyaltyApi'
 import { useGiveCardMutation, useRedeemRewardMutation, useTakeCardMutation, useUnredeemRewardMutation } from '../../../api/salesApi'
 import { Button } from '../../../components/ui/Button'
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
@@ -49,7 +50,7 @@ function NoCard({ customerId, club }: { customerId: string; club: CustomerClubDt
   return (
     <section
       aria-label={`${clubLabel(club.name)} card`}
-      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-line px-4 py-3 text-sm"
+      className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border-2 border-dashed border-line px-4 py-3 text-sm"
     >
       <span className="text-muted">
         No {clubLabel(club.name)} card{club.membership === 'requested' && ' (asked for one)'}. Drinks earn no stamps.
@@ -74,6 +75,10 @@ function MemberCard({
   others: CustomerClubDto[]
   onAdjust: () => void
 }) {
+  // The pink letter in the club's name comes from the clubs list (handover 17a),
+  // which the admin already loads; the customer payload doesn't carry it.
+  const { data: clubs } = useListClubsQuery()
+  const accentLetter = clubs?.find((c) => c.id === club.clubId)?.accentLetter ?? null
   const [takeCard, { isLoading: isTaking }] = useTakeCardMutation()
   const [confirming, setConfirming] = useState(false)
   const [redeem, { isLoading: isRedeeming }] = useRedeemRewardMutation()
@@ -114,7 +119,7 @@ function MemberCard({
     .join(' ')
 
   return (
-    <section aria-label={`${clubLabel(club.name)} card`} className="flex flex-col gap-3 rounded-lg border border-line p-4">
+    <section aria-label={`${clubLabel(club.name)} card`} className="flex flex-col gap-3 rounded-2xl border-[1.5px] border-line p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-semibold">
           {club.name}
@@ -171,7 +176,7 @@ function MemberCard({
             type="button"
             aria-label={`Show card ${card.cardNumber}`}
             onClick={() => setShownNumber(card.cardNumber)}
-            className="absolute rounded-lg border border-line bg-canvas motion-safe:transition-transform motion-safe:hover:-translate-y-0.5"
+            className="absolute rounded-[18px] border-[1.5px] border-line bg-card motion-safe:transition-transform motion-safe:hover:-translate-y-0.5"
             style={{
               // The newest card behind sits nearest the front.
               top: (behind.length - 1 - index) * PEEK,
@@ -185,9 +190,15 @@ function MemberCard({
         {shown && (
           <div
             key={shown.cardNumber}
-            className="relative z-10 rounded-lg border border-line bg-surface p-3 shadow-sm motion-safe:animate-[card-front_150ms_ease-out]"
+            className="relative z-10 rounded-[18px] shadow-sm motion-safe:animate-[card-front_150ms_ease-out]"
           >
-            <StampCard card={shown} />
+            <StampCard
+              card={shown}
+              clubName={club.name}
+              style={club.style}
+              accentLetter={accentLetter}
+              next={isCurrent && club.position < club.slotCount ? club.position + 1 : null}
+            />
           </div>
         )}
       </div>
