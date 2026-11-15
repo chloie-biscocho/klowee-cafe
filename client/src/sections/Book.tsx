@@ -75,6 +75,7 @@ export function Book({ home, choice = NO_PACKAGE_CHOICE }: { home: PublicHome; c
 
   const note = setting(home, 'booking_form_note')
   const steps = bookingSteps(home)
+  const reserve = home.packages.length > 0 ? RESERVED.withPackages : RESERVED.withoutPackages
 
   return (
     <section
@@ -102,14 +103,11 @@ export function Book({ home, choice = NO_PACKAGE_CHOICE }: { home: PublicHome; c
           )}
         </div>
 
-        <div
-          id="booking-form"
-          className={`flex scroll-mt-4 flex-col justify-center [grid-area:form] min-[820px]:justify-start ${
-            home.packages.length > 0 ? RESERVED.withPackages : RESERVED.withoutPackages
-          }`}
-        >
-          <Suspense fallback={null}>
-            <BookingForm packages={home.packages} choice={choice} />
+        {/* The reserve sits on the loading placeholder and on the form itself, not on this box:
+            nothing moves when the form arrives, and the short "sent" confirmation takes only its own space. */}
+        <div id="booking-form" className="scroll-mt-4 [grid-area:form]">
+          <Suspense fallback={<div aria-hidden="true" className={reserve} />}>
+            <BookingForm packages={home.packages} choice={choice} reserve={reserve} />
           </Suspense>
         </div>
 

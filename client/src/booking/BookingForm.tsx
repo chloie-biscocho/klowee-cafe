@@ -25,7 +25,7 @@ const LABEL = 'block text-[0.93rem] font-medium'
  * form switched off meanwhile) is one message above the button, and what was
  * typed stays. On success the form gives way to a confirmation that takes focus.
  */
-export default function BookingForm({ packages, choice }: { packages: PublicPackage[]; choice: PackageChoice }) {
+export default function BookingForm({ packages, choice, reserve = '' }: { packages: PublicPackage[]; choice: PackageChoice; reserve?: string }) {
   const id = useId()
   const [values, setValues] = useState<BookingValues>(() => ({ ...EMPTY_BOOKING, packageId: choice.packageId ?? '' }))
   const [errors, setErrors] = useState<BookingErrors>({})
@@ -112,7 +112,7 @@ export default function BookingForm({ packages, choice }: { packages: PublicPack
   })
 
   return (
-    <form noValidate onSubmit={submit} aria-label="Booking request" className="relative grid gap-4 text-left min-[520px]:grid-cols-2">
+    <form noValidate onSubmit={submit} aria-label="Booking request" className={`relative grid content-start gap-4 text-left min-[520px]:grid-cols-2 ${reserve}`}>
       <Field label="Your name" field="name" id={id} error={errors.name}>
         <input {...props('name')} autoComplete="name" maxLength={LIMITS.name} required />
       </Field>
