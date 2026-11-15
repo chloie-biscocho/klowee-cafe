@@ -111,14 +111,16 @@ function BookingDetail({ booking }: { booking: BookingDto }) {
                   aria-pressed={current}
                   title={BOOKING_STATUS_HINTS[status]}
                   loading={busyStatus === status}
-                  disabled={current || busyStatus !== null}
+                  // The current status stays solid (pressed), not greyed out; pressing it does nothing.
+                  disabled={!current && busyStatus !== null}
                   onClick={async () => {
+                    if (current) return
                     setBusyStatus(status)
                     await save(status, status === 'New' ? 'Back to New.' : `Marked ${status.toLowerCase()}.`)
                     setBusyStatus(null)
                   }}
                 >
-                  {status === 'New' ? 'Back to New' : status}
+                  {status === 'New' && !current ? 'Back to New' : status}
                 </Button>
               )
             })}

@@ -98,6 +98,9 @@ describe('Bookings', () => {
     for (const text of ['Dec 12, 2026', '0917 555 0101', 'Limketkai Atrium', '60', 'Starter', 'Office party, afternoon.', 'Status not changed yet.'])
       expect(screen.getByText(text)).toBeInTheDocument()
     expect(await screen.findByLabelText('1 waiting')).toBeInTheDocument()
+    // The current status is pressed, not greyed out; the others offer a change.
+    expect(screen.getByRole('button', { name: 'New' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'New' })).toBeEnabled()
 
     await user.type(screen.getByLabelText('Your notes'), 'Called, sent the menu.')
     await user.click(screen.getByRole('button', { name: 'Contacted' }))
