@@ -13,12 +13,12 @@ export const TAP_LIFT_MS = 1200
  * cup is never cut off at the edge, and it scrolls a page of cups at a time
  * (snapping to cup starts, so swiping lands on whole cups too). No menu, no shelf.
  *
- * Each cup rests at a small tilt, alternating by position. Hovering it (or
- * tapping it, briefly, on a touch screen) straightens and lifts it over a soft
- * shadow and shows its name, with the pop-up polaroids' timing (handover 19).
- * Cups aren't focusable; when the shelf itself has keyboard focus, every cup
- * shows that state, so keyboard users see the names too. Under reduced motion
- * the tilt stays and nothing lifts (index.css).
+ * At rest every cup stands straight. Hovering one (or tapping it, briefly,
+ * on a touch screen) lifts it over a soft shadow, leans it about 4 degrees
+ * (alternating by position) and shows its name, with the pop-up polaroids'
+ * timing (handover 19; tilt on hover since 19a). Cups aren't focusable; when
+ * the shelf itself has keyboard focus, every cup lifts and shows its name but
+ * stays straight. Under reduced motion nothing tilts or lifts (index.css).
  */
 export function CupShelf({ menu }: { menu: PublicMenu | null }) {
   const drinks = shelfDrinks(menu)
@@ -119,7 +119,7 @@ export function CupShelf({ menu }: { menu: PublicMenu | null }) {
               onPointerLeave={leave(index)}
               onPointerDown={tap(index)}
               onPointerCancel={cancel(index)}
-              className={`shelf-cup relative h-[85px] w-[58px] flex-none snap-start md:h-[106px] md:w-[74px] ${index % 2 ? 'cup-tilt-right' : 'cup-tilt-left'}`}
+              className={`shelf-cup relative h-[85px] w-[58px] flex-none snap-start md:h-[106px] md:w-[74px] ${lifted === index ? (index % 2 ? 'cup-tilt-right' : 'cup-tilt-left') : ''}`}
             >
               <div className="cup-shadow" aria-hidden="true" />
               <div className="cup-body absolute inset-0">

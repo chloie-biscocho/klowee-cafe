@@ -42,19 +42,26 @@ describe('CupShelf', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('tilts cups alternately at rest and lifts one under the mouse', () => {
+  it('stands cups straight at rest, and tilts only the hovered one, alternating by position', () => {
     render(<CupShelf menu={fullHome.menu} />)
     const cups = screen.getAllByRole('img')
+    const tilted = () => cups.filter((cup) => cup.classList.contains('cup-tilt-left') || cup.classList.contains('cup-tilt-right'))
 
-    expect(cups.map((cup) => cup.classList.contains('cup-tilt-left'))).toEqual([true, false, true, false])
-    expect(cups.map((cup) => cup.classList.contains('cup-tilt-right'))).toEqual([false, true, false, true])
+    expect(tilted()).toEqual([])
     expect(cups.some((cup) => cup.hasAttribute('data-lifted'))).toBe(false)
 
     fireEvent.pointerEnter(cups[1]!, { pointerType: 'mouse' })
     expect(cups[1]).toHaveAttribute('data-lifted')
-    expect(cups[0]).not.toHaveAttribute('data-lifted')
+    expect(cups[1]).toHaveClass('cup-tilt-right')
+    expect(tilted()).toEqual([cups[1]])
     fireEvent.pointerLeave(cups[1]!, { pointerType: 'mouse' })
     expect(cups[1]).not.toHaveAttribute('data-lifted')
+    expect(tilted()).toEqual([])
+
+    // Its neighbour leans the other way.
+    fireEvent.pointerEnter(cups[2]!, { pointerType: 'mouse' })
+    expect(cups[2]).toHaveClass('cup-tilt-left')
+    fireEvent.pointerLeave(cups[2]!, { pointerType: 'mouse' })
   })
 
   it('lifts a tapped cup briefly on touch, without getting stuck', () => {

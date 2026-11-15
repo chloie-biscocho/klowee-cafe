@@ -293,16 +293,19 @@ section[id] {
 }
 
 /*
- * The shelf's cups (handover 19). Each rests at a small tilt, alternating by
- * position. Lifted (hover, a brief tap, or the shelf having keyboard focus) it
- * straightens and rises over a soft shadow, and its name shows. The timing and
- * easing are the pop-up polaroids' (Tailwind's 200ms default transition).
+ * The shelf's cups (handover 19, tilt reversed in 19a). At rest every cup
+ * stands straight in one level line. Hovered (or tapped, briefly) it rises
+ * over a soft shadow, leans about 4 degrees (alternating by position: the
+ * class is added only while lifted) and shows its name. With the shelf
+ * focused from the keyboard every cup rises and shows its name but stays
+ * straight, so a whole row never leans at once. The timing and easing are
+ * the pop-up polaroids' (Tailwind's 200ms default transition).
  */
 .cup-tilt-left {
-  --tilt: -3deg;
+  --tilt: -4deg;
 }
 .cup-tilt-right {
-  --tilt: 3deg;
+  --tilt: 4deg;
 }
 .cup-body,
 .cup-shadow,
@@ -311,7 +314,7 @@ section[id] {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 .cup-body {
-  transform: rotate(var(--tilt, 0deg));
+  transform: translateY(0) rotate(0deg);
   transition-property: transform;
 }
 .cup-shadow {
@@ -349,9 +352,11 @@ section[id] {
     max-width: calc(100% + 20px);
   }
 }
-.shelf-cup[data-lifted] .cup-body,
 .cup-shelf:focus-visible .cup-body {
   transform: translateY(-6px) rotate(0deg);
+}
+.shelf-cup[data-lifted] .cup-body {
+  transform: translateY(-6px) rotate(var(--tilt, 0deg));
 }
 .shelf-cup[data-lifted] .cup-shadow,
 .cup-shelf:focus-visible .cup-shadow,
@@ -437,7 +442,7 @@ section[id] {
   .polaroid {
     transition: none;
   }
-  /* Cups keep their resting tilt and never lift; a lifted cup still shows its name, without motion. */
+  /* Cups stay straight and never lift; a lifted cup still shows its name, without motion. */
   .cup-body,
   .cup-shadow,
   .cup-name {
@@ -445,7 +450,7 @@ section[id] {
   }
   .shelf-cup[data-lifted] .cup-body,
   .cup-shelf:focus-visible .cup-body {
-    transform: rotate(var(--tilt, 0deg));
+    transform: none;
   }
   .shelf-cup[data-lifted] .cup-shadow,
   .cup-shelf:focus-visible .cup-shadow {

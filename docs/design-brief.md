@@ -62,9 +62,12 @@ font swaps in. Sentence case for headings; the menu prints in lowercase.
 - **Logo sticker:** the owners' logo in a 184px circle in the hero only. The
   header is a text wordmark; there is no logo up there or on the cups.
 - **Cups:** a tapered glass of three layers under a lid, no label at rest.
-  Each rests tilted ±3°, alternating; hovered, tapped (for 1.2 s on touch) or
-  with the shelf focused from the keyboard, it straightens, lifts 6px over a
-  soft shadow and shows its name in a small white tag (handover 19).
+  At rest they stand straight in one level line. Hovered or tapped (for
+  1.2 s on touch; a swipe lets go), a cup lifts 6px over a soft shadow, leans
+  about 4° (alternating by position, so neighbours lean different ways) and
+  shows its name in a small white tag. With the shelf focused from the
+  keyboard, every cup lifts and shows its name but stays straight
+  (handover 19; tilt on hover since 19a).
 - **Marker ovals:** a hand-drawn pink loop sized to each category label,
   generated in code (`lib/ovalPath.ts`), slightly rotated, alternating.
 - **Dotted leaders** between a drink and its price.
@@ -141,7 +144,7 @@ Three animations, all stopped under `prefers-reduced-motion`:
   (`stroke-dashoffset` from 1 to 0 on a `pathLength="1"` path).
 
 The page's clouds use the hero's drift. Cups lift with the polaroids' 200ms
-ease; under reduced motion they keep their tilt and never lift, though a
+ease; under reduced motion they stay straight and never lift, though a
 hovered cup still shows its name.
 
 Polaroids straighten with a 200ms transition, and the ticker's dot pulses
