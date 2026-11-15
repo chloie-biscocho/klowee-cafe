@@ -33,6 +33,32 @@ public class BookingService : IBookingService
     public const string EnabledKey = "booking_form_enabled";
     public const string NoteKey = "booking_form_note";
 
+    /// <summary>The Book section's numbered steps (handover 20a): one per line, at most three, each up to 80 characters.</summary>
+    public const string StepsKey = "booking_steps";
+    public const int MaxSteps = 3;
+    public const int MaxStepLength = 80;
+
+    /// <summary>The owners' approved wording, seeded once by the migration `SeedBookingSteps`.</summary>
+    public const string DefaultSteps =
+        "Send us your date and venue.\nWe message you back to talk through the details.\nWe confirm, then roll up with the cart.";
+
+    /// <summary>
+    /// What's wrong with a steps value, or null. Blank lines don't count (the
+    /// site skips them), so the rule is about the steps a visitor would see.
+    /// </summary>
+    public static string? StepsProblem(string? value)
+    {
+        var steps = (value ?? string.Empty).Split('\n').Select(line => line.Trim()).Where(line => line.Length > 0).ToList();
+        if (steps.Count > MaxSteps)
+        {
+            return $"Booking steps: at most {MaxSteps} lines, one step per line.";
+        }
+
+        return steps.Any(step => step.Length > MaxStepLength)
+            ? $"Booking steps: each line up to {MaxStepLength} characters."
+            : null;
+    }
+
     private readonly KloweeDbContext _db;
     private readonly IClock _clock;
     private readonly ICurrentUser _user;

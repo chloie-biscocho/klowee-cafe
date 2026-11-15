@@ -266,6 +266,37 @@ public class BookingTests : IClassFixture<KloweeApiFactory>
         Assert.Equal("Book at least two weeks ahead.", home.Settings[BookingService.NoteKey]);
     }
 
+    [Fact]
+    public async Task TheSteps_AreUpToThreeLinesOf80Characters_AndGoOutOnTheHomePayload()
+    {
+        var owner = await _factory.CreateOwnerClientAsync();
+        var anon = await _factory.CreateAnonymousClientAsync();
+        var line = new string('s', BookingService.MaxStepLength);
+        Task<HttpResponseMessage> Put(string value) => owner.PutAsJsonAsync("/api/settings", new[] { new { key = BookingService.StepsKey, value } });
+
+        // Three lines of 80 are fine, and blank lines don't count as steps.
+        var ok = await Put($"{line}\n\n{line}\n{line}\n");
+        Assert.True(ok.IsSuccessStatusCode, await ok.Content.ReadAsStringAsync());
+
+        var four = await Put("One.\nTwo.\nThree.\nFour.");
+        Assert.Equal(HttpStatusCode.BadRequest, four.StatusCode);
+        Assert.Contains("at most 3 lines", (await four.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
+        var tooLong = await Put($"One.\n{line}s");
+        Assert.Equal(HttpStatusCode.BadRequest, tooLong.StatusCode);
+        Assert.Contains("80 characters", (await tooLong.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
+
+        // A refused save changes nothing; empty clears them.
+        await SetAsync(owner, BookingService.StepsKey, BookingService.DefaultSteps);
+        var home = await anon.GetFromJsonAsync<PublicHomeDto>("/api/public/home", KloweeApiFactory.Json);
+        Assert.Equal(BookingService.DefaultSteps, home!.Settings[BookingService.StepsKey]);
+        Assert.Equal(3, BookingService.DefaultSteps.Split('\n').Length);
+        Assert.All(BookingService.DefaultSteps.Split('\n'), step => Assert.True(step.Length <= BookingService.MaxStepLength));
+        await Put("Five.\nSix.\nSeven.\nEight.");
+        Assert.Equal(BookingService.DefaultSteps, (await anon.GetFromJsonAsync<PublicHomeDto>("/api/public/home", KloweeApiFactory.Json))!.Settings[BookingService.StepsKey]);
+        await SetAsync(owner, BookingService.StepsKey, "");
+        Assert.Equal("", (await anon.GetFromJsonAsync<PublicHomeDto>("/api/public/home", KloweeApiFactory.Json))!.Settings[BookingService.StepsKey]);
+    }
+
     // ---- rate limits ----
 
     [Fact]

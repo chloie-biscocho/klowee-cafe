@@ -29,7 +29,8 @@ public class SiteSettingService : ISiteSettingService
         PublicTabService.NoteKey,
         // The homepage's booking form (handover 20): on unless "false", and an optional line above it.
         BookingService.EnabledKey,
-        BookingService.NoteKey
+        BookingService.NoteKey,
+        BookingService.StepsKey
     };
 
     /// <summary>
@@ -77,6 +78,13 @@ public class SiteSettingService : ISiteSettingService
         if (duplicate is not null)
         {
             throw new ValidationFailedException($"Setting '{duplicate.Key}' appears more than once.");
+        }
+
+        // The Book section's steps have a shape (handover 20a): up to three lines of 80 characters.
+        if (settings.FirstOrDefault(s => s.Key == BookingService.StepsKey) is { } steps
+            && BookingService.StepsProblem(steps.Value) is { } problem)
+        {
+            throw new ValidationFailedException(problem);
         }
 
         var keys = settings.Select(s => s.Key).ToList();
