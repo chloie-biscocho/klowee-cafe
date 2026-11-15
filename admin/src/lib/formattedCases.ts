@@ -23,6 +23,11 @@ export const PARSE_CASES: { name: string; input: string; blocks: Block[] }[] = [
     input: 'See [our menu](https://klowee.cafe/#menu) today',
     blocks: [p([t('See '), { type: 'link', href: 'https://klowee.cafe/#menu', children: [t('our menu')] }, t(' today')])],
   },
+  {
+    name: 'a link with encoded parentheses',
+    input: '[the menu](https://klowee.cafe/menu_%28nov%29)',
+    blocks: [p([{ type: 'link', href: 'https://klowee.cafe/menu_%28nov%29', children: [t('the menu')] }])],
+  },
   { name: 'a mailto link', input: '[Email us](mailto:hello@klowee.cafe)', blocks: [p([{ type: 'link', href: 'mailto:hello@klowee.cafe', children: [t('Email us')] }])] },
   { name: 'a list', input: '- Coffee\n- Matcha', blocks: [{ type: 'list', items: [[t('Coffee')], [t('Matcha')]] }] },
   { name: 'a list item with bold', input: '- **2** baristas', blocks: [{ type: 'list', items: [[{ type: 'strong', children: [t('2')] }, t(' baristas')]] }] },

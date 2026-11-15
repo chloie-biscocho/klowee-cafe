@@ -129,6 +129,8 @@ function NoteEditor({ initial }: { initial: string }) {
     <div className="flex flex-col gap-2">
       <FormattedTextarea
         label="Note on the tab page"
+        // The pay dialog's column on the site: 344px at its widest (handover 21 report).
+        siteColumn={344}
         hint="Shown to every customer above the ways to pay. Leave empty for none."
         rows={2}
         maxLength={4000}

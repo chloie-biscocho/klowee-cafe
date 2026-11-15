@@ -126,6 +126,22 @@ describe('FormattedTextarea', () => {
     expect(screen.queryByLabelText('Link address')).not.toBeInTheDocument()
   })
 
+  it('encodes parentheses in a link address, so the link survives being read back', async () => {
+    const { user, stored, select } = setup('the menu')
+    select(4, 8)
+    await user.click(screen.getByRole('button', { name: 'Link (Ctrl+K)' }))
+    await user.type(screen.getByLabelText('Link address'), 'https://klowee.example/menu_(nov){Enter}')
+    expect(stored()).toBe('the [menu](https://klowee.example/menu_%28nov%29)')
+    expect(within(screen.getByRole('region', { name: 'Body preview' })).getByRole('link', { name: 'menu' })).toHaveAttribute('href', 'https://klowee.example/menu_%28nov%29')
+  })
+
+  it("lays the preview out at the site's column width, and says why justify shows left there", () => {
+    render(<FormattedTextarea label="Description" siteColumn={260} value={'::justify\nA long package description.'} onChange={() => {}} />)
+    const preview = screen.getByRole('region', { name: 'Description preview' })
+    expect(preview.firstElementChild).toHaveStyle({ maxWidth: '260px' })
+    expect(within(preview).getByText(/narrow column \(260px\), so justified paragraphs show left-aligned there/)).toBeInTheDocument()
+  })
+
   it('a link with nothing selected inserts example words to type over', async () => {
     const { user, stored, select } = setup('')
     select(0)

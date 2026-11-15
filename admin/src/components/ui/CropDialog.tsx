@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import Cropper, { type Area, type MediaSize } from 'react-easy-crop'
 import { Button } from './Button'
 import { cropToFile, FREE_SHAPES } from './cropImage'
@@ -48,6 +48,17 @@ export default function CropDialog({ request, aspect, round = false, keepOrigina
   const [moved, setMoved] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const dialog = useRef<HTMLDivElement>(null)
+
+  // Keyboard users land in the dialog (on the frame, once it's drawn), and go back where they were on close.
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null
+    dialog.current?.focus()
+    return () => previous?.focus?.()
+  }, [])
+  useEffect(() => {
+    if (media) dialog.current?.querySelector<HTMLElement>('[data-testid="cropper"]')?.focus()
+  }, [media])
 
   const frameAspect =
     shape === 'original' ? (media ? (rotation % 180 === 0 ? media.naturalWidth / media.naturalHeight : media.naturalHeight / media.naturalWidth) : 1) : shape
@@ -105,7 +116,7 @@ export default function CropDialog({ request, aspect, round = false, keepOrigina
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-scrim p-4 sm:p-8">
-      <div role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} className="w-full max-w-2xl rounded-[18px] bg-surface shadow-lg" onKeyDown={keys}>
+      <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} className="w-full max-w-2xl rounded-[18px] bg-surface shadow-lg focus:outline-none" onKeyDown={keys}>
         <div className="border-b-[1.5px] border-line px-5 py-3.5">
           <h2 id={`${id}-title`} className="font-serif text-lg text-accent">
             {request.recrop ? 'Crop the photo' : 'Frame the photo'}

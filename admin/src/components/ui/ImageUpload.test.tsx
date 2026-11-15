@@ -212,6 +212,17 @@ describe('ImageUpload', () => {
     expect(screen.getByRole('dialog', { name: 'New event' })).toBeInTheDocument()
   })
 
+  it('moves focus into the crop dialog, onto the frame, and back to where it was on Cancel', async () => {
+    const { user } = renderWithStore(<ImageUpload value={STORED} onChange={vi.fn()} folder="events" label="Cover image" aspect={4 / 3} />, signedIn)
+    server.use(http.get(STORED, () => new HttpResponse(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), { headers: { 'content-type': 'image/png' } })))
+    const crop = screen.getByRole('button', { name: 'Crop' })
+    await user.click(crop)
+    const dialog = await screen.findByRole('dialog', { name: 'Crop the photo' })
+    await waitFor(() => expect(within(dialog).getByTestId('cropper')).toHaveFocus())
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    expect(crop).toHaveFocus()
+  })
+
   it('the crop dialog names every control, and + and − zoom', async () => {
     const { user } = renderWithStore(<ImageUpload value={null} onChange={vi.fn()} folder="menu" label="Photo" />, signedIn)
     await user.upload(screen.getByLabelText('Photo'), pngFile())

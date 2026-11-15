@@ -5,6 +5,8 @@ import { alignmentAt, applyEdit, selectionIsLink, setAlignment, toggleLink, togg
 import { FormattedPreview } from './FormattedPreview'
 
 const PREVIEW_KEY = 'klowee.admin.formatPreview'
+/** The site justifies only in columns at least this wide (client index.css, `.fmt-justify`). */
+const JUSTIFY_MIN_COLUMN = 420
 
 function readPreviewOpen(): boolean {
   try {
@@ -18,6 +20,12 @@ interface FormattedTextareaProps extends Omit<ComponentPropsWithRef<'textarea'>,
   label: string
   error?: string
   hint?: string
+  /**
+   * The width (px) of this text's column on the site at its widest, where it
+   * is narrower than the preview: the preview lays out at that width, so a
+   * justified paragraph shows left-aligned here exactly when it does there.
+   */
+  siteColumn?: number
 }
 
 /**
@@ -32,7 +40,7 @@ interface FormattedTextareaProps extends Omit<ComponentPropsWithRef<'textarea'>,
  * it. Where the browser refuses that command, `setRangeText` and an input
  * event do the same edit (without the undo step).
  */
-export function FormattedTextarea({ label, error, hint, className = '', rows = 5, ref, onChange, onKeyDown, onSelect, value, defaultValue, ...rest }: FormattedTextareaProps) {
+export function FormattedTextarea({ label, error, hint, siteColumn, className = '', rows = 5, ref, onChange, onKeyDown, onSelect, value, defaultValue, ...rest }: FormattedTextareaProps) {
   const id = useId()
   const area = useRef<HTMLTextAreaElement | null>(null)
   const [text, setText] = useState(String(value ?? defaultValue ?? ''))
@@ -94,7 +102,8 @@ export function FormattedTextarea({ label, error, hint, className = '', rows = 5
     setLinkError(null)
   }
   const addLink = () => {
-    const address = url.trim()
+    // Parentheses would end the link early when it's read back: encode them, as browsers do.
+    const address = url.trim().replace(/\(/g, '%28').replace(/\)/g, '%29')
     if (!isSafeUrl(address)) {
       setLinkError('Use a full address starting with https://, http:// or mailto:.')
       return
@@ -250,7 +259,14 @@ export function FormattedTextarea({ label, error, hint, className = '', rows = 5
         </button>
         {previewOpen && (
           <div id={previewId} role="region" aria-label={`${label} preview`} className="px-3 pt-1 pb-3">
-            <FormattedPreview text={shown} />
+            <div style={siteColumn ? { maxWidth: siteColumn } : undefined}>
+              <FormattedPreview text={shown} />
+            </div>
+            {siteColumn !== undefined && siteColumn < JUSTIFY_MIN_COLUMN && /(^|\n)::justify[ \t]*(\n|$)/.test(shown) && (
+              <p className="mt-2 text-xs text-muted">
+                On the site this text sits in a narrow column ({siteColumn}px), so justified paragraphs show left-aligned there, as here.
+              </p>
+            )}
           </div>
         )}
       </div>

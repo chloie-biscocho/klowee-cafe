@@ -82,6 +82,8 @@ export function PackageForm({
         />
         <FormattedTextarea
           label="Description"
+          // A package card's text column on the site: 260px at its widest (handover 21 report).
+          siteColumn={260}
           error={errors.description?.message}
           {...register('description')}
         />
