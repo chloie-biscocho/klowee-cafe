@@ -233,6 +233,7 @@ describe('Settings → Bookings', () => {
       expect(saved).toEqual([
         { key: 'booking_form_enabled', value: 'false' },
         { key: 'booking_form_note', value: 'Two weeks ahead, please.' },
+        { key: 'booking_steps', value: '' },
       ]),
     )
     expect(await screen.findByText('Booking form is off.')).toBeInTheDocument()
@@ -242,5 +243,38 @@ describe('Settings → Bookings', () => {
     server.use(http.get(`${API}/settings`, () => HttpResponse.json([{ key: 'booking_form_enabled', value: 'false' }])))
     renderApp('/site/settings', signedIn)
     expect(await screen.findByRole('switch', { name: /Booking form on the website/ })).not.toBeChecked()
+  })
+})
+
+describe('Settings → Bookings: the steps (handover 20a)', () => {
+  it('saves the steps, and refuses more than three lines or a line over 80 characters before sending', async () => {
+    let saved: SiteSettingRequest[] | null = null
+    server.use(
+      http.get(`${API}/settings`, () => HttpResponse.json([{ key: 'booking_steps', value: 'Send us your date and venue.' }])),
+      http.put(`${API}/settings`, async ({ request: req }) => {
+        saved = (await req.json()) as SiteSettingRequest[]
+        return HttpResponse.json([])
+      }),
+    )
+    const { user } = renderApp('/site/settings', signedIn)
+
+    const box = await screen.findByLabelText('Steps')
+    expect(box).toHaveValue('Send us your date and venue.')
+    expect(screen.getByText(/One step per line, up to three/)).toBeInTheDocument()
+    const save = screen.getByRole('button', { name: 'Save bookings' })
+
+    await user.type(box, '{Enter}Two.{Enter}Three.{Enter}Four.')
+    expect(screen.getByText('At most 3 steps, one per line.')).toBeInTheDocument()
+    expect(save).toBeDisabled()
+
+    await user.clear(box)
+    await user.type(box, `One.{Enter}${'x'.repeat(81)}`)
+    expect(screen.getByText('Each step up to 80 characters.')).toBeInTheDocument()
+    expect(save).toBeDisabled()
+
+    await user.clear(box)
+    await user.type(box, 'Send us your date and venue.{Enter}We message you back.{Enter}We confirm.')
+    await user.click(save)
+    await waitFor(() => expect(saved?.find((s) => s.key === 'booking_steps')?.value).toBe('Send us your date and venue.\nWe message you back.\nWe confirm.'))
   })
 })

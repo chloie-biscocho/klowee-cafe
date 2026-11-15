@@ -88,7 +88,7 @@ export default function BookingForm({ packages, choice }: { packages: PublicPack
 
   if (sent) {
     return (
-      <div ref={confirmation} tabIndex={-1} className="mx-auto max-w-[560px] rounded-2xl bg-sky/60 px-5 py-8 text-center focus:outline-none focus-visible:outline-3">
+      <div ref={confirmation} tabIndex={-1} className="rounded-2xl bg-sky/60 px-5 py-8 text-center focus:outline-none focus-visible:outline-3">
         <p className="font-serif text-[1.4rem] text-deep">Request sent. Klowee will get back to you.</p>
         <PillButton variant="ghost" className="mt-5" onClick={another}>
           Send another
@@ -112,7 +112,7 @@ export default function BookingForm({ packages, choice }: { packages: PublicPack
   })
 
   return (
-    <form noValidate onSubmit={submit} aria-label="Booking request" className="relative mx-auto grid max-w-[560px] gap-4 text-left md:grid-cols-2">
+    <form noValidate onSubmit={submit} aria-label="Booking request" className="relative grid gap-4 text-left min-[520px]:grid-cols-2">
       <Field label="Your name" field="name" id={id} error={errors.name}>
         <input {...props('name')} autoComplete="name" maxLength={LIMITS.name} required />
       </Field>
@@ -158,7 +158,7 @@ export default function BookingForm({ packages, choice }: { packages: PublicPack
         <input id={`${id}-website`} name="website" tabIndex={-1} autoComplete="off" value={values.website} onChange={set('website')} />
       </div>
 
-      <div className="md:col-span-2">
+      <div className="min-[520px]:col-span-2">
         {message && (
           <p role="alert" className="mb-3 text-center text-[0.95rem] font-bold text-deep">
             {message}
@@ -199,7 +199,7 @@ function Field({
     </span>
   )
   return (
-    <div className={wide ? 'md:col-span-2' : undefined}>
+    <div className={wide ? 'min-[520px]:col-span-2' : undefined}>
       <label htmlFor={`${id}-${field}`} className={LABEL}>
         {label}
       </label>

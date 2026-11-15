@@ -170,7 +170,7 @@ describe('the booking form', () => {
 
     expect(within(within(f).getByLabelText('Package')).getAllByRole('option').map((o) => o.textContent)).toEqual(['Not sure yet', 'Starter', 'Regular'])
     expect(within(f).getByText('Your details are only used to reply about this booking.')).toBeInTheDocument()
-    expect(screen.getByText('or message us')).toBeInTheDocument()
+    expect(screen.getByText('Prefer to chat? Message us')).toBeInTheDocument()
   })
 
   it('a package card preselects that package, a second card overrides it', async () => {
@@ -191,11 +191,14 @@ describe('the booking form', () => {
 
 describe('the Book section with the form switched off', () => {
   it('has no form and looks as it did: the line and the contact buttons only', () => {
-    const off = { ...home, settings: { ...home.settings, booking_form_enabled: 'false', booking_form_note: 'Book two weeks ahead.' } }
+    const off = { ...home, settings: { ...home.settings, booking_form_enabled: 'false', booking_form_note: 'Book two weeks ahead.', booking_steps: 'One.\nTwo.' } }
     const { container } = render(<Book home={off} />)
 
     expect(screen.queryByRole('form')).not.toBeInTheDocument()
     expect(screen.queryByText('or message us')).not.toBeInTheDocument()
+    expect(screen.queryByText('Prefer to chat? Message us')).not.toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'How booking works' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Bring the cart to your event' }).closest('section')).toHaveClass('text-center')
     expect(screen.queryByText('Book two weeks ahead.')).not.toBeInTheDocument()
     expect(container.querySelector('#booking-form')).toBeNull()
     expect(screen.getByRole('link', { name: 'Email us' })).toBeInTheDocument()
@@ -214,5 +217,54 @@ describe('the Book section with the form switched off', () => {
     render(<Book home={{ ...home, settings: { ...home.settings, booking_form_note: 'Book two weeks ahead.' } }} />)
     expect(screen.getByText('Book two weeks ahead.')).toBeInTheDocument()
     await form()
+  })
+})
+
+describe('the Book section side by side (handover 20a)', () => {
+  const steps = 'Send us your date and venue.\nWe message you back to talk through the details.\nWe confirm, then roll up with the cart.'
+
+  it('puts the words, steps and contact buttons in the left column and the form in the right', async () => {
+    render(<Book home={{ ...home, settings: { ...home.settings, booking_form_note: 'Two weeks ahead, please.', booking_steps: steps } }} />)
+    const f = await form()
+
+    const heading = screen.getByRole('heading', { name: 'Bring the cart to your event' })
+    const intro = heading.parentElement!
+    const formColumn = document.getElementById('booking-form')!
+    const chat = screen.getByText('Prefer to chat? Message us').parentElement!
+    // Three areas of one grid: intro and chat on the left from 820px, the form on the right.
+    expect(intro.parentElement).toBe(formColumn.parentElement)
+    expect(chat.parentElement).toBe(formColumn.parentElement)
+    expect(intro).toHaveClass('[grid-area:intro]')
+    expect(formColumn).toHaveClass('[grid-area:form]')
+    expect(chat).toHaveClass('[grid-area:chat]')
+    expect(formColumn.parentElement!.className).toContain("min-[820px]:[grid-template-areas:'intro_form'_'chat_form']")
+    // Narrow reading order (and Tab order): words, then the form, then the buttons.
+    expect([...formColumn.parentElement!.children]).toEqual([intro, formColumn, chat])
+    expect(formColumn).toContainElement(f)
+    expect(within(chat).getByRole('link', { name: 'Email us' })).toBeInTheDocument()
+    expect(within(intro).getByText('Two weeks ahead, please.')).toBeInTheDocument()
+    expect(within(intro).getByText('Tell us the date and headcount.')).toBeInTheDocument()
+    // The heading is left-aligned now; the form isn't held to its old narrow width.
+    expect(heading.closest('section')).not.toHaveClass('text-center')
+    expect(f).not.toHaveClass('max-w-[560px]')
+  })
+
+  it('renders the steps as an ordered list from the setting, in order', () => {
+    render(<Book home={{ ...home, settings: { ...home.settings, booking_steps: `${steps}\n` } }} />)
+
+    const list = screen.getByRole('list', { name: 'How booking works' })
+    expect(list.tagName).toBe('OL')
+    expect(within(list).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      '1Send us your date and venue.',
+      '2We message you back to talk through the details.',
+      '3We confirm, then roll up with the cart.',
+    ])
+  })
+
+  it('renders no list (and leaves no gap) when the setting is empty or missing', () => {
+    const { rerender } = render(<Book home={{ ...home, settings: { ...home.settings, booking_steps: '  \n ' } }} />)
+    expect(screen.queryByRole('list', { name: 'How booking works' })).not.toBeInTheDocument()
+    rerender(<Book home={home} />)
+    expect(screen.queryByRole('list', { name: 'How booking works' })).not.toBeInTheDocument()
   })
 })

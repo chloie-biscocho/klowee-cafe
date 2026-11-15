@@ -15,6 +15,15 @@ export function bookingFormEnabled(home: PublicHome): boolean {
   return setting(home, 'booking_form_enabled').toLowerCase() !== 'false'
 }
 
+/** The Book section's numbered steps (handover 20a): one per non-blank line, at most three (the API's rule). */
+export function bookingSteps(home: PublicHome): string[] {
+  return setting(home, 'booking_steps')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+}
+
 /** Today in Manila as YYYY-MM-DD (the date input's format). */
 export function businessToday(now: Date = new Date()): string {
   // en-CA formats dates as YYYY-MM-DD.

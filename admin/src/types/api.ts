@@ -316,9 +316,11 @@ export const TAB_NOTE_KEY = 'tab_page_note' as const
 /** The homepage's booking form (handover 20): on unless exactly "false", and an optional line above it. */
 export const BOOKING_ENABLED_KEY = 'booking_form_enabled' as const
 export const BOOKING_NOTE_KEY = 'booking_form_note' as const
+/** The Book section's numbered steps (handover 20a): one per line, at most three, each up to 80 characters. */
+export const BOOKING_STEPS_KEY = 'booking_steps' as const
 
 export interface SiteSettingRequest {
-  key: SettingKey | typeof TAB_NOTE_KEY | typeof BOOKING_ENABLED_KEY | typeof BOOKING_NOTE_KEY
+  key: SettingKey | typeof TAB_NOTE_KEY | typeof BOOKING_ENABLED_KEY | typeof BOOKING_NOTE_KEY | typeof BOOKING_STEPS_KEY
   value: string | null
 }
 

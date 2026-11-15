@@ -2,7 +2,7 @@ import { useListSettingsQuery } from '../../api/settingsApi'
 import { Card } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Spinner } from '../../components/ui/Spinner'
-import { BOOKING_ENABLED_KEY, BOOKING_NOTE_KEY, TAB_NOTE_KEY } from '../../types/api'
+import { BOOKING_ENABLED_KEY, BOOKING_NOTE_KEY, BOOKING_STEPS_KEY, TAB_NOTE_KEY } from '../../types/api'
 import { BookingSettings } from './BookingSettings'
 import { CustomerPayments } from './CustomerPayments'
 import { SettingsForm } from './SettingsForm'
@@ -31,6 +31,7 @@ export function SettingsPage() {
       <BookingSettings
         enabled={(settings.find((s) => s.key === BOOKING_ENABLED_KEY)?.value ?? '').trim().toLowerCase() !== 'false'}
         note={settings.find((s) => s.key === BOOKING_NOTE_KEY)?.value ?? ''}
+        steps={settings.find((s) => s.key === BOOKING_STEPS_KEY)?.value ?? ''}
       />
     </>
   )
