@@ -18,6 +18,11 @@ import {
 const FIELD = 'mt-1 block w-full rounded-xl border-[1.5px] bg-cloud px-3 py-2.5 text-ink placeholder:text-soft'
 const LABEL = 'block text-[0.93rem] font-medium'
 
+/** Grid widths: one column below 520px, two from 520px, six from 820px. */
+const HALF = 'min-[820px]:col-span-3'
+const THIRD = 'min-[820px]:col-span-2'
+const FULL = 'min-[520px]:col-span-2 min-[820px]:col-span-6'
+
 /**
  * The booking request form (handover 20), its own lazy chunk. Errors show
  * under each field on submit, with focus on the first; the API's own field
@@ -112,24 +117,24 @@ export default function BookingForm({ packages, choice, reserve = '' }: { packag
   })
 
   return (
-    <form noValidate onSubmit={submit} aria-label="Booking request" className={`relative grid content-start gap-4 text-left min-[520px]:grid-cols-2 ${reserve}`}>
-      <Field label="Your name" field="name" id={id} error={errors.name}>
+    // Layout B (handover 20a, owner's choice): six columns from 820px (name and contact a half each;
+    // date, guests and package a third each, or date and guests a half each without packages; venue
+    // and message full width), two columns from 520px, one below.
+    <form noValidate onSubmit={submit} aria-label="Booking request" className={`relative grid content-start gap-4 text-left min-[520px]:grid-cols-2 min-[820px]:grid-cols-6 ${reserve}`}>
+      <Field label="Your name" field="name" id={id} error={errors.name} span={HALF}>
         <input {...props('name')} autoComplete="name" maxLength={LIMITS.name} required />
       </Field>
-      <Field label="How to reach you" field="contact" id={id} error={errors.contact} hint="Mobile number, Messenger or Instagram">
+      <Field label="How to reach you" field="contact" id={id} error={errors.contact} hint="Mobile number, Messenger or Instagram" span={HALF}>
         <input {...props('contact', 'hint')} autoComplete="tel" maxLength={LIMITS.contact} required />
       </Field>
-      <Field label="Event date" field="eventDate" id={id} error={errors.eventDate}>
+      <Field label="Event date" field="eventDate" id={id} error={errors.eventDate} span={packages.length > 0 ? THIRD : HALF}>
         <input {...props('eventDate')} type="date" min={today} max={latestEventDate(today)} required />
       </Field>
-      <Field label="Number of guests (optional)" field="guestCount" id={id} error={errors.guestCount}>
+      <Field label="Number of guests (optional)" field="guestCount" id={id} error={errors.guestCount} span={packages.length > 0 ? THIRD : HALF}>
         <input {...props('guestCount')} type="number" inputMode="numeric" min={LIMITS.minGuests} max={LIMITS.maxGuests} step={1} />
       </Field>
-      <Field label="Venue" field="venue" id={id} error={errors.venue} wide>
-        <input {...props('venue')} maxLength={LIMITS.venue} required />
-      </Field>
       {packages.length > 0 && (
-        <Field label="Package" field="packageId" id={id} error={errors.packageId} wide>
+        <Field label="Package" field="packageId" id={id} error={errors.packageId} span={THIRD}>
           <select {...props('packageId')}>
             <option value="">Not sure yet</option>
             {packages.map((pkg) => (
@@ -140,12 +145,15 @@ export default function BookingForm({ packages, choice, reserve = '' }: { packag
           </select>
         </Field>
       )}
+      <Field label="Venue" field="venue" id={id} error={errors.venue} span={FULL}>
+        <input {...props('venue')} maxLength={LIMITS.venue} required />
+      </Field>
       <Field
         label="Anything else (optional)"
         field="message"
         id={id}
         error={errors.message}
-        wide
+        span={FULL}
         hint={`${values.message.length} / ${LIMITS.message}`}
         counter
       >
@@ -158,16 +166,18 @@ export default function BookingForm({ packages, choice, reserve = '' }: { packag
         <input id={`${id}-website`} name="website" tabIndex={-1} autoComplete="off" value={values.website} onChange={set('website')} />
       </div>
 
-      <div className="min-[520px]:col-span-2">
+      <div className={FULL}>
         {message && (
-          <p role="alert" className="mb-3 text-center text-[0.95rem] font-bold text-deep">
+          <p role="alert" className="mb-3 text-[0.95rem] font-bold text-deep">
             {message}
           </p>
         )}
-        <PillButton type="submit" className="w-full disabled:cursor-default disabled:opacity-60" disabled={sending}>
-          {sending ? 'Sending your request…' : 'Send booking request'}
-        </PillButton>
-        <p className="mt-2 text-center text-[0.9rem] text-soft">Your details are only used to reply about this booking.</p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <PillButton type="submit" className="w-full disabled:cursor-default disabled:opacity-60 min-[520px]:w-auto" disabled={sending}>
+            {sending ? 'Sending your request…' : 'Send booking request'}
+          </PillButton>
+          <p className="text-[0.9rem] text-soft">Your details are only used to reply about this booking.</p>
+        </div>
       </div>
     </form>
   )
@@ -180,7 +190,7 @@ function Field({
   error,
   hint,
   counter,
-  wide,
+  span,
   children,
 }: {
   label: string
@@ -189,7 +199,8 @@ function Field({
   error?: string
   hint?: string
   counter?: boolean
-  wide?: boolean
+  /** Its width in the grid (HALF, THIRD or FULL). */
+  span: string
   children: ReactNode
 }) {
   // Under the input, so side-by-side inputs stay level; a counter sits at the right.
@@ -199,7 +210,7 @@ function Field({
     </span>
   )
   return (
-    <div className={wide ? 'min-[520px]:col-span-2' : undefined}>
+    <div className={span}>
       <label htmlFor={`${id}-${field}`} className={LABEL}>
         {label}
       </label>

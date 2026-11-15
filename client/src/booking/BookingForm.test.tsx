@@ -170,7 +170,7 @@ describe('the booking form', () => {
 
     expect(within(within(f).getByLabelText('Package')).getAllByRole('option').map((o) => o.textContent)).toEqual(['Not sure yet', 'Starter', 'Regular'])
     expect(within(f).getByText('Your details are only used to reply about this booking.')).toBeInTheDocument()
-    expect(screen.getByText('Prefer to chat? Message us')).toBeInTheDocument()
+    expect(screen.getByText('or message us')).toBeInTheDocument()
   })
 
   it('a package card preselects that package, a second card overrides it', async () => {
@@ -220,33 +220,46 @@ describe('the Book section with the form switched off', () => {
   })
 })
 
-describe('the Book section side by side (handover 20a)', () => {
+describe('the Book section, layout B (handover 20a)', () => {
   const steps = 'Send us your date and venue.\nWe message you back to talk through the details.\nWe confirm, then roll up with the cart.'
 
-  it('puts the words, steps and contact buttons in the left column and the form in the right', async () => {
+  it('puts the words and the contact buttons in a row above one wide form', async () => {
     render(<Book home={{ ...home, settings: { ...home.settings, booking_form_note: 'Two weeks ahead, please.', booking_steps: steps } }} />)
     const f = await form()
 
     const heading = screen.getByRole('heading', { name: 'Bring the cart to your event' })
-    const intro = heading.parentElement!
-    const formColumn = document.getElementById('booking-form')!
-    const chat = screen.getByText('Prefer to chat? Message us').parentElement!
-    // Three areas of one grid: intro and chat on the left from 820px, the form on the right.
-    expect(intro.parentElement).toBe(formColumn.parentElement)
-    expect(chat.parentElement).toBe(formColumn.parentElement)
-    expect(intro).toHaveClass('[grid-area:intro]')
-    expect(formColumn).toHaveClass('[grid-area:form]')
-    expect(chat).toHaveClass('[grid-area:chat]')
-    expect(formColumn.parentElement!.className).toContain("min-[820px]:[grid-template-areas:'intro_form'_'chat_form']")
-    // Narrow reading order (and Tab order): words, then the form, then the buttons.
-    expect([...formColumn.parentElement!.children]).toEqual([intro, formColumn, chat])
-    expect(formColumn).toContainElement(f)
+    const words = heading.parentElement!
+    const chat = screen.getByText('or message us').parentElement!
+    const top = words.parentElement!
+    const formBox = document.getElementById('booking-form')!
+    // The top row holds the words and the buttons; the form follows it, across the panel.
+    expect(chat.parentElement).toBe(top)
+    expect([...top.children]).toEqual([words, chat])
+    expect(top.nextElementSibling).toBe(formBox)
+    expect(formBox).toContainElement(f)
     expect(within(chat).getByRole('link', { name: 'Email us' })).toBeInTheDocument()
-    expect(within(intro).getByText('Two weeks ahead, please.')).toBeInTheDocument()
-    expect(within(intro).getByText('Tell us the date and headcount.')).toBeInTheDocument()
-    // The heading is left-aligned now; the form isn't held to its old narrow width.
+    expect(within(words).getByText('Two weeks ahead, please.')).toBeInTheDocument()
+    expect(within(words).getByRole('list', { name: 'How booking works' })).toBeInTheDocument()
     expect(heading.closest('section')).not.toHaveClass('text-center')
-    expect(f).not.toHaveClass('max-w-[560px]')
+    // Six columns from 820px: name and contact a half each; date, guests and package a third each; venue full.
+    expect(f).toHaveClass('min-[820px]:grid-cols-6')
+    const cell = (label: string) => within(f).getByLabelText(label).parentElement!
+    expect(cell('Your name')).toHaveClass('min-[820px]:col-span-3')
+    expect(cell('How to reach you')).toHaveClass('min-[820px]:col-span-3')
+    expect(cell('Event date')).toHaveClass('min-[820px]:col-span-2')
+    expect(cell('Package')).toHaveClass('min-[820px]:col-span-2')
+    expect(cell('Venue')).toHaveClass('min-[820px]:col-span-6')
+    // The fields keep their order: name, contact, date, guests, package, venue, anything else.
+    expect([...f.querySelectorAll('label')].map((l) => l.textContent).filter((t) => t !== 'Website')).toEqual([
+      'Your name', 'How to reach you', 'Event date', 'Number of guests (optional)', 'Package', 'Venue', 'Anything else (optional)',
+    ])
+  })
+
+  it('without packages, date and guests share their row half and half', async () => {
+    render(<Book home={{ ...home, packages: [] }} />)
+    const f = await form()
+    expect(within(f).getByLabelText('Event date').parentElement).toHaveClass('min-[820px]:col-span-3')
+    expect(within(f).getByLabelText('Number of guests (optional)').parentElement).toHaveClass('min-[820px]:col-span-3')
   })
 
   it('renders the steps as an ordered list from the setting, in order', () => {
