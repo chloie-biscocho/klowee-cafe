@@ -228,6 +228,39 @@ section[id] {
   .cloud-5 { display: none; }
   .cloud-6 { top: 560px; right: -50px; }
 }
+/*
+ * Clouds placed by data (handover 19, src/components/PageSky.tsx): the same
+ * pill and two puffs as `.cloud-1`, scaled from one width. A phone caps the
+ * width at 70% of the screen. `.cloud-flip` puts the puffs on the right.
+ */
+.cloud-free {
+  --s: min(var(--w), 70vw);
+  width: var(--s);
+  height: calc(var(--s) * 0.285);
+}
+.cloud-free::before {
+  width: calc(var(--s) * 0.4);
+  height: calc(var(--s) * 0.4);
+  left: calc(var(--s) * 0.18);
+  top: calc(var(--s) * -0.19);
+}
+.cloud-free::after {
+  width: calc(var(--s) * 0.285);
+  height: calc(var(--s) * 0.285);
+  left: calc(var(--s) * 0.505);
+  top: calc(var(--s) * -0.116);
+}
+.cloud-flip::before {
+  left: calc(var(--s) * 0.42);
+}
+.cloud-flip::after {
+  left: calc(var(--s) * 0.21);
+}
+@media (max-width: 760px) {
+  .cloud-wide {
+    display: none;
+  }
+}
 @keyframes drift {
   from { transform: translateX(0); }
   to { transform: translateX(var(--d, 60px)); }
@@ -242,7 +275,8 @@ section[id] {
 .cup-glass,
 .cup-cover {
   position: absolute;
-  inset: 11px 0 0 0;
+  /* Below the lid: the shelf's smaller cups set --lid (handover 19); the tab page's scene keeps 11px. */
+  inset: var(--lid, 11px) 0 0 0;
   clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);
 }
 .cup-glass {
@@ -256,6 +290,78 @@ section[id] {
 }
 @keyframes fill {
   to { transform: scaleY(0); }
+}
+
+/*
+ * The shelf's cups (handover 19). Each rests at a small tilt, alternating by
+ * position. Lifted (hover, a brief tap, or the shelf having keyboard focus) it
+ * straightens and rises over a soft shadow, and its name shows. The timing and
+ * easing are the pop-up polaroids' (Tailwind's 200ms default transition).
+ */
+.cup-tilt-left {
+  --tilt: -3deg;
+}
+.cup-tilt-right {
+  --tilt: 3deg;
+}
+.cup-body,
+.cup-shadow,
+.cup-name {
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cup-body {
+  transform: rotate(var(--tilt, 0deg));
+  transition-property: transform;
+}
+.cup-shadow {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -9px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--color-line), transparent);
+  opacity: 0;
+  transition-property: opacity;
+}
+.cup-name {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  width: max-content;
+  /* Never wider than the cup's step, so neighbouring names can't overlap. */
+  max-width: calc(100% + 9px);
+  padding: 2px 7px;
+  border-radius: 8px;
+  background: var(--color-panel);
+  color: var(--color-deep);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, -4px);
+  transition-property: opacity, transform;
+}
+@media (min-width: 760px) {
+  .cup-name {
+    max-width: calc(100% + 20px);
+  }
+}
+.shelf-cup[data-lifted] .cup-body,
+.cup-shelf:focus-visible .cup-body {
+  transform: translateY(-6px) rotate(0deg);
+}
+.shelf-cup[data-lifted] .cup-shadow,
+.cup-shelf:focus-visible .cup-shadow,
+.shelf-cup[data-lifted] .cup-name,
+.cup-shelf:focus-visible .cup-name {
+  opacity: 1;
+}
+.shelf-cup[data-lifted] .cup-name,
+.cup-shelf:focus-visible .cup-name {
+  transform: translate(-50%, 0);
 }
 
 /* Marker ovals: the path is drawn in once, when the menu sheet first scrolls into view. */
@@ -330,5 +436,24 @@ section[id] {
   }
   .polaroid {
     transition: none;
+  }
+  /* Cups keep their resting tilt and never lift; a lifted cup still shows its name, without motion. */
+  .cup-body,
+  .cup-shadow,
+  .cup-name {
+    transition: none;
+  }
+  .shelf-cup[data-lifted] .cup-body,
+  .cup-shelf:focus-visible .cup-body {
+    transform: rotate(var(--tilt, 0deg));
+  }
+  .shelf-cup[data-lifted] .cup-shadow,
+  .cup-shelf:focus-visible .cup-shadow {
+    opacity: 0;
+  }
+  .cup-name,
+  .shelf-cup[data-lifted] .cup-name,
+  .cup-shelf:focus-visible .cup-name {
+    transform: translate(-50%, 0);
   }
 }

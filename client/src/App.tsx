@@ -1,4 +1,5 @@
 import { useHomeData } from './api/useHomeData'
+import { PageSky } from './components/PageSky'
 import { Book } from './sections/Book'
 import { CupShelf } from './sections/CupShelf'
 import { ErrorState } from './sections/ErrorState'
@@ -41,15 +42,18 @@ export function App() {
             <Hero home={data} />
           )}
           {home.status === 'loading' && <LoadingState />}
+          {/* The sections after the hero share one sky (handover 19). It arrives with the data,
+              so the static shell is unchanged, and it is absolute, so nothing moves when it does. */}
           {data && (
-            <>
+            <div className="relative isolate">
+              <PageSky />
               <CupShelf menu={data.menu} />
               <Story home={data} />
               <Menu home={data} />
               <Popups home={data} />
               <Packages home={data} />
               <Book home={data} />
-            </>
+            </div>
           )}
         </main>
 

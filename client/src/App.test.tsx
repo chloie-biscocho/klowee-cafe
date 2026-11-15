@@ -18,6 +18,20 @@ describe('App', () => {
     expect(screen.getByRole('contentinfo')).toHaveTextContent('Klowee Cafe, Cagayan de Oro')
   })
 
+  it('puts one sky behind the sections from the shelf to Book, after the data arrives, and not behind the footer', async () => {
+    render(<App />)
+
+    // The loading render (the static shell's copy) has no page sky.
+    expect(screen.queryByTestId('page-sky')).not.toBeInTheDocument()
+    await screen.findByRole('heading', { level: 1 })
+    const sky = screen.getByTestId('page-sky')
+    const band = sky.parentElement!
+    expect(band).toHaveClass('relative', 'isolate')
+    expect(band).toContainElement(screen.getByRole('group', { name: /layered cups/ }))
+    expect(band).toContainElement(screen.getByRole('heading', { name: 'Bring the cart to your event' }))
+    expect(band).not.toContainElement(screen.getByRole('contentinfo'))
+  })
+
   it('shows the error card with header and footer, and refetches on retry', async () => {
     let calls = 0
     server.use(
