@@ -186,6 +186,21 @@ Container 1000px with 22px gutters. At 760px and below: header links wrap and th
 smaller cups (58 × 85) and arrows, one menu column, one package column,
 stacked story, the hero's clouds reposition (the fifth hides), and the page sky drops to 9 clouds, each at most 70% of the screen wide.
 
+## Formatted text (handover 21)
+The owners' longer texts (hero body, story body, the Book line, the tab
+page's pay note, event and package descriptions) can use a small Markdown
+subset (decision 024): bold, italic, links (http, https, mailto; new tab),
+bullet lists, line breaks, and per-paragraph alignment (`::justify`,
+`::center`, `::left`). Plain text looks exactly as before.
+- **Links** are `deep`, medium weight, underlined. **Lists** have `deep`
+  disc markers, indented 1.3em. Bold and italic use the face's own weights.
+- **Justify** uses hyphenation (`lang="en"`) and `text-wrap: pretty`, and
+  only when the paragraph's own column is at least 420px wide (a container
+  query); narrower, it is left-aligned so no wide gaps open between words.
+  Centre applies at every width.
+- **Package descriptions** now show on their cards, under the guest note and
+  above the price; a package without one looks as before.
+
 ## Copy rules
 Text comes from the payload or is a fixed label from the mockup. The mockup's
 marketing sentences (the pop-ups' Instagram note, the packages lead, the story

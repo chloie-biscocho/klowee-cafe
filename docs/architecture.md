@@ -477,6 +477,39 @@ owners' admin
   `features/bookings/`, `BookingRequestsPanel`, `settings/BookingSettings`.
   `EventForm` takes `initial` values for a new event.
 
+## Formatted text and cropping (handover 21, decision 024)
+
+```
+owner types in a FormattedTextarea (admin)            visitor's browser (client)
+  toolbar ─► formatEdits.ts (pure: range + new text)    FormattedText ─► parseFormatted(text) ─► React elements
+          ─► document.execCommand('insertText')                         (text nodes only; links checked by isSafeUrl)
+             (one undoable edit, a real input event)
+  preview ─► FormattedPreview ─► parseFormatted(text)
+                  ▲                                         ▲
+                  └──── lib/formatted.ts, byte-identical in both apps, one shared formattedCases.ts ────┘
+stored: the same plain-text columns as before (no API change)
+```
+
+- **`lib/formatted.ts`**: `parseFormatted` (blocks: paragraphs with an
+  alignment, lists; inlines: text, strong, em, link, br), `isSafeUrl`
+  (http/https with a host, or mailto; whole-string check), `toPlainText`.
+  The site's `components/FormattedText.tsx` renders it into the same `<p>`
+  elements and classes each field used before; `.fmt` in `index.css` is a
+  size container, so `.fmt-justify` justifies only in columns of 420px or more.
+- **Where it's shown:** the hero and story bodies, the Book line (form on and
+  off), event descriptions, package descriptions (now on their cards), and the
+  tab page's pay note. The old `paragraphs()` helper is gone.
+- **Admin:** `components/ui/FormattedTextarea.tsx` (toolbar, inline link
+  field, collapsible preview remembered in `localStorage`) on those six
+  fields; `formatEdits.ts` holds each button's edit as a pure function.
+- **Cropping:** `components/ui/ImageUpload.tsx` opens `CropDialog.tsx`
+  (lazy; `react-easy-crop`) after the pre-check. Props: `aspect` (a number,
+  or `'free'` for a choice of shapes), `round`, `keepOriginal` (QR). The
+  dialog's Escape is caught in the capture phase so a form modal under it
+  stays open. `cropImage.ts` draws the area with one canvas transform (scale,
+  translate, rotate) and exports under 5 MB. Re-crop fetches the stored image
+  as a blob (storage sends `Access-Control-Allow-Origin: *`).
+
 ## Hosting and delivery
 
 | Piece | Host | Built from |
