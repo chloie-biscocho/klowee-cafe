@@ -83,6 +83,29 @@ violations 409.
 v7 in library mode (`createBrowserRouter`, no route loaders). Redux Toolkit
 holds the store; RTK Query owns everything that came from the API.
 
+**Look (handover 18, decision 022).** "Clear sky": the site's sky and navy,
+Karla for the interface and Young Serif for page titles and stat numbers,
+self-hosted from copies of the client's files. Every colour is a token in
+`admin/src/index.css` (`canvas`, `surface`, `ink`, `muted`, `line`,
+`accent`, `on-accent`, `accent-soft`, `side`, `side-ink`, `nav-active`,
+status and `on-status`, `scrim`, `chart-1/2`, and the loyalty card's fixed
+`card-*` set); dark values only under `html[data-theme="dark"]`, chosen with
+the sidebar switch and stored as `klowee.admin.theme`, applied before first
+paint by `index.html`. `dark:` follows that attribute, never the device.
+Shapes live in `components/ui/` (pill buttons and inputs, 18px panels, 1.5px
+table rules). Below 900px the sidebar becomes a row across the top.
+
+**Month control.** `components/ui/MonthStepper` (previous, month, next; next
+off on the current Manila month; arrow keys) serves Dashboard and Orders.
+Orders keeps its period in the URL (`?month=` or `?from=&to=`) and shows the
+API's `total` and `unpaid` for the whole filter under the table.
+
+**The loyalty card** (`features/sales/customers/StampCard.tsx`, `StampMark`)
+is a port of the customer page's card (handover 17a): cream face, Bowlby One
+name with its pink accent letter (from `/loyalty/clubs`), SIPPED and CLAIMED
+stamps with the shared `stampTilt`; its fonts load with the card only
+(`card.css`). The admin keeps its links to orders and its undated titles.
+
 ### How a screen gets its data
 
 ```
