@@ -34,7 +34,7 @@ export function DiscountControl({
                 role="radio"
                 aria-checked={type === option.value}
                 className={`rounded px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${
-                  type === option.value ? 'bg-accent text-white' : 'text-ink hover:bg-canvas'
+                  type === option.value ? 'bg-accent text-on-accent' : 'text-ink hover:bg-canvas'
                 }`}
                 onClick={() => onChange(option.value, option.value === type ? value : '')}
               >

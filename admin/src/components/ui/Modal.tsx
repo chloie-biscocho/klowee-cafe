@@ -27,7 +27,7 @@ export function Modal({ open, title, onClose, children, footer, width = 'max-w-l
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-ink/30 p-4 sm:p-8">
+    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-scrim p-4 sm:p-8">
       <button
         type="button"
         aria-label="Close dialog"

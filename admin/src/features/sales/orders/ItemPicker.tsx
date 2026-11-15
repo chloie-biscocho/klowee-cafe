@@ -146,7 +146,7 @@ export function ItemPicker({ items, addOns, lines, onChange, filterRef, rewardsF
                               disabled={!reward.enabled}
                               title={reward.enabled ? undefined : 'Already on another drink in this order.'}
                               className={`rounded-full border px-2.5 py-0.5 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${
-                                on ? 'border-success bg-success text-white' : 'border-success/40 text-success hover:bg-success-soft'
+                                on ? 'border-success bg-success text-on-status' : 'border-success/40 text-success hover:bg-success-soft'
                               }`}
                               onClick={() => onChange(item.menuVersionItemId, { ...line, rewardId: on ? null : reward.rewardId })}
                             >

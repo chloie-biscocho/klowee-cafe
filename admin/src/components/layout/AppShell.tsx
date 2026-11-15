@@ -24,11 +24,11 @@ export function AppShell() {
   const title = usePageTitle()
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen max-wide:flex-col">
       <Sidebar />
-      <main className="flex-1 overflow-x-hidden">
-        <div className="mx-auto max-w-[1100px] px-8 py-7">
-          <h1 className="mb-5 text-xl font-bold tracking-tight">{title}</h1>
+      <main className="min-w-0 flex-1 overflow-x-hidden">
+        <div className="mx-auto max-w-[1180px] px-[30px] pt-[26px] pb-11 max-wide:px-4 max-wide:pt-5">
+          <h1 className="mb-5 font-serif text-[1.75rem] leading-[1.1] text-accent">{title}</h1>
           <Outlet />
         </div>
       </main>
