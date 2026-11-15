@@ -117,33 +117,35 @@ font swaps in. Sentence case for headings; the menu prints in lowercase.
 8. **Packages:** "Event packages", a white card per active package: name, guest
    note, price, inclusions as divided lines, "Book this". Hidden when none.
 9. **Book:** a white panel. With the **booking request form** on (handover 20;
-   `booking_form_enabled` isn't "false"), layout **A, side by side**
-   (`docs/mockups/klowee-booking-layout-sample.html`, handover 20a):
-   - **From 820px, two columns** sharing a top edge, about 5 : 7. Left:
-     "Bring the cart to your event" (left-aligned), `book_body`,
-     `booking_form_note` when set, the **steps** (`booking_steps`: up to
-     three lines, a real ordered list with the numbers in `sky` circles),
-     then under a dashed `line` rule "Prefer to chat? Message us" with Email
-     us, Message on Instagram, Facebook (each only when set). Right: the
-     form at the column's full width.
-   - **Below 820px, one column:** heading, line, note, steps, form, then
-     "Prefer to chat?" and the buttons. The form's pairs (name and contact,
-     date and guests) sit side by side from 520px and stack below it.
-   - **The form:** your name, how to reach you (hint "Mobile number,
-     Messenger or Instagram" under the input), event date (earliest today
-     in Manila), number of guests (optional), venue, package (the active
-     ones and "Not sure yet"), anything else (optional, with a count); the
-     send button full width with "Your details are only used to reply about
-     this booking." under it. Field shape from the tab page's Pay form
-     (`cloud` fill, 1.5px `line` border, 12px corners). Errors sit under
-     each field in bold `deep` (no red: the palette has none), with a 2px
-     `deep` border and focus on the first. Sending, the button says so;
-     sent, a `sky` panel "Request sent. Klowee will get back to you." takes
-     focus in the form's place (the left column stays), with Send another.
+   `booking_form_enabled` isn't "false"), layout **B, one wide form**
+   (`docs/mockups/klowee-booking-layout-sample.html`, handover 20a; the owner
+   chose B over A after seeing A built):
+   - **A top row:** on the left "Bring the cart to your event" (left-aligned),
+     `book_body`, `booking_form_note` when set, and the **steps**
+     (`booking_steps`: up to three lines, a real ordered list with the
+     numbers in `sky` circles); on the right "or message us" with Email us,
+     Message on Instagram, Facebook (each only when set), at the row's
+     bottom. The row wraps (buttons under the words) when the words would be
+     narrower than about 20rem.
+   - **The form across the panel:** six columns from 820px (name and how to
+     reach you a half each; event date, guests and package a third each, or
+     date and guests a half each without packages; venue and anything else
+     full width), two columns from 520px, one below. Then the send button
+     with "Your details are only used to reply about this booking." beside
+     it (full-width button below 520px).
+   - **The fields:** hint "Mobile number, Messenger or Instagram" under its
+     input, event date earliest today in Manila, guests optional, package
+     the active ones and "Not sure yet", anything else optional with a
+     count. Field shape from the tab page's Pay form (`cloud` fill, 1.5px
+     `line` border, 12px corners). Errors sit under each field in bold
+     `deep` (no red: the palette has none), with a 2px `deep` border and
+     focus on the first. Sending, the button says so; sent, a `sky` panel
+     "Request sent. Klowee will get back to you." takes focus in the form's
+     place, with Send another.
    - A package card's "Book this" scrolls to the form with that package
      chosen. The form is its own chunk; its space is reserved on the
-     placeholder and the form (862px below 520px, 657px from 520px, 680px
-     from 820px; 87px less without packages).
+     placeholder and the form (862px below 520px, 657px from 520px, 518px
+     from 820px; below 820px 87px less without packages).
    With the form off, the section is exactly as before handover 20: centred
    heading, `book_body`, and the buttons.
 10. **Footer:** "© {year} Klowee Cafe, Cagayan de Oro" and the two social links.
