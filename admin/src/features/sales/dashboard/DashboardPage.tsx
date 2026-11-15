@@ -1,17 +1,16 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { useGetMonthlyQuery, useGetOutstandingQuery, useGetSummaryQuery } from '../../../api/salesApi'
 import { Button } from '../../../components/ui/Button'
 import { Card, CardHeader } from '../../../components/ui/Card'
 import { EmptyState } from '../../../components/ui/EmptyState'
-import { Table, Td, Th } from '../../../components/ui/Table'
 import { MonthStepper } from '../../../components/ui/MonthStepper'
 import { monthRange, todayInManila } from '../../../lib/dates'
-import { formatDate, formatPeso } from '../../../lib/format'
+import { formatPeso } from '../../../lib/format'
 import { SettleModal } from '../customers/SettleModal'
 import { type ChartRange, rangeParams, toChartMonths } from './chartScale'
 import { BookingRequestsPanel } from './BookingRequestsPanel'
 import { CardRequestsPanel } from './CardRequestsPanel'
+import { OutstandingTabs } from './OutstandingTabs'
 import { MonthlyChart } from './MonthlyChart'
 import { PaymentClaimsPanel } from './PaymentClaimsPanel'
 
@@ -65,45 +64,7 @@ export function DashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <Card>
-          <CardHeader>
-            <h2 className="text-[1.02rem] font-bold">Outstanding tabs</h2>
-          </CardHeader>
-          {outstanding && outstanding.length === 0 ? (
-            <EmptyState message="No open tabs. Everyone's paid up." />
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Customer</Th>
-                  <Th className="text-right">Balance</Th>
-                  <Th>Oldest unpaid</Th>
-                  <Th>
-                    <span className="sr-only">Actions</span>
-                  </Th>
-                </tr>
-              </thead>
-              <tbody>
-                {outstanding?.map((row) => (
-                  <tr key={row.customerId}>
-                    <Td>
-                      <Link className="hover:underline" to={`/sales/customers/${row.customerId}`}>
-                        {row.name}
-                      </Link>
-                    </Td>
-                    <Td className="text-right font-semibold">{formatPeso(row.balance)}</Td>
-                    <Td className="text-muted">{formatDate(row.oldestUnpaidOn)}</Td>
-                    <Td className="text-right">
-                      <Button size="sm" onClick={() => setSettling({ id: row.customerId, name: row.name, balance: row.balance })}>
-                        Settle
-                      </Button>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </Card>
+        <OutstandingTabs rows={outstanding} onSettle={(row) => setSettling({ id: row.customerId, name: row.name, balance: row.balance })} />
 
         <Card>
           <CardHeader>
