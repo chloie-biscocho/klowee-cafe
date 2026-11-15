@@ -31,6 +31,9 @@ function SiteImage({
   name: 'hero_image_url' | 'story_image_url'
   label: string
 }) {
+  // The story photo is a circle on the site (client Story.tsx, rounded-full): a square frame with a round guide.
+  // The hero image isn't shown on the site yet, so its frame is free.
+  const frame = name === 'story_image_url' ? { aspect: 1, round: true } : { aspect: 'free' as const }
   return (
     <Controller
       control={control}
@@ -39,6 +42,7 @@ function SiteImage({
         <ImageUpload
           label={label}
           folder="site"
+          {...frame}
           value={field.value === '' ? null : field.value}
           onChange={(url) => field.onChange(url ?? '')}
         />

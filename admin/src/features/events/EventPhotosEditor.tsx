@@ -116,6 +116,8 @@ export function EventPhotosEditor({ eventId, photos }: { eventId: string; photos
             compact
             label="Add photo"
             folder="events"
+            // The site's photo strip shows each at 4:3 (client EventPanel.tsx, aspect-[4/3]).
+            aspect={4 / 3}
             value={null}
             onChange={(url) => url && setDraft([...items, { url, caption: '' }])}
           />

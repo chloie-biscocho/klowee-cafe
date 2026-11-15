@@ -1,9 +1,13 @@
-import { useId, useRef, useState, type DragEvent } from 'react'
+import { lazy, Suspense, useId, useRef, useState, type DragEvent } from 'react'
 import { useUploadImageMutation } from '../../api/uploadsApi'
 import { problemMessage } from '../../lib/errors'
 import type { UploadFolder } from '../../types/api'
 import { Button } from './Button'
 import { Spinner } from './Spinner'
+import type { CropRequest } from './CropDialog'
+
+// The crop dialog and react-easy-crop load only when a dialog opens (handover 21).
+const CropDialog = lazy(() => import('./CropDialog'))
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_BYTES = 5 * 1024 * 1024
@@ -26,21 +30,41 @@ interface ImageUploadProps {
   label: string
   /** A smaller drop zone, for grids of photos. */
   compact?: boolean
+  /**
+   * The crop frame's shape: width ÷ height as the site shows this image, or
+   * 'free' where the site fixes none (the owner picks a shape).
+   */
+  aspect?: number | 'free'
+  /** The site shows it in a circle: a square frame with a round guide. */
+  round?: boolean
+  /** A QR code: "Use original" is the default, and nothing is cropped unless the frame was moved. */
+  keepOriginal?: boolean
 }
 
 /**
- * Click or drop an image; it uploads straight away and `onChange` receives the
- * public URL. Remove only clears the field — the stored object stays in the
- * bucket (orphan cleanup is a known gap, decision 009).
+ * Click or drop an image; after the pre-check a crop dialog opens (handover
+ * 21): Use original, or Crop and upload, and `onChange` receives the public
+ * URL. Cancel keeps the previous image. An existing image can be cropped again
+ * (Crop), which uploads the result as a new file. Remove only clears the field;
+ * the stored object stays in the bucket (orphan cleanup is a known gap,
+ * decision 009).
  */
-export function ImageUpload({ value, onChange, folder, label, compact = false }: ImageUploadProps) {
+export function ImageUpload({ value, onChange, folder, label, compact = false, aspect = 'free', round = false, keepOriginal = false }: ImageUploadProps) {
   const id = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const [upload, { isLoading }] = useUploadImageMutation()
   const [error, setError] = useState<string | null>(null)
   const [isDragOver, setDragOver] = useState(false)
+  const [cropping, setCropping] = useState<CropRequest | null>(null)
+  const [opening, setOpening] = useState(false)
 
-  const accept = async (file: File | undefined) => {
+  const closeCrop = () => {
+    if (cropping) URL.revokeObjectURL(cropping.src)
+    setCropping(null)
+  }
+
+  /** A chosen or dropped file: the pre-check, then the crop dialog. */
+  const accept = (file: File | undefined) => {
     if (!file) return
     const problem = precheckImage(file)
     if (problem) {
@@ -48,6 +72,30 @@ export function ImageUpload({ value, onChange, folder, label, compact = false }:
       return
     }
     setError(null)
+    setCropping({ src: URL.createObjectURL(file), file })
+  }
+
+  /** Crop the stored image: fetched as a blob, so the canvas can read it (storage allows any origin). */
+  const recrop = async () => {
+    if (!value) return
+    setOpening(true)
+    setError(null)
+    try {
+      const response = await fetch(value)
+      if (!response.ok) throw new Error(String(response.status))
+      const blob = await response.blob()
+      const name = decodeURIComponent(value.split('/').pop() ?? 'image')
+      const file = new File([blob], name, { type: blob.type || 'image/webp' })
+      setCropping({ src: URL.createObjectURL(file), file, recrop: true })
+    } catch {
+      setError("The stored image couldn't be opened for cropping. Try again, or upload the photo again.")
+    } finally {
+      setOpening(false)
+    }
+  }
+
+  const send = async (file: File) => {
+    closeCrop()
     try {
       const result = await upload({ file, folder }).unwrap()
       onChange(result.url)
@@ -60,7 +108,7 @@ export function ImageUpload({ value, onChange, folder, label, compact = false }:
   const onDrop = (event: DragEvent) => {
     event.preventDefault()
     setDragOver(false)
-    if (!isLoading) void accept(event.dataTransfer.files[0])
+    if (!isLoading) accept(event.dataTransfer.files[0])
   }
 
   const height = compact ? 'h-28' : 'h-36'
@@ -77,7 +125,7 @@ export function ImageUpload({ value, onChange, folder, label, compact = false }:
         accept={ACCEPTED_TYPES.join(',')}
         className="sr-only"
         onChange={(event) => {
-          void accept(event.target.files?.[0])
+          accept(event.target.files?.[0])
           // Lets the owner pick the same file again after an error.
           event.target.value = ''
         }}
@@ -94,9 +142,14 @@ export function ImageUpload({ value, onChange, folder, label, compact = false }:
             <Button size="sm" loading={isLoading} onClick={() => inputRef.current?.click()}>
               Replace
             </Button>
-            <Button size="sm" variant="danger" disabled={isLoading} onClick={() => onChange(null)}>
-              Remove
-            </Button>
+            <div className="flex gap-1.5">
+              <Button size="sm" loading={opening} disabled={isLoading} onClick={() => void recrop()}>
+                Crop
+              </Button>
+              <Button size="sm" variant="danger" disabled={isLoading} onClick={() => onChange(null)}>
+                Remove
+              </Button>
+            </div>
           </div>
         </div>
       ) : (
@@ -129,6 +182,12 @@ export function ImageUpload({ value, onChange, folder, label, compact = false }:
         <p role="alert" className="text-xs text-danger">
           {error}
         </p>
+      )}
+
+      {cropping && (
+        <Suspense fallback={null}>
+          <CropDialog request={cropping} aspect={aspect} round={round} keepOriginal={keepOriginal} onCancel={closeCrop} onDone={(file) => void send(file)} />
+        </Suspense>
       )}
     </div>
   )

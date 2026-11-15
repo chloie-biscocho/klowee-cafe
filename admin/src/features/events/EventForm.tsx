@@ -99,6 +99,8 @@ export function EventForm({
             <ImageUpload
               label="Cover image"
               folder="events"
+              // The site shows the cover on a 4:3 polaroid (client Polaroid.tsx, aspect-[4/3]).
+              aspect={4 / 3}
               value={field.value}
               onChange={field.onChange}
             />

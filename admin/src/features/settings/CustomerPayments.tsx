@@ -104,7 +104,7 @@ function MethodModal({ method, nextSort, onClose }: { method: PaymentMethodDto |
         <Controller
           control={control}
           name="qrUrl"
-          render={({ field }) => <ImageUpload label="QR code" folder="site" value={field.value} onChange={field.onChange} />}
+          render={({ field }) => <ImageUpload label="QR code" folder="site" keepOriginal value={field.value} onChange={field.onChange} />}
         />
         <div className="grid grid-cols-2 items-end gap-3">
           <Input label="Order" type="number" min={0} hint="Lower shows first." error={errors.sortOrder?.message} {...register('sortOrder')} />
