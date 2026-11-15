@@ -142,8 +142,12 @@ export function EventsPage() {
           onClose={closeForm}
           onSubmit={async (values) => {
             const created = await run(createEvent(toEventRequest(values)), 'Event created.')
+            if (!created.ok) return
+            setFormOpen(false)
+            // Used up: Back from the new event must not reopen the prefilled form.
+            if (prefill) navigate('.', { replace: true, state: null })
             // Photos and publishing live on the detail page, so go straight there.
-            if (created.ok) navigate(`/site/events/${created.data.id}`)
+            navigate(`/site/events/${created.data.id}`)
           }}
         />
       )}

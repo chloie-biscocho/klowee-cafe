@@ -172,6 +172,25 @@ describe('Bookings', () => {
     expect(router.state.location.state).toBeNull()
   })
 
+  it('after creating the event, Back does not reopen the prefilled form', async () => {
+    serveBookings()
+    server.use(http.post(`${API}/events`, async ({ request: req }) => {
+      const body = (await req.json()) as Record<string, unknown>
+      return HttpResponse.json({ ...body, id: 'e0000000-0000-0000-0000-0000000000aa', isPublished: false, photos: [], coverPhotoUrl: null }, { status: 201 })
+    }))
+    const { user, router } = renderApp(`/site/bookings/${request.id}`, signedIn)
+
+    await user.click(await screen.findByRole('button', { name: 'Create event' }))
+    const dialog = await screen.findByRole('dialog', { name: 'New event' })
+    await user.click(within(dialog).getByRole('button', { name: 'Create event' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/site/events/e0000000-0000-0000-0000-0000000000aa'))
+
+    await router.navigate(-1)
+    await waitFor(() => expect(router.state.location.pathname).toBe('/site/events'))
+    expect(router.state.location.state).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'New event' })).not.toBeInTheDocument()
+  })
+
   it('the Dashboard lists New requests with a link to each', async () => {
     serveBookings()
     renderApp('/', signedIn)
