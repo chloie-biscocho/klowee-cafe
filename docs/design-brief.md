@@ -52,11 +52,19 @@ measured from the font files) so the hero heading keeps its lines when the
 font swaps in. Sentence case for headings; the menu prints in lowercase.
 
 ## Motifs
-- **Clouds:** a pill with two round puffs, six in the hero, sizes and drift
-  distances from the mockup (`.cloud-1` to `.cloud-6`).
+- **Clouds:** a pill with two round puffs. Six in the hero, sizes and drift
+  distances from the mockup (`.cloud-1` to `.cloud-6`). Below the hero, one sky
+  behind every section from the shelf to Book (handover 19): 19 clouds on a
+  computer, 9 on a phone, from a fixed list (`lib/pageClouds.ts`), scattered
+  rather than tiled: mostly hanging off the edges, a few large and very soft
+  (opacity 0.4 to 0.5), only small faint ones near the middle. Big clouds drift
+  slower (44 to 52 s) than small ones (24 to 28 s). The footer stays clear.
 - **Logo sticker:** the owners' logo in a 184px circle in the hero only. The
   header is a text wordmark; there is no logo up there or on the cups.
-- **Cups:** a tapered glass of three layers under a lid, no labels.
+- **Cups:** a tapered glass of three layers under a lid, no label at rest.
+  Each rests tilted ±3°, alternating; hovered, tapped (for 1.2 s on touch) or
+  with the shelf focused from the keyboard, it straightens, lifts 6px over a
+  soft shadow and shows its name in a small white tag (handover 19).
 - **Marker ovals:** a hand-drawn pink loop sized to each category label,
   generated in code (`lib/ovalPath.ts`), slightly rotated, alternating.
 - **Dotted leaders** between a drink and its price.
@@ -85,7 +93,9 @@ font swaps in. Sentence case for headings; the menu prints in lowercase.
    menu order, each drink once (a trailing "(Houseblend)" style note is
    stripped, so each matcha appears once). A single row sized to whole cups,
    between two round arrow buttons, no visible scrollbar, swipe on touch,
-   arrows disabled at the ends. Hidden when there is no menu.
+   arrows disabled at the ends; an arrow pages exactly one window. Cups are
+   74 × 106 (58 × 85 at 760px and below) with 24px (13px) gaps, 20% smaller
+   than at launch, so a computer shows 8 instead of 7. Hidden when there is no menu.
 5. **Our story:** white panel, round photo (`story_image_url`) or an empty
    round slot, `story_heading`, `story_body` in paragraphs. Hidden when both
    heading and body are empty.
@@ -116,6 +126,10 @@ Three animations, all stopped under `prefers-reduced-motion`:
 - **Ovals draw in** once, when the menu sheet first enters the viewport
   (`stroke-dashoffset` from 1 to 0 on a `pathLength="1"` path).
 
+The page's clouds use the hero's drift. Cups lift with the polaroids' 200ms
+ease; under reduced motion they keep their tilt and never lift, though a
+hovered cup still shows its name.
+
 Polaroids straighten with a 200ms transition, and the ticker's dot pulses
 (opacity only, stopped under reduced motion). Nothing else moves.
 
@@ -136,8 +150,8 @@ Polaroids straighten with a 200ms transition, and the ticker's dot pulses
 
 ## Responsive
 Container 1000px with 22px gutters. At 760px and below: header links wrap and the theme switch drops below them,
-smaller cups (72 × 106) and arrows, one menu column, one package column,
-stacked story, and the clouds reposition (the fifth hides).
+smaller cups (58 × 85) and arrows, one menu column, one package column,
+stacked story, the hero's clouds reposition (the fifth hides), and the page sky drops to 9 clouds, each at most 70% of the screen wide.
 
 ## Copy rules
 Text comes from the payload or is a fixed label from the mockup. The mockup's
@@ -198,7 +212,7 @@ owner. Same tokens, fonts and theme switch as the homepage; light by default.
 
 ## Accessibility floor
 Skip link, header/main/footer landmarks, every section labelled by its heading.
-Visible 3px `deep` focus rings. Cups are images with the drink's name as label
-and title. Arrow buttons are real buttons that disable at the ends. Polaroids
+Visible 3px `deep` focus rings. Cups are images with the drink's name as label;
+the visible name tag is hidden from assistive tech, and no cup is a tab stop. Arrow buttons are real buttons that disable at the ends. Polaroids
 are buttons with `aria-expanded`. Decorative clouds, ovals and dotted leaders
 are hidden from assistive tech.
