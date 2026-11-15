@@ -122,7 +122,7 @@ export default function CropDialog({ request, aspect, round = false, keepOrigina
             </p>
           )}
 
-          <div className="relative h-[min(60vh,420px)] overflow-hidden rounded-2xl bg-ink">
+          <div className="relative h-[min(60vh,420px)] overflow-hidden rounded-2xl bg-card-ink">
             <Cropper
               image={request.src}
               crop={crop}
