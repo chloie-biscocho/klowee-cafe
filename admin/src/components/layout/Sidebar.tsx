@@ -37,6 +37,7 @@ const NAV_GROUPS: NavGroup[] = [
     links: [
       { to: '/site/packages', label: 'Packages' },
       { to: '/site/events', label: 'Events' },
+      { to: '/site/bookings', label: 'Bookings' },
       { to: '/site/announcements', label: 'Announcements' },
       { to: '/site/settings', label: 'Settings' },
     ],
@@ -51,7 +52,8 @@ export function Sidebar() {
   // for the owners, payments to confirm and cards asked for (handover 17).
   const [from, to] = monthRange(todayInManila())
   const { data: summary } = useGetSummaryQuery({ from, to })
-  const waiting = (summary?.pendingClaimsCount ?? 0) + (summary?.pendingCardRequestsCount ?? 0)
+  // Booking requests still New count too (handover 20).
+  const waiting = (summary?.pendingClaimsCount ?? 0) + (summary?.pendingCardRequestsCount ?? 0) + (summary?.newBookingsCount ?? 0)
 
   return (
     <aside className="relative flex shrink-0 flex-col overflow-hidden bg-side text-side-ink wide:w-[232px] max-wide:flex-row max-wide:flex-wrap max-wide:items-center max-wide:gap-x-1 max-wide:gap-y-1 max-wide:px-3 max-wide:py-2.5">

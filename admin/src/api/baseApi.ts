@@ -57,6 +57,7 @@ const baseQueryWithAuth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQuery
 /** Every tag any endpoint provides or invalidates. */
 export const TAG_TYPES = [
   'Me',
+  'Booking',
   'Category',
   'Item',
   'AddOn',

@@ -313,8 +313,12 @@ export interface SiteSettingDto {
 /** Shown on customers' tab pages, edited with the payment methods (handover 17). */
 export const TAB_NOTE_KEY = 'tab_page_note' as const
 
+/** The homepage's booking form (handover 20): on unless exactly "false", and an optional line above it. */
+export const BOOKING_ENABLED_KEY = 'booking_form_enabled' as const
+export const BOOKING_NOTE_KEY = 'booking_form_note' as const
+
 export interface SiteSettingRequest {
-  key: SettingKey | typeof TAB_NOTE_KEY
+  key: SettingKey | typeof TAB_NOTE_KEY | typeof BOOKING_ENABLED_KEY | typeof BOOKING_NOTE_KEY
   value: string | null
 }
 
@@ -689,6 +693,8 @@ export interface SummaryReportDto {
   /** Waiting for the owners, whatever the range (handover 17). */
   pendingClaimsCount: number
   pendingCardRequestsCount: number
+  /** Booking requests still New (handover 20). Missing from an API before it. */
+  newBookingsCount?: number
 }
 
 export interface OutstandingRowDto {
@@ -774,4 +780,43 @@ export interface CardRequestDto {
   clubId: string
   clubName: string
   requestedAt: string
+}
+
+// ---- Booking requests (handover 20, decision 023) ----
+
+export const BOOKING_STATUSES = ['New', 'Contacted', 'Confirmed', 'Declined'] as const
+export type BookingStatus = (typeof BOOKING_STATUSES)[number]
+
+export interface BookingSummaryDto {
+  id: string
+  eventDate: string
+  name: string
+  venue: string
+  guestCount: number | null
+  packageName: string | null
+  status: BookingStatus
+  createdAt: string
+}
+
+export interface BookingDto {
+  id: string
+  name: string
+  contact: string
+  eventDate: string
+  venue: string
+  guestCount: number | null
+  packageId: string | null
+  packageName: string | null
+  message: string | null
+  status: BookingStatus
+  ownerNotes: string | null
+  statusChangedAt: string | null
+  statusChangedByName: string | null
+  createdAt: string
+}
+
+/** Always both: empty notes clear them. */
+export interface UpdateBookingRequest {
+  status: BookingStatus
+  ownerNotes: string | null
 }

@@ -10,6 +10,7 @@ import { monthRange, todayInManila } from '../../../lib/dates'
 import { formatDate, formatPeso } from '../../../lib/format'
 import { SettleModal } from '../customers/SettleModal'
 import { type ChartRange, rangeParams, toChartMonths } from './chartScale'
+import { BookingRequestsPanel } from './BookingRequestsPanel'
 import { CardRequestsPanel } from './CardRequestsPanel'
 import { MonthlyChart } from './MonthlyChart'
 import { PaymentClaimsPanel } from './PaymentClaimsPanel'
@@ -45,6 +46,7 @@ export function DashboardPage() {
       {/* What's waiting for the owners first (handover 17); each hides when empty. */}
       <PaymentClaimsPanel />
       <CardRequestsPanel />
+      <BookingRequestsPanel />
 
       <div>
         <MonthStepper month={month} onChange={setMonth} today={today} />

@@ -32,6 +32,12 @@ export const AddOnsPage = lazy(() =>
 export const PackagesPage = lazy(() =>
   import('../features/packages/PackagesPage').then((m) => ({ default: m.PackagesPage })),
 )
+export const BookingsPage = lazy(() =>
+  import('../features/bookings/BookingsPage').then((m) => ({ default: m.BookingsPage })),
+)
+export const BookingDetailPage = lazy(() =>
+  import('../features/bookings/BookingDetailPage').then((m) => ({ default: m.BookingDetailPage })),
+)
 export const EventsPage = lazy(() =>
   import('../features/events/EventsPage').then((m) => ({ default: m.EventsPage })),
 )

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { useCreateEventMutation, useListEventsQuery, type EventFilters } from '../../api/eventsApi'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -11,7 +11,7 @@ import { formatDateRange } from '../../lib/format'
 import { EVENT_STATUSES, type EventStatus } from '../../types/api'
 import { EventForm } from './EventForm'
 import { EVENT_STATUS_TONES } from './eventStatus'
-import { toEventRequest } from './schemas'
+import { toEventRequest, type EventValues } from './schemas'
 
 const filterClasses = 'h-8 rounded-full border-[1.5px] border-line bg-surface px-2 text-sm text-ink'
 
@@ -28,7 +28,16 @@ export function EventsPage() {
 
   const [createEvent, { isLoading: isCreating }] = useCreateEventMutation()
   const run = useToastedAction()
-  const [isFormOpen, setFormOpen] = useState(false)
+  // "Create event" on a booking request arrives here with the form's starting
+  // values in router state (never in the address), and the form open.
+  const location = useLocation()
+  const prefill = (location.state as { newEvent?: Partial<EventValues> } | null)?.newEvent
+  const [isFormOpen, setFormOpen] = useState(Boolean(prefill))
+  const closeForm = () => {
+    setFormOpen(false)
+    // Done with the prefill: a refresh or Back shouldn't open it again.
+    if (prefill) navigate('.', { replace: true, state: null })
+  }
 
   const isFiltered = status !== '' || published !== ''
 
@@ -128,8 +137,9 @@ export function EventsPage() {
       {isFormOpen && (
         <EventForm
           event={null}
+          initial={prefill}
           saving={isCreating}
-          onClose={() => setFormOpen(false)}
+          onClose={closeForm}
           onSubmit={async (values) => {
             const created = await run(createEvent(toEventRequest(values)), 'Event created.')
             // Photos and publishing live on the detail page, so go straight there.

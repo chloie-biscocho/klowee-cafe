@@ -55,6 +55,7 @@ export const handlers = [
   http.get(`${API}/payment-claims`, () => HttpResponse.json([])),
   http.get(`${API}/payment-methods`, () => HttpResponse.json([])),
   http.get(`${API}/loyalty/card-requests`, () => HttpResponse.json([])),
+  http.get(`${API}/bookings`, () => HttpResponse.json({ items: [], page: 1, pageSize: 20, totalCount: 0 })),
   http.get(`${API}/reports/monthly`, ({ request }) => {
     const params = new URL(request.url).searchParams
     return HttpResponse.json(monthly(params.get('from'), params.get('to')!))

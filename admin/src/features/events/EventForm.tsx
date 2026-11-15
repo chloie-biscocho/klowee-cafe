@@ -13,12 +13,15 @@ import { eventSchema, type EventValues } from './schemas'
 /** The core fields, for both "New event" and "Edit details". Photos live on the detail page. */
 export function EventForm({
   event,
+  initial,
   saving,
   onClose,
   onSubmit,
 }: {
   /** `null` means "new event". */
   event: EventDetailDto | null
+  /** A new event's starting values, e.g. from a booking request (handover 20). */
+  initial?: Partial<EventValues>
   saving: boolean
   onClose: () => void
   onSubmit: (values: EventValues) => void
@@ -27,12 +30,12 @@ export function EventForm({
   const { register, handleSubmit, control, formState } = useForm<EventValues>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
-      name: event?.name ?? '',
-      venue: event?.venue ?? '',
+      name: event?.name ?? initial?.name ?? '',
+      venue: event?.venue ?? initial?.venue ?? '',
       address: event?.address ?? '',
-      startsOn: event?.startsOn ?? today,
-      endsOn: event?.endsOn ?? today,
-      status: event?.status ?? 'Planned',
+      startsOn: event?.startsOn ?? initial?.startsOn ?? today,
+      endsOn: event?.endsOn ?? initial?.endsOn ?? today,
+      status: event?.status ?? initial?.status ?? 'Planned',
       description: event?.description ?? '',
       coverPhotoUrl: event?.coverPhotoUrl ?? null,
     },
