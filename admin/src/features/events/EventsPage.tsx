@@ -13,7 +13,7 @@ import { EventForm } from './EventForm'
 import { EVENT_STATUS_TONES } from './eventStatus'
 import { toEventRequest } from './schemas'
 
-const filterClasses = 'h-8 rounded-md border border-line bg-surface px-2 text-sm text-ink'
+const filterClasses = 'h-8 rounded-full border-[1.5px] border-line bg-surface px-2 text-sm text-ink'
 
 export function EventsPage() {
   const navigate = useNavigate()

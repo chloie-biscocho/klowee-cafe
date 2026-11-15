@@ -15,7 +15,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Card className="mb-4">
       <CardHeader>
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="text-[1.02rem] font-bold">{title}</h2>
       </CardHeader>
       <div className="flex flex-col gap-4 p-4">{children}</div>
     </Card>

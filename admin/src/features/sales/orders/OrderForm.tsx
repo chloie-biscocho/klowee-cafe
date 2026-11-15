@@ -107,7 +107,7 @@ export function OrderForm({
         />
 
         {order?.discountType === 'LoyaltyFree' && (
-          <p className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning">
+          <p className="rounded-2xl bg-warning-soft px-3 py-2 text-sm text-warning">
             This order used the old card's free drink, which can't be saved again. It will save with no discount: put a
             reward on the drink's line instead.
           </p>

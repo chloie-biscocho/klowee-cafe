@@ -4,7 +4,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 export function Table({ children }: { children: ReactNode }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">{children}</table>
+      <table className="w-full border-collapse text-sm [&_tbody_tr:last-child_td]:border-b-0">{children}</table>
     </div>
   )
 }
@@ -12,7 +12,7 @@ export function Table({ children }: { children: ReactNode }) {
 export function Th({ className = '', children, ...rest }: ComponentPropsWithoutRef<'th'>) {
   return (
     <th
-      className={`border-b border-line px-4 py-2.5 text-left text-xs font-semibold text-muted ${className}`}
+      className={`border-b-[1.5px] border-line px-4 py-2.5 text-left text-[0.8rem] font-bold text-muted ${className}`}
       {...rest}
     >
       {children}
@@ -22,7 +22,7 @@ export function Th({ className = '', children, ...rest }: ComponentPropsWithoutR
 
 export function Td({ className = '', children, ...rest }: ComponentPropsWithoutRef<'td'>) {
   return (
-    <td className={`border-b border-line px-4 py-2.5 align-middle ${className}`} {...rest}>
+    <td className={`border-b-[1.5px] border-line px-4 py-2.5 align-middle ${className}`} {...rest}>
       {children}
     </td>
   )

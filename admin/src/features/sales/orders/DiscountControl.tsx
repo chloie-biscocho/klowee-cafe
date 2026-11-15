@@ -25,7 +25,7 @@ export function DiscountControl({
         Discount
       </span>
       <div className="flex flex-wrap items-center gap-3">
-        <div role="radiogroup" aria-labelledby="discount-label" className="inline-flex rounded-md border border-line p-0.5">
+        <div role="radiogroup" aria-labelledby="discount-label" className="inline-flex rounded-full border-[1.5px] border-line p-0.5">
           {OPTIONS.map((option) => {
             return (
               <button
@@ -33,7 +33,7 @@ export function DiscountControl({
                 type="button"
                 role="radio"
                 aria-checked={type === option.value}
-                className={`rounded px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${
+                className={`rounded-full px-3.5 py-1 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-40 ${
                   type === option.value ? 'bg-accent text-on-accent' : 'text-ink hover:bg-canvas'
                 }`}
                 onClick={() => onChange(option.value, option.value === type ? value : '')}
@@ -53,7 +53,7 @@ export function DiscountControl({
               max={type === 'Percent' ? 100 : undefined}
               step={type === 'Percent' ? '0.5' : '1'}
               autoFocus
-              className="h-8 w-24 rounded-md border border-line px-2 text-sm"
+              className="h-8 w-24 rounded-full border-[1.5px] border-line px-2 text-sm"
               value={value}
               onChange={(event) => onChange(type, event.target.value)}
             />

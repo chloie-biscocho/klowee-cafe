@@ -66,7 +66,7 @@ export function SettleModal({
       {result ? (
         <div className="flex flex-col gap-2">
           <p className="text-sm">Spread over {result.length === 1 ? 'one order' : `${result.length} orders`}, oldest first:</p>
-          <ul className="divide-y divide-line rounded-md border border-line text-sm">
+          <ul className="divide-y divide-line rounded-2xl border border-line text-sm">
             {result.map((payment) => (
               <li key={payment.id} className="flex justify-between px-3 py-2">
                 <Link className="text-accent hover:underline" to={`/sales/orders/${payment.orderId}`} onClick={onClose}>

@@ -81,7 +81,7 @@ export function PaymentClaimsPanel() {
   return (
     <Card>
       <CardHeader>
-        <h2 className="text-sm font-semibold">Payments to confirm</h2>
+        <h2 className="text-[1.02rem] font-bold">Payments to confirm</h2>
         <span className="text-xs text-muted">Check the account for each reference, then confirm.</span>
       </CardHeader>
       <Table>

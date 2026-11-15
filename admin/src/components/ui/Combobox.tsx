@@ -66,7 +66,7 @@ export function Combobox({ label, options, value, onChange, placeholder, autoFoc
 
   return (
     <div className="relative flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-xs font-semibold text-muted">
+      <label htmlFor={id} className="text-[0.8rem] font-bold text-muted">
         {label}
       </label>
       <input
@@ -99,7 +99,7 @@ export function Combobox({ label, options, value, onChange, placeholder, autoFoc
           id={listId}
           role="listbox"
           aria-label={label}
-          className="absolute top-full z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-line bg-surface py-1 shadow-lg"
+          className="absolute top-full z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-2xl border-[1.5px] border-line bg-surface py-1.5 shadow-lg"
         >
           {matches.map((option, index) => (
             <li

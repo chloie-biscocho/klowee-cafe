@@ -15,7 +15,7 @@ export function LoyaltyLedger({ customerId, clubs }: { customerId: string; clubs
   const filter = (
     <label className="flex items-center gap-2 px-3 pt-3 text-sm">
       <span className="text-muted">Card</span>
-      <select aria-label="Card" className="h-8 rounded-md border border-line px-2 text-sm" value={clubId} onChange={(e) => setClubId(e.target.value)}>
+      <select aria-label="Card" className="h-8 rounded-full border-[1.5px] border-line px-2 text-sm" value={clubId} onChange={(e) => setClubId(e.target.value)}>
         <option value="">All cards</option>
         {clubs.map((club) => (
           <option key={club.clubId} value={club.clubId}>

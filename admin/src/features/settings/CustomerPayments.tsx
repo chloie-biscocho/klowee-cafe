@@ -168,7 +168,7 @@ export function CustomerPayments({ note }: { note: string }) {
   return (
     <Card className="mb-4">
       <CardHeader>
-        <h2 className="text-sm font-semibold">Customer payments</h2>
+        <h2 className="text-[1.02rem] font-bold">Customer payments</h2>
         <Button size="sm" variant="primary" onClick={() => setEditing('new')}>
           Add a way to pay
         </Button>
@@ -179,7 +179,7 @@ export function CustomerPayments({ note }: { note: string }) {
         {!isLoading && methods?.length === 0 && (
           <p className="text-sm text-muted">No ways to pay yet. Until you add one, tab pages ask customers to pay in person.</p>
         )}
-        <ul className="divide-y divide-line rounded-md border border-line empty:hidden">
+        <ul className="divide-y divide-line rounded-2xl border border-line empty:hidden">
           {methods?.map((method) => (
             <li key={method.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
               {method.qrUrl ? (

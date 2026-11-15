@@ -38,14 +38,14 @@ export function Modal({ open, title, onClose, children, footer, width = 'max-w-l
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`w-full ${width} rounded-lg border border-line bg-surface shadow-lg`}
+        className={`w-full ${width} rounded-[18px] bg-surface shadow-lg`}
       >
-        <div className="border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold">{title}</h2>
+        <div className="border-b-[1.5px] border-line px-5 py-3.5">
+          <h2 className="font-serif text-lg text-accent">{title}</h2>
         </div>
-        <div className="px-4 py-4">{children}</div>
+        <div className="px-5 py-4">{children}</div>
         {footer && (
-          <div className="flex justify-end gap-2 border-t border-line px-4 py-3">{footer}</div>
+          <div className="flex justify-end gap-2 border-t-[1.5px] border-line px-5 py-3.5">{footer}</div>
         )}
       </div>
     </div>

@@ -105,7 +105,7 @@ export function CustomersPage() {
             <input
               aria-label="Search customers"
               placeholder="Search name or nickname"
-              className="h-8 w-56 rounded-md border border-line px-2.5 text-sm"
+              className="h-8 w-56 rounded-full border-[1.5px] border-line px-2.5 text-sm"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />

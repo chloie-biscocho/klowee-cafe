@@ -38,7 +38,7 @@ export function PaymentsSection({ order }: { order: OrderDetailDto }) {
   return (
     <Card>
       <CardHeader>
-        <h2 className="text-sm font-semibold">Payments</h2>
+        <h2 className="text-[1.02rem] font-bold">Payments</h2>
       </CardHeader>
       {order.payments.length > 0 && (
         <Table>

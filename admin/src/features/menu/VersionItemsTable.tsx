@@ -52,7 +52,7 @@ export function VersionItemsTable({
                     aria-label={`Price for ${item.name}`}
                     value={item.price}
                     onChange={(event) => onChange(index, { price: event.target.value })}
-                    className="h-8 w-24 rounded-md border border-line bg-surface px-2 text-sm"
+                    className="h-8 w-24 rounded-full border-[1.5px] border-line bg-surface px-2 text-sm"
                   />
                 )}
               </Td>

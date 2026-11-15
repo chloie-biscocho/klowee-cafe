@@ -67,7 +67,7 @@ export function ImageUpload({ value, onChange, folder, label, compact = false }:
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-xs font-semibold text-muted">
+      <label htmlFor={id} className="text-[0.8rem] font-bold text-muted">
         {label}
       </label>
       <input
@@ -88,7 +88,7 @@ export function ImageUpload({ value, onChange, folder, label, compact = false }:
           <img
             src={value}
             alt={label}
-            className={`${height} max-w-full rounded-md border border-line object-cover`}
+            className={`${height} max-w-full rounded-2xl border border-line object-cover`}
           />
           <div className="flex flex-col gap-1.5">
             <Button size="sm" loading={isLoading} onClick={() => inputRef.current?.click()}>
@@ -110,7 +110,7 @@ export function ImageUpload({ value, onChange, folder, label, compact = false }:
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          className={`relative flex ${height} w-full flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed text-sm transition-colors ${
+          className={`relative flex ${height} w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed text-sm transition-colors ${
             isDragOver ? 'border-accent bg-accent-soft text-accent' : 'border-line text-muted hover:bg-canvas'
           }`}
         >

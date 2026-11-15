@@ -59,12 +59,12 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.label} className="p-4">
-            <p className="text-xs font-semibold text-muted uppercase">{stat.label}</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums" aria-label={stat.label}>
+          <Card key={stat.label} className="px-5 py-[18px]">
+            <p className="text-[0.92rem] text-muted">{stat.label}</p>
+            <p className="mt-0.5 font-serif text-[1.75rem] leading-[1.2] text-accent tabular-nums" aria-label={stat.label}>
               {stat.value}
             </p>
-            <p className="text-xs text-muted">{stat.note}</p>
+            <p className="text-[0.85rem] text-muted">{stat.note}</p>
           </Card>
         ))}
       </div>
@@ -72,7 +72,7 @@ export function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Card>
           <CardHeader>
-            <h2 className="text-sm font-semibold">Outstanding tabs</h2>
+            <h2 className="text-[1.02rem] font-bold">Outstanding tabs</h2>
           </CardHeader>
           {outstanding && outstanding.length === 0 ? (
             <EmptyState message="No open tabs. Everyone's paid up." />
@@ -110,7 +110,7 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <h2 className="text-sm font-semibold">Top drinks {isCurrentMonth ? 'this month' : 'that month'}</h2>
+            <h2 className="text-[1.02rem] font-bold">Top drinks {isCurrentMonth ? 'this month' : 'that month'}</h2>
           </CardHeader>
           {summary && summary.topItems.length === 0 ? (
             <EmptyState message="No drinks sold this month yet." />
@@ -132,7 +132,7 @@ export function DashboardPage() {
 
       <Card className="p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold">Revenue by month</h2>
+          <h2 className="text-[1.02rem] font-bold">Revenue by month</h2>
           <div className="flex gap-1" role="group" aria-label="Chart range">
             {RANGES.map(({ value, label }) => (
               <Button key={value} size="sm" variant={range === value ? 'primary' : 'ghost'} aria-pressed={range === value} onClick={() => setRange(value)}>

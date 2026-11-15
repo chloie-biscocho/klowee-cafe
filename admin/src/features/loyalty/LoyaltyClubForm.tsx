@@ -28,7 +28,7 @@ function AccentPicker({ name, value, onChange }: { name: string; value: number |
         <button
           type="button"
           aria-pressed={current === null}
-          className={`h-8 rounded-md border px-2 text-xs ${current === null ? 'border-accent bg-accent-soft font-semibold text-accent' : 'border-line text-muted'}`}
+          className={`h-8 rounded-full border px-2 text-xs ${current === null ? 'border-accent bg-accent-soft font-semibold text-accent' : 'border-line text-muted'}`}
           onClick={() => onChange(null)}
         >
           None
@@ -40,7 +40,7 @@ function AccentPicker({ name, value, onChange }: { name: string; value: number |
               type="button"
               aria-pressed={current === index}
               aria-label={`Letter ${index + 1}, ${char.toUpperCase()}`}
-              className={`h-8 w-7 rounded-md border text-sm font-bold ${
+              className={`h-8 w-7 rounded-full border text-sm font-bold ${
                 current === index ? 'border-stamp-pink-edge bg-stamp-pink text-danger' : 'border-line'
               }`}
               onClick={() => onChange(index)}

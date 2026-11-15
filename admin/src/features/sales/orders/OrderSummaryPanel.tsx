@@ -34,7 +34,7 @@ export function OrderSummaryPanel({
 
   return (
     <Card className="sticky top-6 flex flex-col gap-3 p-4">
-      <h2 className="text-sm font-semibold">Summary</h2>
+      <h2 className="text-[1.02rem] font-bold">Summary</h2>
       {lines.length === 0 ? (
         <p className="text-sm text-muted">No drinks yet.</p>
       ) : (

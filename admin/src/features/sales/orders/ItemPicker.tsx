@@ -58,7 +58,7 @@ export function ItemPicker({ items, addOns, lines, onChange, filterRef, rewardsF
         ref={filterRef}
         aria-label="Find a drink"
         placeholder="Type to find a drink, Enter to add one"
-        className="h-9 w-full rounded-md border border-line px-2.5 text-sm"
+        className="h-9 w-full rounded-full border-[1.5px] border-line px-2.5 text-sm"
         value={filter}
         onChange={(event) => {
           setFilter(event.target.value)
@@ -66,7 +66,7 @@ export function ItemPicker({ items, addOns, lines, onChange, filterRef, rewardsF
         }}
         onKeyDown={onKeyDown}
       />
-      <div className="max-h-[28rem] overflow-y-auto rounded-md border border-line">
+      <div className="max-h-[28rem] overflow-y-auto rounded-2xl border border-line">
         {groups.length === 0 && <p className="px-3 py-6 text-center text-sm text-muted">No drink matches “{filter}”.</p>}
         {groups.map((group) => (
           <section key={group.category} aria-label={group.category}>
@@ -92,7 +92,7 @@ export function ItemPicker({ items, addOns, lines, onChange, filterRef, rewardsF
                         <button
                           type="button"
                           aria-label={`One less ${item.name}`}
-                          className="size-7 rounded-md border border-line text-sm disabled:opacity-40"
+                          className="size-7 rounded-full border-[1.5px] border-line text-sm disabled:opacity-40"
                           disabled={line.quantity === 0}
                           onClick={() => step(item.menuVersionItemId, -1)}
                         >
@@ -104,7 +104,7 @@ export function ItemPicker({ items, addOns, lines, onChange, filterRef, rewardsF
                         <button
                           type="button"
                           aria-label={`One more ${item.name}`}
-                          className="size-7 rounded-md border border-line text-sm"
+                          className="size-7 rounded-full border-[1.5px] border-line text-sm"
                           onClick={() => step(item.menuVersionItemId, 1)}
                         >
                           +

@@ -55,7 +55,7 @@ export function VersionsPage() {
           <label className="flex items-center gap-2 text-sm text-muted">
             Context
             <select
-              className="h-8 rounded-md border border-line bg-surface px-2 text-sm text-ink"
+              className="h-8 rounded-full border-[1.5px] border-line bg-surface px-2 text-sm text-ink"
               value={context}
               onChange={(event) => setContext(event.target.value as MenuContext | '')}
             >

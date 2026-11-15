@@ -21,7 +21,7 @@ export function TabLinkBox({ customer }: { customer: CustomerDetailDto }) {
 
   return (
     <Card className="flex flex-col gap-2 p-5">
-      <h2 className="text-sm font-semibold">Tab link</h2>
+      <h2 className="text-[1.02rem] font-bold">Tab link</h2>
       {customer.tabUrl ? (
         <>
           <div className="flex flex-wrap items-center gap-2">
@@ -30,7 +30,7 @@ export function TabLinkBox({ customer }: { customer: CustomerDetailDto }) {
               aria-label="Tab link"
               value={customer.tabUrl}
               onFocus={(event) => event.target.select()}
-              className="h-8 min-w-0 flex-1 rounded-md border border-line bg-canvas px-2.5 font-mono text-xs"
+              className="h-8 min-w-0 flex-1 rounded-full border-[1.5px] border-line bg-canvas px-2.5 font-mono text-xs"
             />
             <Button size="sm" variant="primary" onClick={() => copy(customer.tabUrl!, 'Link')}>
               Copy

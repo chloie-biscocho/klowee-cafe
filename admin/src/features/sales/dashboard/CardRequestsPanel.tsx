@@ -29,7 +29,7 @@ export function CardRequestsPanel() {
   return (
     <Card>
       <CardHeader>
-        <h2 className="text-sm font-semibold">Card requests</h2>
+        <h2 className="text-[1.02rem] font-bold">Card requests</h2>
       </CardHeader>
       <Table>
         <thead>

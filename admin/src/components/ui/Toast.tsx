@@ -21,7 +21,7 @@ export function Toast({ toast, onDismiss }: { toast: ToastModel; onDismiss: (id:
   return (
     <div
       role="status"
-      className={`pointer-events-auto flex w-80 items-start gap-3 rounded-md border px-3 py-2.5 text-sm shadow-sm ${tones[toast.tone]}`}
+      className={`pointer-events-auto flex w-80 items-start gap-3 rounded-2xl border px-3.5 py-2.5 text-sm shadow-sm ${tones[toast.tone]}`}
     >
       <span className="flex-1">{toast.message}</span>
       <button

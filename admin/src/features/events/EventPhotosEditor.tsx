@@ -64,7 +64,7 @@ export function EventPhotosEditor({ eventId, photos }: { eventId: string; photos
             <img
               src={photo.url}
               alt={photo.caption || `Photo ${index + 1}`}
-              className="h-28 w-full rounded-md border border-line object-cover"
+              className="h-28 w-full rounded-2xl border border-line object-cover"
             />
             <input
               aria-label={`Caption for photo ${index + 1}`}
@@ -78,7 +78,7 @@ export function EventPhotosEditor({ eventId, photos }: { eventId: string; photos
                   ),
                 )
               }
-              className="h-8 w-full rounded-md border border-line bg-surface px-2 text-sm"
+              className="h-8 w-full rounded-full border-[1.5px] border-line bg-surface px-2 text-sm"
             />
             <div className="flex gap-1">
               <Button

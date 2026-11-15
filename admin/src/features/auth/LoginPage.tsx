@@ -56,9 +56,10 @@ export function LoginPage() {
       <form
         onSubmit={onSubmit}
         noValidate
-        className="w-full max-w-sm rounded-lg border border-line bg-surface p-6"
+        className="w-full max-w-sm rounded-[18px] bg-surface p-7"
       >
-        <h1 className="text-lg font-bold tracking-tight">Klowee admin</h1>
+        <img src="/logo.jpg" alt="" width={56} height={56} className="mb-3 size-14 rounded-full" />
+        <h1 className="font-serif text-[1.6rem] leading-tight text-accent">Klowee admin</h1>
         <p className="mt-1 mb-5 text-sm text-muted">Sign in to manage the menu.</p>
 
         <div className="flex flex-col gap-4">
@@ -80,7 +81,7 @@ export function LoginPage() {
         </div>
 
         {error && (
-          <p role="alert" className="mt-4 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
+          <p role="alert" className="mt-4 rounded-2xl bg-danger-soft px-3.5 py-2 text-sm text-danger">
             {problemMessage(error, 'Could not sign in.')}
           </p>
         )}

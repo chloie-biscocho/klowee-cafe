@@ -51,7 +51,7 @@ export function AddItemPicker({ open, loading, candidates, onClose, onAdd }: Add
       <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
         {candidates.map((item) => (
           <li key={item.id}>
-            <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-canvas">
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-2xl px-2 py-1.5 text-sm hover:bg-canvas">
               <input
                 type="checkbox"
                 className="size-4 accent-accent"

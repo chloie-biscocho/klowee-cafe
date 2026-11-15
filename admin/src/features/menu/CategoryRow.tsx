@@ -9,7 +9,7 @@ import { categorySchema, type CategoryValues } from './schemas'
 type CategoryInput = z.input<typeof categorySchema>
 
 const cellInput =
-  'h-8 w-full rounded-md border border-line bg-surface px-2 text-sm focus:border-accent'
+  'h-8 w-full rounded-full border-[1.5px] border-line bg-surface px-2 text-sm focus:border-accent'
 
 /** The editing state of an existing row: the same three columns, as inputs. */
 export function CategoryRow({

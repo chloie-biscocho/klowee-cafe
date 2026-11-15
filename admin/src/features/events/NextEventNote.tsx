@@ -19,7 +19,7 @@ export function NextEventNote({ event }: { event: EventDetailDto }) {
 
   return (
     <p
-      className={`mb-4 rounded-md border px-3 py-2 text-sm ${
+      className={`mb-4 rounded-2xl border px-3 py-2 text-sm ${
         verdict.kind === 'next'
           ? 'border-success/30 bg-success-soft text-success'
           : 'border-line bg-surface text-muted'

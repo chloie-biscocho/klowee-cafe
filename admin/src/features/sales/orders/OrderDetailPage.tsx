@@ -84,7 +84,7 @@ export function OrderDetailPage() {
 
       <Card>
         <CardHeader>
-          <h2 className="text-sm font-semibold">Drinks</h2>
+          <h2 className="text-[1.02rem] font-bold">Drinks</h2>
           {discount && <span className="text-xs text-muted">Discount: {discount}</span>}
         </CardHeader>
         <Table>

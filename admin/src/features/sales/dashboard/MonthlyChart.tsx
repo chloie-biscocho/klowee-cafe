@@ -55,8 +55,8 @@ export function MonthlyChart({ months, label }: { months: ChartMonth[]; label: s
           return (
             <g key={month.key} data-testid={`chart-month-${month.key}`} onMouseEnter={() => setHovered(index)}>
               <rect x={x} y={PAD.top} width={band} height={PLOT_H} className={hovered === index ? 'fill-canvas' : 'fill-transparent'} />
-              <rect x={x + band / 2 - bar - 1} y={y(month.revenue)} width={bar} height={PAD.top + PLOT_H - y(month.revenue)} className="fill-accent" rx="2" />
-              <rect x={x + band / 2 + 1} y={y(month.collected)} width={bar} height={PAD.top + PLOT_H - y(month.collected)} className="fill-success" rx="2" />
+              <rect x={x + band / 2 - bar - 1} y={y(month.revenue)} width={bar} height={PAD.top + PLOT_H - y(month.revenue)} className="fill-chart-1" rx="3" />
+              <rect x={x + band / 2 + 1} y={y(month.collected)} width={bar} height={PAD.top + PLOT_H - y(month.collected)} className="fill-chart-2" rx="3" />
               {showsLabel(index, months.length) && (
                 <text x={x + band / 2} y={HEIGHT - 8} textAnchor="middle" className="fill-muted text-[10px]">
                   {month.label}
@@ -69,17 +69,17 @@ export function MonthlyChart({ months, label }: { months: ChartMonth[]; label: s
 
       <div className="mt-1 flex gap-4 text-xs text-muted">
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-accent" /> Revenue
+          <span className="size-2.5 rounded-sm bg-chart-1" /> Revenue
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-success" /> Collected
+          <span className="size-2.5 rounded-sm bg-chart-2" /> Collected
         </span>
       </div>
 
       {hover && hovered !== null && (
         <div
           role="tooltip"
-          className="pointer-events-none absolute top-2 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs shadow"
+          className="pointer-events-none absolute top-2 rounded-2xl border border-line bg-surface px-2.5 py-1.5 text-xs shadow"
           style={{ left: `${((PAD.left + (hovered + 0.5) * band) / WIDTH) * 100}%`, transform: 'translateX(-50%)' }}
         >
           <p className="font-semibold">{hover.label}</p>

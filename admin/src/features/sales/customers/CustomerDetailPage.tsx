@@ -73,7 +73,7 @@ export function CustomerDetailPage() {
 
       {customer.clubs.length > 0 && (
         <Card className="flex flex-col gap-3 p-5">
-          <h2 className="text-sm font-semibold">Loyalty cards</h2>
+          <h2 className="text-[1.02rem] font-bold">Loyalty cards</h2>
           <div className="grid gap-3 xl:grid-cols-2">
             {customer.clubs.map((club) => (
               <ClubCard

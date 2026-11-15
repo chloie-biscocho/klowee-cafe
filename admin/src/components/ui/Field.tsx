@@ -19,7 +19,7 @@ export function Field({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-xs font-semibold text-muted">
+      <label htmlFor={id} className="text-[0.8rem] font-bold text-muted">
         {label}
       </label>
       {children}
@@ -34,4 +34,4 @@ export function Field({
 }
 
 export const controlClasses =
-  'h-9 w-full rounded-md border border-line bg-surface px-2.5 text-sm text-ink placeholder:text-muted/70 disabled:bg-canvas disabled:text-muted'
+  'h-9 w-full rounded-full border-[1.5px] border-line bg-surface px-3.5 text-sm text-ink placeholder:text-muted/80 disabled:bg-canvas disabled:text-muted'

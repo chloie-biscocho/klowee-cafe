@@ -16,7 +16,7 @@ export function Textarea({ label, error, hint, className = '', rows = 3, ...rest
         rows={rows}
         aria-invalid={error ? true : undefined}
         aria-errormessage={error ? `${id}-error` : undefined}
-        className={`${controlClasses} h-auto py-2 leading-5 ${error ? 'border-danger' : ''} ${className}`}
+        className={`${controlClasses} h-auto rounded-2xl! py-2 leading-5 ${error ? 'border-danger' : ''} ${className}`}
         {...rest}
       />
     </Field>
