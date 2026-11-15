@@ -39,12 +39,19 @@ public class ApiExceptionHandler : IExceptionHandler
         {
             HttpContext = httpContext,
             Exception = apiException,
-            ProblemDetails = new ProblemDetails
-            {
-                Status = apiException.StatusCode,
-                Title = apiException.Title,
-                Detail = apiException.Message
-            }
+            ProblemDetails = apiException is FieldValidationException fields
+                ? new HttpValidationProblemDetails(fields.Errors.ToDictionary(e => e.Key, e => e.Value))
+                {
+                    Status = apiException.StatusCode,
+                    Title = apiException.Title,
+                    Detail = apiException.Message
+                }
+                : new ProblemDetails
+                {
+                    Status = apiException.StatusCode,
+                    Title = apiException.Title,
+                    Detail = apiException.Message
+                }
         });
     }
 }

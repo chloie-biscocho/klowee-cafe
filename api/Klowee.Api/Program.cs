@@ -189,6 +189,9 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
+// Booking requests from the homepage (handover 20, decision 023).
+builder.Services.AddScoped<IBookingService, BookingService>();
+
 // ---- Media storage ----
 // Supabase Storage over its REST API (docs/decisions/009-media-storage.md).
 // The service role key is a secret: it lives in user-secrets locally and an
@@ -280,9 +283,42 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // The IP is the real one because UseForwardedHeaders runs first.
 builder.Services.AddOptions<LoginRateLimitOptions>();
 builder.Services.AddOptions<TabRateLimitOptions>();
+builder.Services.AddOptions<BookingRateLimitOptions>();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // The booking form's visitors get a sentence they can act on. Other limited
+    // endpoints keep their plain 429 (filled in by UseStatusCodePages).
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        if (!context.HttpContext.Request.Path.StartsWithSegments("/api/public/bookings"))
+        {
+            return;
+        }
+
+        await context.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>().WriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = context.HttpContext,
+            ProblemDetails = new Microsoft.AspNetCore.Mvc.ProblemDetails
+            {
+                Status = StatusCodes.Status429TooManyRequests,
+                Title = "Too many requests",
+                Detail = BookingRateLimitOptions.RejectedMessage
+            }
+        });
+    };
+
+    // The booking form (handover 20): per client IP, 3 an hour and 10 a day,
+    // both at once (a chained limiter takes a permit from each).
+    options.AddPolicy(BookingRateLimitOptions.PolicyName, httpContext =>
+    {
+        var limits = httpContext.RequestServices.GetRequiredService<IOptions<BookingRateLimitOptions>>().Value;
+        var ip = httpContext.Connection.RemoteIpAddress ?? IPAddress.None;
+        return RateLimitPartition.Get("booking:" + ip, _ => RateLimiter.CreateChained(
+            new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions { PermitLimit = limits.PerHour, Window = TimeSpan.FromHours(1), QueueLimit = 0 }),
+            new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions { PermitLimit = limits.PerDay, Window = TimeSpan.FromDays(1), QueueLimit = 0 })));
+    });
 
     // The public tab page (handover 17): reads by client IP (the same IP as the
     // login limit, from CF-Connecting-IP); writes by token. The token is hashed
@@ -413,10 +449,12 @@ app.UseWhen(
                && !context.Request.Path.StartsWithSegments("/api/public/tab"),
     branch => branch.UseHttpLogging());
 
-// Every tab-page response, errors and 429s included: never cached, never indexed.
+// Every tab-page and booking-form response, errors and 429s included: never
+// cached, never indexed.
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path.StartsWithSegments("/api/public/tab"))
+    if (context.Request.Path.StartsWithSegments("/api/public/tab")
+        || context.Request.Path.StartsWithSegments("/api/public/bookings"))
     {
         context.Response.OnStarting(() =>
         {

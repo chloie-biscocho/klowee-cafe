@@ -125,6 +125,101 @@ namespace Klowee.Api.Data.Migrations
                     b.ToTable("announcements", (string)null);
                 });
 
+            modelBuilder.Entity("Klowee.Api.Entities.BookingRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Contact")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("contact");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateOnly>("EventDate")
+                        .HasColumnType("date")
+                        .HasColumnName("event_date");
+
+                    b.Property<int?>("GuestCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("guest_count");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("message");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("OwnerNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("owner_notes");
+
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("package_id");
+
+                    b.Property<string>("PackageName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("package_name");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("StatusChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("status_changed_at");
+
+                    b.Property<Guid?>("StatusChangedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("status_changed_by");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Venue")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("venue");
+
+                    b.HasKey("Id")
+                        .HasName("pk_booking_requests");
+
+                    b.HasIndex("PackageId")
+                        .HasDatabaseName("ix_booking_requests_package_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_booking_requests_status");
+
+                    b.ToTable("booking_requests", (string)null);
+                });
+
             modelBuilder.Entity("Klowee.Api.Entities.Customer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1613,6 +1708,15 @@ namespace Klowee.Api.Data.Migrations
                         .HasFilter("deleted_at IS NULL");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("Klowee.Api.Entities.BookingRequest", b =>
+                {
+                    b.HasOne("Klowee.Api.Entities.Package", null)
+                        .WithMany()
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_booking_requests_packages_package_id");
                 });
 
             modelBuilder.Entity("Klowee.Api.Entities.EventPhoto", b =>

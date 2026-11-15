@@ -26,7 +26,10 @@ public class SiteSettingService : ISiteSettingService
         "instagram_url",
         "facebook_url",
         "contact_email",
-        PublicTabService.NoteKey
+        PublicTabService.NoteKey,
+        // The homepage's booking form (handover 20): on unless "false", and an optional line above it.
+        BookingService.EnabledKey,
+        BookingService.NoteKey
     };
 
     /// <summary>

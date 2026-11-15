@@ -51,6 +51,7 @@ public class KloweeDbContext : DbContext
     public DbSet<LoyaltyMembership> LoyaltyMemberships => Set<LoyaltyMembership>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
     public DbSet<PaymentClaim> PaymentClaims => Set<PaymentClaim>();
+    public DbSet<BookingRequest> BookingRequests => Set<BookingRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

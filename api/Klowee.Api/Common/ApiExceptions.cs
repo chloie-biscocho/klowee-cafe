@@ -77,3 +77,20 @@ public class StorageException : ApiException
     {
     }
 }
+
+/// <summary>
+/// 400 with an error per field, the shape [ApiController] gives attribute
+/// failures (ValidationProblemDetails, `errors` keyed by the body's camelCase
+/// names), for rules a service checks itself: a date in the business's time
+/// zone, a package that must be active.
+/// </summary>
+public class FieldValidationException : ApiException
+{
+    public FieldValidationException(IReadOnlyDictionary<string, string[]> errors)
+        : base(StatusCodes.Status400BadRequest, "One or more validation errors occurred.", "Please check the highlighted fields.")
+    {
+        Errors = errors;
+    }
+
+    public IReadOnlyDictionary<string, string[]> Errors { get; }
+}

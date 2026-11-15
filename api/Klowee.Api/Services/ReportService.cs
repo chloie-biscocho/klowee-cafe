@@ -50,6 +50,7 @@ public class ReportService : IReportService
         // Waiting for the owners, whatever the range (handover 17).
         var pendingClaims = await _db.PaymentClaims.CountAsync(c => c.Status == Entities.PaymentClaimStatus.Pending, cancellationToken);
         var pendingRequests = await _db.LoyaltyMemberships.CountAsync(m => m.Status == Entities.MembershipStatus.Requested, cancellationToken);
+        var newBookings = await _db.BookingRequests.CountAsync(b => b.Status == Entities.BookingStatus.New, cancellationToken);
 
         return new SummaryReportDto(
             start,
@@ -73,7 +74,8 @@ public class ReportService : IReportService
                 .ToList(),
             NewCustomers: firstOrders.Count(first => first >= start && first <= end),
             PendingClaimsCount: pendingClaims,
-            PendingCardRequestsCount: pendingRequests);
+            PendingCardRequestsCount: pendingRequests,
+            NewBookingsCount: newBookings);
     }
 
     public async Task<IReadOnlyList<OutstandingRowDto>> OutstandingAsync(CancellationToken cancellationToken)

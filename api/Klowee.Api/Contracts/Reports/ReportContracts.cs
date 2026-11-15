@@ -22,7 +22,8 @@ public record SummaryReportDto(
     IReadOnlyList<TopItemDto> TopItems,
     int NewCustomers,
     int PendingClaimsCount = 0,
-    int PendingCardRequestsCount = 0);
+    int PendingCardRequestsCount = 0,
+    int NewBookingsCount = 0);
 
 public record OutstandingRowDto(
     Guid CustomerId,

@@ -111,6 +111,12 @@ public class KloweeApiFactory : WebApplicationFactory<Program>
                 options.ClaimsPerHour = 10_000;
                 options.CardRequestsPerDay = 10_000;
             });
+            // And the booking form's; BookingTests puts the real ones back.
+            services.Configure<BookingRateLimitOptions>(options =>
+            {
+                options.PerHour = 10_000;
+                options.PerDay = 10_000;
+            });
         });
     }
 
