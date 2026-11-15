@@ -31,7 +31,7 @@ describe('Story, Packages, Book', () => {
     render(<Book home={fullHome} />)
 
     expect(screen.getByRole('link', { name: 'Email us' })).toHaveAttribute('href', 'mailto:hello@kloweecafe.com')
-    expect(screen.getByRole('link', { name: 'Message on Instagram' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Instagram' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Facebook' })).not.toBeInTheDocument()
   })
 })

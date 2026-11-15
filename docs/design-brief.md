@@ -124,7 +124,7 @@ font swaps in. Sentence case for headings; the menu prints in lowercase.
      `book_body`, `booking_form_note` when set, and the **steps**
      (`booking_steps`: up to three lines, a real ordered list with the
      numbers in `sky` circles); on the right "or message us" with Email us,
-     Message on Instagram, Facebook (each only when set), at the row's
+     Instagram, Facebook (each only when set), at the row's
      bottom. The row wraps (buttons under the words) when the words would be
      narrower than about 20rem.
    - **The form across the panel:** six columns from 820px (name and how to

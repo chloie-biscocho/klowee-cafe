@@ -45,7 +45,7 @@ export function Book({ home, choice = NO_PACKAGE_CHOICE }: { home: PublicHome; c
         {email && <LinkButton href={`mailto:${email}`}>Email us</LinkButton>}
         {instagram && (
           <LinkButton href={instagram} variant="ghost" {...external}>
-            Message on Instagram
+            Instagram
           </LinkButton>
         )}
         {facebook && (
