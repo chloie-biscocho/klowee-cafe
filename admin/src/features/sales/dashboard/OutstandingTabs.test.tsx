@@ -21,16 +21,17 @@ function show(rows: OutstandingRowDto[], onSettle = vi.fn()) {
 }
 
 describe('Outstanding tabs', () => {
-  it('with 12 tabs, shows every row with no scroll region, and the count in the title', () => {
+  it('with 8 tabs, shows every row with no scroll region, and the count in the title', () => {
+    expect(VISIBLE_ROWS).toBe(8)
     show(tabs(VISIBLE_ROWS))
 
-    expect(screen.getByRole('heading', { name: 'Outstanding tabs (12)' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Outstanding tabs (8)' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Outstanding tabs, scrollable' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('outstanding-scroll')).not.toBeInTheDocument()
-    expect(screen.getAllByRole('row')).toHaveLength(1 + 12)
+    expect(screen.getAllByRole('row')).toHaveLength(1 + 8)
   })
 
-  it('with 13 or more, puts every row inside a labelled, focusable scroll region, in the same order', async () => {
+  it('with 9 or more, puts every row inside a labelled, focusable scroll region, in the same order', async () => {
     const rows = tabs(25)
     const onSettle = show(rows)
 

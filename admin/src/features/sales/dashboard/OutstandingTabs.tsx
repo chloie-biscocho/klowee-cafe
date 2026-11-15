@@ -7,15 +7,15 @@ import { Td, Th } from '../../../components/ui/Table'
 import { formatDate, formatPeso } from '../../../lib/format'
 import type { OutstandingRowDto } from '../../../types/api'
 
-/** At most this many rows show at once; more scroll inside the panel (handover 19a). */
-export const VISIBLE_ROWS = 12
+/** At most this many rows show at once; more scroll inside the panel (handover 19a; 8 at the owner's request). */
+export const VISIBLE_ROWS = 8
 
 const TABLE = 'w-full border-collapse text-sm [&_tbody_tr:last-child_td]:border-b-0'
 
 /**
- * Every customer with a balance, in the API's order, with Settle. Up to 12
+ * Every customer with a balance, in the API's order, with Settle. Up to 8
  * rows the panel is as tall as its rows. Beyond that it keeps the height of
- * 12 and the rows scroll inside one labelled, focusable region (keyboard
+ * 8 and the rows scroll inside one labelled, focusable region (keyboard
  * users can reach and scroll it), under a header that stays put, with a soft
  * fade at the bottom while there is more below. Sideways scroll on a phone
  * happens inside the same region.
@@ -84,7 +84,7 @@ function Rows({ rows, onSettle, sticky }: { rows: OutstandingRowDto[]; onSettle:
   )
 }
 
-/** The scrolling box: exactly the header plus 12 rows tall, measured from the rows themselves, so it holds at any width. */
+/** The scrolling box: exactly the header plus 8 rows tall, measured from the rows themselves, so it holds at any width. */
 function ScrollRegion({ children }: { children: (sticky: boolean) => ReactNode }) {
   const box = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState<number | null>(null)
