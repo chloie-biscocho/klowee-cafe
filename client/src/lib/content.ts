@@ -7,14 +7,6 @@ export function setting(home: PublicHome | null, key: string): string {
   return home?.settings[key]?.trim() ?? ''
 }
 
-/** The owners write paragraphs separated by a blank line. */
-export function paragraphs(text: string | null | undefined): string[] {
-  return (text ?? '')
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-}
-
 /** What the ticker says: the current announcement, else the next pop-up, else the owners' fallback line. */
 export type TickerLine =
   | { kind: 'announcement'; text: string; href: string | null }

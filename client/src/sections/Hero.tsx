@@ -1,6 +1,7 @@
 import type { PublicHome } from '../api/types'
 import { LinkButton } from '../components/Button'
 import { Clouds } from '../components/Clouds'
+import { FormattedText } from '../components/FormattedText'
 import { setting } from '../lib/content'
 
 /**
@@ -43,7 +44,7 @@ export function Hero({ home }: { home: PublicHome | null }) {
           >
             {heading || 'Klowee Cafe'}
           </h1>
-          {body && <p className="relative z-[1] mx-auto mb-[22px] max-w-[44ch]">{body}</p>}
+          <FormattedText text={body} className="relative z-[1]" paragraphClassName="mx-auto mb-[22px] max-w-[44ch]" listClassName="mx-auto mb-[22px] w-fit max-w-[44ch] text-left" />
           <div className="relative z-[1]">
             <LinkButton href="#book">Book the cart</LinkButton>
             <a href="#menu" className="mt-3.5 block font-medium text-deep underline md:mt-0 md:ml-4 md:inline">

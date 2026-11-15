@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import type { PublicHome } from '../api/types'
 import { LinkButton } from '../components/Button'
+import { FormattedText } from '../components/FormattedText'
 import { bookingFormEnabled, bookingSteps, NO_PACKAGE_CHOICE, type PackageChoice } from '../lib/booking'
 import { setting } from '../lib/content'
 
@@ -66,7 +67,7 @@ export function Book({ home, choice = NO_PACKAGE_CHOICE }: { home: PublicHome; c
         <h2 id="book-heading" className="mb-1.5 font-serif text-[clamp(1.7rem,4vw,2.3rem)] leading-[1.1] text-deep">
           Bring the cart to your event
         </h2>
-        {body && <p className="mx-auto mb-6 max-w-[56ch] text-soft">{body}</p>}
+        <FormattedText text={body} paragraphClassName="mx-auto mb-6 max-w-[56ch] text-soft" listClassName="mx-auto mb-6 w-fit max-w-[56ch] text-left text-soft" />
         {buttons('justify-center')}
       </section>
     )
@@ -87,7 +88,7 @@ export function Book({ home, choice = NO_PACKAGE_CHOICE }: { home: PublicHome; c
           <h2 id="book-heading" className="font-serif text-[clamp(1.7rem,4vw,2.3rem)] leading-[1.1] text-balance text-deep">
             Bring the cart to your event
           </h2>
-          {body && <p className="mt-2.5 max-w-[46ch] text-soft">{body}</p>}
+          <FormattedText text={body} paragraphClassName="mt-2.5 max-w-[46ch] text-soft" listClassName="mt-2.5 max-w-[46ch] text-soft" />
           {note && <p className="mt-3 max-w-[46ch] text-[0.95rem] font-medium text-deep">{note}</p>}
           {steps.length > 0 && (
             // An ordered list: the order is the meaning. role="list" keeps it a list in Safari, which drops it with list-style none.

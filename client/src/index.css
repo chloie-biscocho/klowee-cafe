@@ -404,6 +404,46 @@ section[id] {
   display: none;
 }
 
+/*
+ * The owners' formatted texts (handover 21, components/FormattedText.tsx).
+ * The wrapper is a size container: a justified paragraph is justified only
+ * when its own column is at least 420px wide, because narrow justified text
+ * opens wide gaps between words. Hyphenation needs the page's lang (en).
+ * Links and lists take the site's existing text styles.
+ */
+.fmt {
+  container-type: inline-size;
+}
+.fmt-left {
+  text-align: left;
+}
+.fmt-center {
+  text-align: center;
+}
+.fmt-justify {
+  text-align: left;
+  hyphens: auto;
+  text-wrap: pretty;
+}
+@container (min-width: 420px) {
+  .fmt-justify {
+    text-align: justify;
+  }
+}
+.fmt a {
+  color: var(--color-deep);
+  font-weight: 500;
+  text-decoration: underline;
+}
+.fmt ul {
+  list-style: disc;
+  padding-left: 1.3em;
+  margin-top: 0.5em;
+}
+.fmt li::marker {
+  color: var(--color-deep);
+}
+
 /* Menu drinks: the plus/minus marker replaces the default disclosure triangle. */
 .drink > summary {
   list-style: none;

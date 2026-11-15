@@ -1,5 +1,5 @@
 import type { PublicEvent } from '../api/types'
-import { paragraphs } from '../lib/content'
+import { FormattedText } from './FormattedText'
 import { formatDateRange } from '../lib/format'
 
 /** The open pop-up, under its row: name, dates and venue, the description, and a strip of its photos. */
@@ -22,11 +22,7 @@ export function EventPanel({ event, id, onClose }: { event: PublicEvent; id: str
         </button>
       </div>
 
-      {paragraphs(event.description).map((paragraph, index) => (
-        <p key={index} className="mt-2 max-w-[65ch]">
-          {paragraph}
-        </p>
-      ))}
+      <FormattedText text={event.description} className="max-w-[65ch]" paragraphClassName="mt-2" listClassName="mt-2" />
 
       {event.photos.length > 0 && (
         <ul className="mt-4 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:thin]">

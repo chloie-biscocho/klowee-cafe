@@ -1,5 +1,6 @@
 import type { PublicHome } from '../api/types'
 import { LinkButton } from '../components/Button'
+import { FormattedText } from '../components/FormattedText'
 import { bookingFormEnabled } from '../lib/booking'
 import { formatPeso } from '../lib/format'
 
@@ -22,6 +23,8 @@ export function Packages({ home, onBook }: { home: PublicHome; onBook?: (package
           <li key={pkg.id} className="flex flex-col rounded-3xl bg-panel px-6 pt-[26px] pb-6">
             <h3 className="font-serif text-[1.4rem] text-deep">{pkg.name}</h3>
             {pkg.guestCountNote && <p className="mb-3 text-soft">{pkg.guestCountNote}</p>}
+            {/* The owners' description, formatted (handover 21); none, no space. */}
+            <FormattedText text={pkg.description} className="mb-3 text-[0.95rem]" paragraphClassName="mt-2 first-of-type:mt-0" listClassName="mt-2" />
             <p className="mb-3 text-[1.8rem] font-bold tracking-[-0.01em]">{formatPeso(pkg.price)}</p>
             <ul className="mb-5 flex-1">
               {pkg.inclusions.map((inclusion, index) => (

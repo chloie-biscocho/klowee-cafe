@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { PillButton } from '../components/Button'
+import { FormattedText } from '../components/FormattedText'
 import { formatPeso } from '../lib/format'
 import type { ClaimRequest, TabPayMethod } from './types'
 import type { WriteResult } from './useTab'
@@ -208,7 +209,7 @@ export function PayDialog({
               )}
             </div>
 
-            {note && <p className="order-6 text-[0.95rem] text-soft md:order-none">{note}</p>}
+            <FormattedText text={note} className="order-6 text-[0.95rem] text-soft md:order-none" />
 
             <div className="order-7 md:order-none">
               <label className="block text-[0.93rem] font-medium" htmlFor={`${id}-amount`}>
