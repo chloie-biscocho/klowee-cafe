@@ -653,6 +653,16 @@ export interface PagedResult<T> {
   totalCount: number
 }
 
+/**
+ * The orders list (handover 18): a page plus totals for the whole filter.
+ * Optional because an API from before handover 18 doesn't send them; the
+ * summary line then stays hidden.
+ */
+export interface OrderListResult extends PagedResult<OrderSummaryDto> {
+  total?: number
+  unpaid?: number
+}
+
 export interface ChannelTotalDto {
   channel: PaymentChannel
   amount: number

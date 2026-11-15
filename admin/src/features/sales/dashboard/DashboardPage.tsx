@@ -5,15 +5,14 @@ import { Button } from '../../../components/ui/Button'
 import { Card, CardHeader } from '../../../components/ui/Card'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { Table, Td, Th } from '../../../components/ui/Table'
-import { monthRange, shiftMonth, todayInManila } from '../../../lib/dates'
+import { MonthStepper } from '../../../components/ui/MonthStepper'
+import { monthRange, todayInManila } from '../../../lib/dates'
 import { formatDate, formatPeso } from '../../../lib/format'
 import { SettleModal } from '../customers/SettleModal'
 import { type ChartRange, rangeParams, toChartMonths } from './chartScale'
 import { CardRequestsPanel } from './CardRequestsPanel'
 import { MonthlyChart } from './MonthlyChart'
 import { PaymentClaimsPanel } from './PaymentClaimsPanel'
-
-const monthTitle = new Intl.DateTimeFormat('en-PH', { month: 'long', year: 'numeric', timeZone: 'UTC' })
 
 const RANGES: { value: ChartRange; label: string; description: string }[] = [
   { value: '12', label: '12 months', description: 'last 12 months' },
@@ -47,14 +46,8 @@ export function DashboardPage() {
       <PaymentClaimsPanel />
       <CardRequestsPanel />
 
-      <div className="flex items-center gap-2">
-        <Button size="sm" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>
-          ←
-        </Button>
-        <span className="min-w-36 text-center text-sm font-semibold">{monthTitle.format(new Date(`${month}T00:00:00Z`))}</span>
-        <Button size="sm" aria-label="Next month" disabled={isCurrentMonth} onClick={() => setMonth(shiftMonth(month, 1))}>
-          →
-        </Button>
+      <div>
+        <MonthStepper month={month} onChange={setMonth} today={today} />
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

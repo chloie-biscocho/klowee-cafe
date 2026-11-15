@@ -112,6 +112,19 @@ public record OrderDetailDto(
 
 public record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount);
 
+/// <summary>
+/// The orders list: one page, plus totals for the whole filter, not just the
+/// page (handover 18): what the orders came to, and what of that is still
+/// unpaid. Status is applied before totalling.
+/// </summary>
+public record OrderListResult(
+    IReadOnlyList<OrderSummaryDto> Items,
+    int Page,
+    int PageSize,
+    int TotalCount,
+    decimal Total,
+    decimal Unpaid) : PagedResult<OrderSummaryDto>(Items, Page, PageSize, TotalCount);
+
 public record PaymentRequest
 {
     [Range(typeof(decimal), "0.01", "1000000")]

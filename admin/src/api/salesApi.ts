@@ -11,9 +11,8 @@ import type {
   MonthlyRowDto,
   OrderDetailDto,
   OrderRequest,
-  OrderSummaryDto,
+  OrderListResult,
   OutstandingRowDto,
-  PagedResult,
   PaymentDto,
   PaymentRequest,
   PaymentStatus,
@@ -132,7 +131,7 @@ export const salesApi = baseApi.injectEndpoints({
     }),
 
     // ---- Orders and payments ----
-    listOrders: build.query<PagedResult<OrderSummaryDto>, OrderListArgs>({
+    listOrders: build.query<OrderListResult, OrderListArgs>({
       query: (args) => ({
         url: '/orders',
         params: Object.fromEntries(Object.entries(args).filter(([, value]) => value !== undefined && value !== '')),

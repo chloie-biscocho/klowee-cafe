@@ -223,6 +223,32 @@ public class OrderTests : IClassFixture<KloweeApiFactory>
     }
 
     [Fact]
+    public async Task List_TotalsCoverTheWholeFilter_NotJustThePage_AfterTheStatusFilter()
+    {
+        var (client, m) = await SetupAsync();
+        var june = await CreateCustomerAsync(client, "June totals");
+        // Three orders in August: 110 unpaid, 110 part paid (40), 160 paid.
+        var unpaid = await CreateOrderAsync(client, OrderBody(june.Id, [Line(m.Americano)], orderedOn: new DateOnly(2026, 8, 3)));
+        var part = await CreateOrderAsync(client, OrderBody(june.Id, [Line(m.Americano)], orderedOn: new DateOnly(2026, 8, 10)));
+        var paid = await CreateOrderAsync(client, OrderBody(june.Id, [Line(m.Latte)], orderedOn: new DateOnly(2026, 8, 20)));
+        await EnsureAsync(await PayAsync(client, part.Id, 40m));
+        await EnsureAsync(await PayAsync(client, paid.Id, paid.Total));
+        // Outside the range: never counted.
+        await CreateOrderAsync(client, OrderBody(june.Id, [Line(m.Latte)], orderedOn: new DateOnly(2026, 9, 1)));
+
+        const string august = "from=2026-08-01&to=2026-08-31";
+        var page = await client.GetFromJsonAsync<OrderListResult>($"/api/orders?customerId={june.Id}&{august}&page=1&pageSize=1", KloweeApiFactory.Json);
+        Assert.Single(page!.Items);                                    // one row on the page...
+        Assert.Equal((3, 380m, 180m), (page.TotalCount, page.Total, page.Unpaid));   // ...totals for all three
+
+        var notPaid = await client.GetFromJsonAsync<OrderListResult>($"/api/orders?customerId={june.Id}&{august}&status=Unpaid", KloweeApiFactory.Json);
+        Assert.Equal((1, 110m, 110m), (notPaid!.TotalCount, notPaid.Total, notPaid.Unpaid));
+        var partial = await client.GetFromJsonAsync<OrderListResult>($"/api/orders?customerId={june.Id}&{august}&status=Partial", KloweeApiFactory.Json);
+        Assert.Equal((1, 110m, 70m), (partial!.TotalCount, partial.Total, partial.Unpaid));
+        Assert.Equal(unpaid.Id, notPaid.Items.Single().Id);
+    }
+
+    [Fact]
     public async Task List_FiltersByCustomerDatesAndDerivedStatus_NewestFirst()
     {
         var (client, m) = await SetupAsync();

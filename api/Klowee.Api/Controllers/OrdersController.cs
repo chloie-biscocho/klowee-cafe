@@ -19,8 +19,8 @@ public class OrdersController : ControllerBase
 
     /// <summary>Newest first. <c>customerId</c> matches orders the customer drank or paid for.</summary>
     [HttpGet]
-    [ProducesResponseType<PagedResult<OrderSummaryDto>>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<PagedResult<OrderSummaryDto>>> List(
+    [ProducesResponseType<OrderListResult>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<OrderListResult>> List(
         [FromQuery] DateOnly? from = null,
         [FromQuery] DateOnly? to = null,
         [FromQuery] Guid? customerId = null,

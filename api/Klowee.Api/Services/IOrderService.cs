@@ -12,7 +12,7 @@ public record OrderListQuery(
 
 public interface IOrderService
 {
-    Task<PagedResult<OrderSummaryDto>> ListAsync(OrderListQuery query, CancellationToken cancellationToken);
+    Task<OrderListResult> ListAsync(OrderListQuery query, CancellationToken cancellationToken);
 
     Task<OrderDetailDto> GetAsync(Guid id, CancellationToken cancellationToken);
 

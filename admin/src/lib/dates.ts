@@ -75,3 +75,11 @@ export function shiftMonth(isoDate: string, by: number): string {
   const shifted = new Date(Date.UTC(year, month - 1 + by, 1))
   return shifted.toISOString().slice(0, 10)
 }
+
+const monthTitle = new Intl.DateTimeFormat('en-PH', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+
+/** "2026-11-01" → "November 2026". */
+export const monthLabel = (month: string) => monthTitle.format(new Date(`${month.slice(0, 7)}-01T00:00:00Z`))
+
+/** The first day of the month `isoDate` falls in, Manila's today by default. */
+export const currentMonth = (isoDate: string = todayInManila()) => monthRange(isoDate)[0]

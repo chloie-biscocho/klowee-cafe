@@ -42,7 +42,7 @@ public class OrderService : IOrderService
     /// <summary>What saving the order does to its redemptions.</summary>
     private sealed record RewardPlan(List<PlannedReward> Rewards, List<LoyaltyRedemption> Released);
 
-    public async Task<PagedResult<OrderSummaryDto>> ListAsync(OrderListQuery query, CancellationToken cancellationToken)
+    public async Task<OrderListResult> ListAsync(OrderListQuery query, CancellationToken cancellationToken)
     {
         var orders = _db.Orders.AsNoTracking().AsQueryable();
         if (query.From is { } from)
@@ -68,8 +68,9 @@ public class OrderService : IOrderService
 
         var page = Math.Max(1, query.Page);
         var size = Math.Clamp(query.PageSize, 1, 200);
-        return new PagedResult<OrderSummaryDto>(
-            filtered.Skip((page - 1) * size).Take(size).ToList(), page, size, filtered.Count);
+        return new OrderListResult(
+            filtered.Skip((page - 1) * size).Take(size).ToList(), page, size, filtered.Count,
+            filtered.Sum(o => o.Total), filtered.Sum(o => o.Total - o.Paid));
     }
 
     public async Task<IReadOnlyList<OrderSummaryDto>> SummariesAsync(IQueryable<Order> orders, CancellationToken cancellationToken)
