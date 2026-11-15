@@ -200,6 +200,9 @@ bullet lists, line breaks, and per-paragraph alignment (`::justify`,
   Centre applies at every width.
 - **Package descriptions** now show on their cards, under the guest note and
   above the price; a package without one looks as before.
+- **Where justify shows** (measured at 1280px): hero, story, Book line and
+  event descriptions; never package descriptions (260px column) or the tab
+  page's note (344px), and nothing at phone widths.
 
 ## Copy rules
 Text comes from the payload or is a fixed label from the mockup. The mockup's

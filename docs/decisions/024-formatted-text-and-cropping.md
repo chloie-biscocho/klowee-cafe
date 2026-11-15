@@ -6,8 +6,7 @@ The owners write the site's longer texts (the hero and story bodies, the
 Book line, the tab page note, event and package descriptions) in plain
 boxes. They asked, by name, for justified paragraphs, and for bold, links
 and lists. Separately, a photo went up exactly as taken, so the site cropped
-it wherever its frame happened to fall: the story photo's circle cut off a
-face, a polaroid lost the top of the cart.
+it wherever its frame happened to fall.
 
 ## Decision
 
@@ -55,6 +54,11 @@ and the admin's preview cannot disagree about what a text means.
 when its own column is under 420px wide, measured with a container query, not
 the screen: narrow justified columns open wide gaps between words whether
 the column is narrow because of a phone or a three-column card row.
+Measured at 1280px: the hero, story, Book line and event descriptions are
+justified; package descriptions (a 260px card column) and the tab page's
+note (a 344px column) never are, at any width. For those two fields the
+admin's preview lays out at the site's column width and says so, so the
+preview never shows justify where the site won't.
 
 ### Cropping in the browser, before upload
 
