@@ -20,7 +20,8 @@ describe('Story, Packages, Book', () => {
     expect(screen.getByRole('heading', { name: 'Starter' })).toBeInTheDocument()
     expect(screen.getByText('₱7,500')).toBeInTheDocument()
     expect(screen.getByText('2 baristas')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Book this: Starter' })).toHaveAttribute('href', '#book')
+    // With the booking form on (nothing saved means on), a card goes to the form (handover 20).
+    expect(screen.getByRole('link', { name: 'Book this: Starter' })).toHaveAttribute('href', '#booking-form')
 
     rerender(<Packages home={emptyHome} />)
     expect(container).toBeEmptyDOMElement()

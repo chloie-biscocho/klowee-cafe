@@ -1,10 +1,16 @@
 import type { PublicHome } from '../api/types'
 import { LinkButton } from '../components/Button'
+import { bookingFormEnabled } from '../lib/booking'
 import { formatPeso } from '../lib/format'
 
-/** One white card per active package. No packages, no section. */
-export function Packages({ home }: { home: PublicHome }) {
+/**
+ * One white card per active package. No packages, no section. With the
+ * booking form on, "Book this" scrolls to the form with that package chosen;
+ * with it off, to the Book section as before.
+ */
+export function Packages({ home, onBook }: { home: PublicHome; onBook?: (packageId: string) => void }) {
   if (home.packages.length === 0) return null
+  const formOn = bookingFormEnabled(home)
 
   return (
     <section id="packages" aria-labelledby="packages-heading" className="pt-5 pb-[30px]">
@@ -24,7 +30,12 @@ export function Packages({ home }: { home: PublicHome }) {
                 </li>
               ))}
             </ul>
-            <LinkButton href="#book" variant="ghost" aria-label={`Book this: ${pkg.name}`}>
+            <LinkButton
+              href={formOn ? '#booking-form' : '#book'}
+              variant="ghost"
+              aria-label={`Book this: ${pkg.name}`}
+              onClick={formOn ? () => onBook?.(pkg.id) : undefined}
+            >
               Book this
             </LinkButton>
           </li>

@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { useHomeData } from './api/useHomeData'
+import { NO_PACKAGE_CHOICE } from './lib/booking'
 import { PageSky } from './components/PageSky'
 import { Book } from './sections/Book'
 import { CupShelf } from './sections/CupShelf'
@@ -21,6 +23,9 @@ import { Ticker } from './sections/Ticker'
 export function App() {
   const home = useHomeData()
   const data = home.status === 'ready' ? home.data : null
+  // A package card's "Book this" picks that package in the booking form (handover 20).
+  const [choice, setChoice] = useState(NO_PACKAGE_CHOICE)
+  const book = (packageId: string) => setChoice((current) => ({ packageId, nonce: current.nonce + 1 }))
 
   return (
     <div id="top">
@@ -51,8 +56,8 @@ export function App() {
               <Story home={data} />
               <Menu home={data} />
               <Popups home={data} />
-              <Packages home={data} />
-              <Book home={data} />
+              <Packages home={data} onBook={book} />
+              <Book home={data} choice={choice} />
             </div>
           )}
         </main>
