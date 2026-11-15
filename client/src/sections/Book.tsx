@@ -10,12 +10,14 @@ const BookingForm = lazy(() => import('../booking/BookingForm'))
 
 /**
  * The form's space while its chunk loads, so nothing below moves when it
- * arrives: the form's own height at each width, measured in the browser
- * (handover 20 report), with and without the package field.
+ * arrives: the form's tallest height in each layout, measured in the browser
+ * (862px at a 320px phone, 636px from 760px; the package field is 87px of
+ * that with its gap). Errors shown after a submit may grow it, which is the
+ * visitor's own doing, not a shift.
  */
 const RESERVED = {
-  withPackages: 'min-h-[692px] md:min-h-[515px]',
-  withoutPackages: 'min-h-[612px] md:min-h-[435px]',
+  withPackages: 'min-h-[862px] md:min-h-[636px]',
+  withoutPackages: 'min-h-[775px] md:min-h-[549px]',
 }
 
 /**
@@ -47,7 +49,7 @@ export function Book({ home, choice = NO_PACKAGE_CHOICE }: { home: PublicHome; c
       {formOn && (
         <>
           {note && <p className="mx-auto mb-5 max-w-[56ch] text-[0.95rem] font-medium text-deep">{note}</p>}
-          <div id="booking-form" className={`scroll-mt-4 ${home.packages.length > 0 ? RESERVED.withPackages : RESERVED.withoutPackages}`}>
+          <div id="booking-form" className={`flex scroll-mt-4 flex-col justify-center ${home.packages.length > 0 ? RESERVED.withPackages : RESERVED.withoutPackages}`}>
             <Suspense fallback={null}>
               <BookingForm packages={home.packages} choice={choice} />
             </Suspense>

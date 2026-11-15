@@ -147,7 +147,7 @@ export default function BookingForm({ packages, choice }: { packages: PublicPack
         error={errors.message}
         wide
         hint={`${values.message.length} / ${LIMITS.message}`}
-        hintBelow
+        counter
       >
         <textarea {...props('message', 'hint', 'resize-y')} rows={3} maxLength={LIMITS.message} />
       </Field>
@@ -179,7 +179,7 @@ function Field({
   id,
   error,
   hint,
-  hintBelow,
+  counter,
   wide,
   children,
 }: {
@@ -188,12 +188,13 @@ function Field({
   id: string
   error?: string
   hint?: string
-  hintBelow?: boolean
+  counter?: boolean
   wide?: boolean
   children: ReactNode
 }) {
+  // Under the input, so side-by-side inputs stay level; a counter sits at the right.
   const hintLine = hint && (
-    <span id={`${id}-${field}-hint`} className={`block text-[0.85rem] text-soft ${hintBelow ? 'mt-1 text-right' : ''}`}>
+    <span id={`${id}-${field}-hint`} className={`mt-1 block text-[0.85rem] text-soft ${counter ? 'text-right' : ''}`}>
       {hint}
     </span>
   )
@@ -202,9 +203,8 @@ function Field({
       <label htmlFor={`${id}-${field}`} className={LABEL}>
         {label}
       </label>
-      {!hintBelow && hintLine}
       {children}
-      {hintBelow && hintLine}
+      {hintLine}
       {error && (
         <p id={`${id}-${field}-error`} className="mt-1 text-[0.9rem] font-bold text-deep">
           {error}
