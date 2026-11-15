@@ -41,9 +41,13 @@ no gain at a few requests a month.
     order and hidden from screen readers. People leave it empty; form-filling
     bots fill it. A filled one gets the same 201 as anyone, and nothing is
     stored, so a bot learns nothing;
-  - a **rate limit per client IP**: 3 an hour and 10 a day, both at once
-    (a chained limiter), on the real address from `CF-Connecting-IP` as for
-    login and the tab page. Every attempt counts, refused ones too. A
+  - a **rate limit per client IP**: 3 an hour and 10 a day, both at once,
+    on the real address from `CF-Connecting-IP` as for login and the tab
+    page. They are two separate limiters (the hour in the endpoint's
+    policy, the day in the global limiter), not one chained limiter: a
+    chained one reports itself idle when its hour refills, ASP.NET then
+    discards it, and the day count would start over (a test with the
+    windows shrunk to seconds caught exactly that). Every attempt counts, refused ones too. A
     limited visitor reads one sentence and is pointed at Instagram or
     Facebook.
   If spam ever gets through both, the next step is a privacy-respecting

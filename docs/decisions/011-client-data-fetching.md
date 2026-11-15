@@ -65,6 +65,13 @@ Redux or React Query to a 23 kB page to solve problems it doesn't have. The
 rule above still holds: a second page with writes that touch shared data
 would move the client to RTK Query.
 
+## The booking form (handover 20)
+
+The "booking form in phase 2" named above arrived as decision 023 and still
+uses plain `fetch`: one POST whose answer is only "received", with nothing to
+cache, refetch or share with another view (`client/src/lib/booking.ts`). The
+trigger to adopt a data library is still a write that other views must see.
+
 ## Consequences
 
 - The client ships no Redux; its runtime is React and ReactDOM only.

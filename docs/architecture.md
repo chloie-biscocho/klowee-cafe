@@ -459,8 +459,10 @@ owners' admin
   the status stamp (who and when, only on a real change). It throws
   `FieldValidationException`, which `ApiExceptionHandler` writes as
   `ValidationProblemDetails`, the same shape as attribute failures.
-- **`Program.cs`** adds the `booking` rate-limit policy (a chained limiter:
-  `BookingRateLimitOptions.PerHour` and `PerDay` per client IP), an
+- **`Program.cs`** adds the `booking` rate-limit policy (the hour window,
+  `BookingRateLimitOptions.PerHour` per client IP) and a global limiter that
+  only limits booking POSTs (the day window, `PerDay`). Two limiters, not a
+  chained one, so the day count survives the hour resetting. Also an
   `OnRejected` that writes the friendly 429 for this path only, and
   `/api/public/bookings` to the no-store, noindex middleware.
 - **Logging:** ids and outcomes only; HTTP logging has paths, never bodies.
