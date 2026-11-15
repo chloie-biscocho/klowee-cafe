@@ -5,7 +5,7 @@ import { ImageUpload } from '../../components/ui/ImageUpload'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Select } from '../../components/ui/Select'
-import { Textarea } from '../../components/ui/Textarea'
+import { FormattedTextarea } from '../../components/ui/FormattedTextarea'
 import { todayInManila } from '../../lib/dates'
 import { EVENT_STATUSES, type EventDetailDto } from '../../types/api'
 import { eventSchema, type EventValues } from './schemas'
@@ -86,7 +86,7 @@ export function EventForm({
             {...register('endsOn')}
           />
         </div>
-        <Textarea
+        <FormattedTextarea
           label="Description"
           rows={4}
           error={errors.description?.message}

@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { ImageUpload } from '../../components/ui/ImageUpload'
 import { Input } from '../../components/ui/Input'
-import { Textarea } from '../../components/ui/Textarea'
+import { FormattedTextarea } from '../../components/ui/FormattedTextarea'
 import { UnsavedChangesPrompt } from '../../components/ui/UnsavedChangesPrompt'
 import { useToastedAction } from '../../features/toasts/useToastedAction'
 import { changedSettings, settingsSchema, toSettingsValues, type SettingsValues } from './settingsForm'
@@ -79,18 +79,18 @@ export function SettingsForm({ initial }: { initial: SettingsValues }) {
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <Group title="Hero">
         <Input label="Heading" error={errors.hero_heading?.message} {...register('hero_heading')} />
-        <Textarea label="Body" rows={4} error={errors.hero_body?.message} {...register('hero_body')} />
+        <FormattedTextarea label="Body" rows={4} error={errors.hero_body?.message} {...register('hero_body')} />
         <SiteImage control={control} name="hero_image_url" label="Hero image" />
       </Group>
 
       <Group title="Story">
         <Input label="Heading" error={errors.story_heading?.message} {...register('story_heading')} />
-        <Textarea label="Body" rows={6} error={errors.story_body?.message} {...register('story_body')} />
+        <FormattedTextarea label="Body" rows={6} error={errors.story_body?.message} {...register('story_body')} />
         <SiteImage control={control} name="story_image_url" label="Story image" />
       </Group>
 
       <Group title="Book the cart">
-        <Textarea
+        <FormattedTextarea
           label="Body"
           rows={3}
           hint="The line under the heading of the site's booking section."

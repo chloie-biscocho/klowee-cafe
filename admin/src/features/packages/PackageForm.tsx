@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
-import { Textarea } from '../../components/ui/Textarea'
+import { FormattedTextarea } from '../../components/ui/FormattedTextarea'
 import type { PackageDto } from '../../types/api'
 import { InclusionsEditor } from './InclusionsEditor'
 import { packageSchema, type PackageValues } from './schemas'
@@ -80,7 +80,7 @@ export function PackageForm({
           error={errors.guestCountNote?.message}
           {...register('guestCountNote')}
         />
-        <Textarea
+        <FormattedTextarea
           label="Description"
           error={errors.description?.message}
           {...register('description')}

@@ -18,7 +18,7 @@ import { ImageUpload } from '../../components/ui/ImageUpload'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Select } from '../../components/ui/Select'
-import { Textarea } from '../../components/ui/Textarea'
+import { FormattedTextarea } from '../../components/ui/FormattedTextarea'
 import { useToastedAction } from '../../features/toasts/useToastedAction'
 import {
   PAYMENT_CHANNELS,
@@ -127,7 +127,7 @@ function NoteEditor({ initial }: { initial: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <Textarea
+      <FormattedTextarea
         label="Note on the tab page"
         hint="Shown to every customer above the ways to pay. Leave empty for none."
         rows={2}
