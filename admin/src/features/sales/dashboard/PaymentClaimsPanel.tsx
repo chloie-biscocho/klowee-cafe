@@ -93,7 +93,9 @@ export function PaymentClaimsPanel() {
             <Th>Reference</Th>
             <Th>Reported</Th>
             <Th className="text-right">Tab now</Th>
-            <Th />
+            <Th>
+              <span className="sr-only">Actions</span>
+            </Th>
           </tr>
         </thead>
         <tbody>

@@ -34,12 +34,14 @@
   /* The sidebar's two clouds; transparent in dark (no clouds at night). */
   --color-side-cloud: rgb(255 255 255 / 0.7);
 
-  /* Status (unchanged in light). `on-status` is text on a solid status fill. */
-  --color-success: #2e7d4f;
+  /* Status. `on-status` is text on a solid status fill. Success and warning are a
+     shade darker than before (#2e7d4f, #b7791f) so badge text reaches 4.5:1 on
+     their soft fills (handover 18 report); danger is unchanged. */
+  --color-success: #2d7a4d;
   --color-success-soft: #e8f3ec;
   --color-danger: #b4322e;
   --color-danger-soft: #fbecec;
-  --color-warning: #b7791f;
+  --color-warning: #98641a;
   --color-warning-soft: #fdf5e6;
   --color-on-status: #ffffff;
 

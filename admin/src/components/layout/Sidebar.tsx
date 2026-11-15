@@ -67,7 +67,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav aria-label="Main" className="relative flex-1 px-3 max-wide:flex max-wide:flex-1 max-wide:flex-wrap max-wide:px-0">
+      <nav aria-label="Main" className="relative flex-1 px-3 max-wide:order-3 max-wide:flex max-wide:basis-full max-wide:flex-wrap max-wide:px-0">
         {NAV_GROUPS.map((group) => (
           <div key={group.heading} className="max-wide:contents">
             <p className="px-3 pt-4 pb-1 text-[0.78rem] font-bold text-side-soft max-wide:hidden">{group.heading}</p>
@@ -103,7 +103,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="relative px-5 pt-3 pb-4 max-wide:flex max-wide:items-center max-wide:gap-3 max-wide:p-0">
+      <div className="relative px-5 pt-3 pb-4 max-wide:order-2 max-wide:ml-auto max-wide:flex max-wide:items-center max-wide:gap-3 max-wide:p-0">
         <ThemeSwitch className="mb-3 max-wide:mb-0" />
         <p className="truncate text-sm font-bold max-wide:hidden">{user?.displayName ?? 'Signed in'}</p>
         <div className="mt-1 flex gap-3 max-wide:mt-0">

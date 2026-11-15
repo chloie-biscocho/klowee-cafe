@@ -37,7 +37,9 @@ export function CardRequestsPanel() {
             <Th>Customer</Th>
             <Th>Card</Th>
             <Th>Asked</Th>
-            <Th />
+            <Th>
+              <span className="sr-only">Actions</span>
+            </Th>
           </tr>
         </thead>
         <tbody>

@@ -109,9 +109,9 @@ export function StampCard({
 
   return (
     <div className="flex flex-col gap-2">
-      {fromPaper && <p className="text-xs text-muted">from paper card</p>}
       <div className="relative overflow-hidden rounded-[18px] bg-card px-3 pt-[18px] pb-4 text-center text-card-ink">
         <Squiggles />
+        {fromPaper && <p className="mb-1 text-xs font-bold text-card-ink">from paper card</p>}
         <p aria-hidden="true" className="px-5 font-hand text-[0.62rem] font-medium tracking-[.12em]">
           KLOWEE CAFE'S LOYALTY CARD PRESENTS
         </p>

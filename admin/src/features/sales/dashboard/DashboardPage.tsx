@@ -76,7 +76,9 @@ export function DashboardPage() {
                   <Th>Customer</Th>
                   <Th className="text-right">Balance</Th>
                   <Th>Oldest unpaid</Th>
-                  <Th />
+                  <Th>
+                    <span className="sr-only">Actions</span>
+                  </Th>
                 </tr>
               </thead>
               <tbody>
