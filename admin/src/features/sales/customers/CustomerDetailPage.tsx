@@ -11,9 +11,9 @@ import { useToastedAction } from '../../toasts/useToastedAction'
 import { OrdersTable } from '../orders/OrdersTable'
 import { blankToNull, type CustomerValues } from '../schemas'
 import { AdjustStampsModal } from './AdjustStampsModal'
-import { ClubCard } from './ClubCard'
 import { CustomerFormModal } from './CustomerFormModal'
 import { LoyaltyLedger } from './LoyaltyLedger'
+import { LoyaltyPanel } from './LoyaltyPanel'
 import { MergeModal } from './MergeModal'
 import { SettleModal } from './SettleModal'
 import { TabLinkBox } from './TabLinkBox'
@@ -72,24 +72,15 @@ export function CustomerDetailPage() {
       <TabLinkBox customer={customer} />
 
       {customer.clubs.length > 0 && (
-        <Card className="flex flex-col gap-3 p-5">
-          <h2 className="text-[1.02rem] font-bold">Loyalty cards</h2>
-          <div className="grid gap-3 xl:grid-cols-2">
-            {customer.clubs.map((club) => (
-              <ClubCard
-                key={club.clubId}
-                customerId={id}
-                customerName={customer.name}
-                club={club}
-                others={customer.clubs}
-                onAdjust={() => {
-                  setAdjustClub(club.clubId)
-                  setDialog('adjust')
-                }}
-              />
-            ))}
-          </div>
-        </Card>
+        <LoyaltyPanel
+          customerId={id}
+          customerName={customer.name}
+          clubs={customer.clubs}
+          onAdjust={(clubId) => {
+            setAdjustClub(clubId)
+            setDialog('adjust')
+          }}
+        />
       )}
 
       <Card>

@@ -11,7 +11,7 @@ describe('Customer loyalty cards', () => {
     renderApp(`/sales/customers/${keeDetail.id}`, signedIn)
 
     const card = await screen.findByRole('region', { name: 'Coffee Club card' })
-    expect(within(card).getByText('card 1, 4 of 12')).toBeInTheDocument()
+    expect(within(card).getByText('Card 1 · 4 of 12')).toBeInTheDocument()
     const slots = within(card).getByRole('list', { name: 'Card 1: 4 of 12 slots stamped' })
     expect(within(slots).getAllByRole('listitem')).toHaveLength(12)
     expect(within(card).getByLabelText('Slot 4, stamped, added by hand')).toHaveAttribute('title', 'Added by hand')
@@ -62,7 +62,7 @@ describe('Customer loyalty cards', () => {
     renderApp(`/sales/customers/${keeDetail.id}`, signedIn)
 
     const card = await screen.findByRole('region', { name: 'Coffee Club card' })
-    expect(within(card).getByText('card 4, 7 of 12')).toBeInTheDocument()
+    expect(within(card).getByText('Card 4 · 7 of 12')).toBeInTheDocument()
   })
 
   it('marks a reward used by hand, and makes a hand-marked one available again', async () => {
