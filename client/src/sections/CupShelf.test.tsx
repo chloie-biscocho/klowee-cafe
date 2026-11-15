@@ -73,6 +73,17 @@ describe('CupShelf', () => {
     expect(cup).not.toHaveAttribute('data-lifted')
   })
 
+  it('lets go at once when a touch on a cup turns into a swipe or a scroll', () => {
+    render(<CupShelf menu={fullHome.menu} />)
+    const cup = screen.getByRole('img', { name: 'Americano' })
+
+    fireEvent.pointerDown(cup, { pointerType: 'touch' })
+    expect(cup).toHaveAttribute('data-lifted')
+    // The browser cancels the pointer when it takes the gesture over for scrolling.
+    fireEvent.pointerCancel(cup, { pointerType: 'touch' })
+    expect(cup).not.toHaveAttribute('data-lifted')
+  })
+
   it('shows the lifted state on every cup when the shelf has keyboard focus (CSS), without adding tab stops', () => {
     render(<CupShelf menu={fullHome.menu} />)
 

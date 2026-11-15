@@ -88,6 +88,12 @@ export function CupShelf({ menu }: { menu: PublicMenu | null }) {
     setLifted(index)
     tapTimer.current = window.setTimeout(() => setLifted(null), TAP_LIFT_MS)
   }
+  // A touch that turns into a swipe or a page scroll is cancelled by the browser: it wasn't a tap, so let go at once.
+  const cancel = (index: number) => (event: PointerEvent) => {
+    if (event.pointerType !== 'touch') return
+    window.clearTimeout(tapTimer.current)
+    setLifted((current) => (current === index ? null : current))
+  }
 
   return (
     <div ref={row} className="flex items-center justify-center gap-2 pt-[30px] pb-1.5 md:gap-3.5">
@@ -112,6 +118,7 @@ export function CupShelf({ menu }: { menu: PublicMenu | null }) {
               onPointerEnter={enter(index)}
               onPointerLeave={leave(index)}
               onPointerDown={tap(index)}
+              onPointerCancel={cancel(index)}
               className={`shelf-cup relative h-[85px] w-[58px] flex-none snap-start md:h-[106px] md:w-[74px] ${index % 2 ? 'cup-tilt-right' : 'cup-tilt-left'}`}
             >
               <div className="cup-shadow" aria-hidden="true" />
