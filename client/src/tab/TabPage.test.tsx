@@ -352,3 +352,55 @@ describe('the tab page: a long tab (handover 17a)', () => {
     expect(within(sheet).getByRole('button', { name: 'Show fewer' })).toHaveAttribute('aria-expanded', 'true')
   })
 })
+
+describe('the pay dialog, roomier (handover 17b)', () => {
+  const open = async (methods: typeof tab.pay.methods) => {
+    const user = await renderTab({ ...tab, pay: { note: 'Exact amount, please.', methods } })
+    await user.click(within(receipt()).getByRole('button', { name: methods.length === 1 ? `Pay with ${methods[0]!.label}` : 'Pay' }))
+    return { user, dialog: screen.getByRole('dialog', { name: 'Pay ₱780' }) }
+  }
+
+  it('with two methods, shows the switch, the QR and the form together', async () => {
+    const { dialog } = await open([gcash, cimb])
+    expect(within(dialog).getByRole('group', { name: 'Pay with' })).toBeInTheDocument()
+    expect(within(dialog).getByRole('img', { name: /GCash QR code/ })).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Amount sent')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('GCash reference number')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: "I've paid" })).toBeInTheDocument()
+    expect(within(dialog).getByText('Exact amount, please.')).toBeInTheDocument()
+  })
+
+  it('a method without a QR has no image box; its account details take the width', async () => {
+    const { dialog } = await open([{ ...cimb, qrUrl: null }])
+    expect(within(dialog).queryByRole('img')).not.toBeInTheDocument()
+    expect(dialog.querySelector('[data-qr-box]')).toBeNull()
+    expect(within(dialog).queryByRole('link', { name: 'Save QR' })).not.toBeInTheDocument()
+    expect(within(dialog).getByText('Chloie B.')).toBeInTheDocument()
+  })
+
+  it('a method without a number has no Copy button and no number row', async () => {
+    const { dialog } = await open([{ ...gcash, accountNumber: null }])
+    expect(within(dialog).queryByRole('button', { name: 'Copy' })).not.toBeInTheDocument()
+    expect(within(dialog).queryByText('Number')).not.toBeInTheDocument()
+  })
+
+  it('never stretches the QR past its natural size: no size attributes, capped by a fixed box, centred', async () => {
+    const { dialog } = await open([gcash])
+    const qr = within(dialog).getByRole('img', { name: /GCash QR code/ })
+    expect(qr).not.toHaveAttribute('width')
+    expect(qr).not.toHaveAttribute('height')
+    expect(qr.className).toMatch(/\bw-auto\b/)
+    expect(qr.className).toMatch(/\bh-auto\b/)
+    expect(qr.className).toMatch(/\bmax-w-full\b/)
+    expect(qr.className).toMatch(/\bmax-h-full\b/)
+    const box = qr.closest('[data-qr-box]')!
+    expect(box.className).toMatch(/items-center/)
+    expect(box.className).toMatch(/justify-center/)
+  })
+
+  it('the header’s close button closes the dialog', async () => {
+    const { user, dialog } = await open([gcash])
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+})

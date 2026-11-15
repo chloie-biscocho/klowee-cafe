@@ -10,3 +10,16 @@
   font-display: swap;
   src: url('/fonts/bowlby-one-latin.woff2') format('woff2');
 }
+
+/* The Pay sheet rises in when it opens (handover 17b); no motion when reduced. */
+@media (prefers-reduced-motion: no-preference) {
+  .pay-sheet[open] {
+    animation: pay-sheet-in 0.22s ease-out;
+  }
+}
+@keyframes pay-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}

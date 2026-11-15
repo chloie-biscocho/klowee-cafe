@@ -154,9 +154,18 @@ owner. Same tokens, fonts and theme switch as the homepage; light by default.
   dark treatment in dark): "your tab", a dotted-leader row per unpaid order
   with a second line for the date and "N paid", a ruled "you owe ₱…". Nothing
   owed: "you're all paid up". Reports waiting for Klowee are yellow sticker
-  chips; a rejected report shows its reason. Pay opens a native `<dialog>`
-  (Karla): method switch, the QR, account name and number with Copy, Save QR
-  with a hint for paying on the same phone, amount and reference.
+  chips; a rejected report shows its reason.
+- **Pay dialog (handover 17b):** a native `<dialog>` (Karla) with a fixed
+  header (title, ✕) over a scrolling body. From 760px it is about 760px wide
+  in two columns: left, the method switch, the QR at 300px square on a
+  fixed-white card (`card-slot`) with a quiet border and padding, and Save QR;
+  right, the amount large, the account name and number with Copy, the page
+  note, the form and the buttons. On a phone it is a sheet at the foot of the
+  screen (rounded top, 12px side gutters, up to 92% of the height) in one
+  column: switch, amount, QR (up to 320px), Save QR, account, note, form. The
+  QR is never drawn larger than its natural size; a method without a QR shows
+  its details across the width. It rises in on open, with no motion under
+  reduced motion.
 - **Loyalty cards:** drawn from the data on the printed card's cream face,
   which stays cream in both themes (tokens `card`, `card-slot`, `card-ink`,
   `card-pink`, `cobalt`, `matcha` #437234, `accent-pink`, `bean`, `leaf`,
