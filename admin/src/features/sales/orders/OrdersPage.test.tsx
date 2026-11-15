@@ -91,4 +91,18 @@ describe('Orders: the month control (handover 18)', () => {
     await screen.findByRole('group', { name: 'Month' })
     await waitFor(() => expect(screen.queryByLabelText('Orders summary')).not.toBeInTheDocument())
   })
+
+  it('the browser’s Back steps back through the months walked with the arrows', async () => {
+    const requests = serveOrders()
+    const { user, router } = renderApp('/sales/orders', signedIn)
+
+    await user.click(await screen.findByRole('button', { name: 'Previous month' }))
+    await user.click(screen.getByRole('button', { name: 'Previous month' }))
+    const twoBack = shiftMonth(thisMonth, -2)
+    await waitFor(() => expect(requests.at(-1)?.from).toBe(twoBack))
+
+    await router.navigate(-1)
+    await waitFor(() => expect(screen.getByRole('group', { name: 'Month' })).toHaveTextContent(monthLabel(lastMonth)))
+    expect(router.state.location.search).toBe(`?month=${lastMonth.slice(0, 7)}`)
+  })
 })

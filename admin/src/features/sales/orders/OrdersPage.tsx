@@ -64,12 +64,19 @@ export function OrdersPage() {
   const navigate = useNavigate()
   const period = usePeriod()
   const { from, to } = period
+  // Page and the typed custom dates belong to one period: when the period
+  // changes any way (arrows, This month, the browser's Back), they start over.
+  const periodKey = `${from}|${to}`
   const [showCustom, setShowCustom] = useState(period.custom)
   // The custom range as typed: applied once both dates are complete and in order.
-  const [draft, setDraft] = useState({ from, to })
+  const [typed, setTyped] = useState({ key: periodKey, from, to })
+  const draft = typed.key === periodKey ? typed : { from, to }
+  const setDraft = (next: { from: string; to: string }) => setTyped({ key: periodKey, ...next })
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [status, setStatus] = useState<PaymentStatus | ''>('')
-  const [page, setPage] = useState(1)
+  const [paging, setPaging] = useState({ key: periodKey, page: 1 })
+  const page = paging.key === periodKey ? paging.page : 1
+  const setPage = (next: number) => setPaging({ key: periodKey, page: next })
 
   const { data: customers } = useListCustomersQuery({ includeInactive: true })
   const { data, isLoading, isFetching } = useListOrdersQuery({
@@ -87,16 +94,12 @@ export function OrdersPage() {
     set(value)
     setPage(1)
   }
-  const goMonth = (month: string) => {
-    period.goMonth(month)
-    setDraft({ from: month, to: monthRange(month)[1] })
-    setPage(1)
-  }
+  // Changing the period resets the page and the typed dates by itself (periodKey).
+  const goMonth = (month: string) => period.goMonth(month)
   const editRange = (next: { from: string; to: string }) => {
     setDraft(next)
     if (!DATE.test(next.from) || !DATE.test(next.to) || next.from > next.to) return
     period.setRange(next.from, next.to)
-    setPage(1)
   }
 
   return (

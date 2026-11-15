@@ -41,7 +41,7 @@ function AccentPicker({ name, value, onChange }: { name: string; value: number |
               aria-pressed={current === index}
               aria-label={`Letter ${index + 1}, ${char.toUpperCase()}`}
               className={`h-8 w-7 rounded-full border text-sm font-bold ${
-                current === index ? 'border-stamp-pink-edge bg-stamp-pink text-danger' : 'border-line'
+                current === index ? 'border-stamp-pink-edge bg-stamp-pink text-card-ink' : 'border-line'
               }`}
               onClick={() => onChange(index)}
             >
@@ -237,11 +237,11 @@ export function LoyaltyClubForm({
         </fieldset>
 
         <fieldset className="flex flex-col gap-1.5">
-          <legend className="mb-1 text-xs font-semibold text-muted">Menu categories that feed this card</legend>
-          <div className="grid gap-1 sm:grid-cols-2">
+          <legend className="mb-1 text-[0.8rem] font-bold text-muted">Menu categories that feed this card</legend>
+          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
             {categories.map((category) => (
-              <label key={category.id} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" className="size-4 accent-accent" value={category.id} {...register('categoryIds')} />
+              <label key={category.id} className="flex min-h-7 items-center gap-2 text-sm">
+                <input type="checkbox" className="size-5 flex-none accent-accent" value={category.id} {...register('categoryIds')} />
                 {category.name}
                 {otherClub(category) && <span className="text-xs text-muted">(now {otherClub(category)})</span>}
               </label>
