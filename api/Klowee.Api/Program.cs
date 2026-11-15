@@ -309,15 +309,34 @@ builder.Services.AddRateLimiter(options =>
         });
     };
 
-    // The booking form (handover 20): per client IP, 3 an hour and 10 a day,
-    // both at once (a chained limiter takes a permit from each).
+    // The booking form (handover 20): per client IP, 3 an hour (this policy)
+    // and 10 a day (the global limiter below). Two separate limiters on
+    // purpose: a chained one reports itself idle when its hour refills, the
+    // middleware then discards it, and the day count would start over.
     options.AddPolicy(BookingRateLimitOptions.PolicyName, httpContext =>
     {
         var limits = httpContext.RequestServices.GetRequiredService<IOptions<BookingRateLimitOptions>>().Value;
         var ip = httpContext.Connection.RemoteIpAddress ?? IPAddress.None;
-        return RateLimitPartition.Get("booking:" + ip, _ => RateLimiter.CreateChained(
-            new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions { PermitLimit = limits.PerHour, Window = TimeSpan.FromHours(1), QueueLimit = 0 }),
-            new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions { PermitLimit = limits.PerDay, Window = TimeSpan.FromDays(1), QueueLimit = 0 })));
+        return RateLimitPartition.GetFixedWindowLimiter("booking-hour:" + ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = limits.PerHour, Window = limits.HourWindow, QueueLimit = 0
+        });
+    });
+    // The day window: only booking posts get a limiter; everything else passes untouched.
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        if (!HttpMethods.IsPost(httpContext.Request.Method)
+            || !httpContext.Request.Path.StartsWithSegments("/api/public/bookings"))
+        {
+            return RateLimitPartition.GetNoLimiter("none");
+        }
+
+        var limits = httpContext.RequestServices.GetRequiredService<IOptions<BookingRateLimitOptions>>().Value;
+        var ip = httpContext.Connection.RemoteIpAddress ?? IPAddress.None;
+        return RateLimitPartition.GetFixedWindowLimiter("booking-day:" + ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = limits.PerDay, Window = limits.DayWindow, QueueLimit = 0
+        });
     });
 
     // The public tab page (handover 17): reads by client IP (the same IP as the

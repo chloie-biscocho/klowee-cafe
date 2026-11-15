@@ -15,4 +15,8 @@ public class BookingRateLimitOptions
 
     public int PerHour { get; set; } = 3;
     public int PerDay { get; set; } = 10;
+
+    /// <summary>The two windows' lengths; tests shrink them to seconds.</summary>
+    public TimeSpan HourWindow { get; set; } = TimeSpan.FromHours(1);
+    public TimeSpan DayWindow { get; set; } = TimeSpan.FromDays(1);
 }

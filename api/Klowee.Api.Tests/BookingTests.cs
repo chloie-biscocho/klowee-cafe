@@ -319,8 +319,38 @@ public class BookingTests : IClassFixture<KloweeApiFactory>
             Assert.Equal(HttpStatusCode.Created, (await SendAsync(client, Valid($"Daily {i}"))).StatusCode);
         }
 
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await SendAsync(client, Valid("Daily 11"))).StatusCode);
+        var eleventh = await SendAsync(client, Valid("Daily 11"));
+        Assert.Equal(HttpStatusCode.TooManyRequests, eleventh.StatusCode);
+        Assert.Equal(BookingRateLimitOptions.RejectedMessage, (await eleventh.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
         Assert.Equal(10, new BookingRateLimitOptions().PerDay);
+    }
+
+    /// <summary>
+    /// The day's count must survive the hour window resetting. ASP.NET drops a
+    /// partition's limiter once it reports itself idle; if the chained limiter
+    /// looked idle as soon as its hour refilled, the day count would start over
+    /// and the real ceiling would be 3 an hour. Windows shrunk to seconds.
+    /// </summary>
+    [Fact]
+    public async Task TheDayCount_SurvivesTheHourWindowResetting()
+    {
+        await _factory.EnsureInitializedAsync();
+        using var limited = _factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.Configure<BookingRateLimitOptions>(options =>
+            {
+                options.PerHour = 2;
+                options.HourWindow = TimeSpan.FromSeconds(1);
+                options.PerDay = 3;
+                options.DayWindow = TimeSpan.FromMinutes(2);
+            })));
+        var client = limited.CreateClient();
+
+        Assert.Equal(HttpStatusCode.Created, (await SendAsync(client, Valid("Rollover 1"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await SendAsync(client, Valid("Rollover 2"))).StatusCode);
+        // Long enough for the short window to refill and for the limiter's idle sweep (every 10 s) to run.
+        await Task.Delay(TimeSpan.FromSeconds(16));
+        Assert.Equal(HttpStatusCode.Created, (await SendAsync(client, Valid("Rollover 3"))).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await SendAsync(client, Valid("Rollover 4"))).StatusCode);
     }
 
     // ---- the owners ----
